@@ -1,0 +1,128 @@
+---
+title: Dynamically generate test cases with Jest
+description: As long as you know which cases you want to test up-front (for example, you're not trying to generate them after a network request) you can use Jest to batch out multiple cases at once.
+tags: Basics
+published: true
+guide: true
+---
+
+As long as you know which cases you want to test up-front (for example, you're not trying to generate them after a network request) you can use Jest to batch out multiple cases at once.
+
+The syntax looks like this
+
+```js
+test.each([])("test name", () => {})
+```
+
+## Single argument per test
+
+If you use the wildcard `%s` in your test name, it will inject the first string in your test case. The following test spec will generate five different tests.
+
+```js numbered labeled
+test.each([
+  'FULL_TIME',
+  'PART_TIME',
+  'SELF_EMPLOYED',
+  'UNEMPLOYED',
+  'RETIRED',
+])('can set employment type to %s', (type) => {
+
+  // Test content here
+}),
+```
+
+```js numbered labeled
+test("can set employment type to FULL_TIME", () => {
+  const type = "FULL_TIME"
+
+  // Test content here
+})
+
+test("can set employment type to PART_TIME", () => {
+  const type = "PART_TIME"
+
+  // Test content here
+})
+
+test("can set employment type to SELF_EMPLOYED", () => {
+  const type = "SELF_EMPLOYED"
+
+  // Test content here
+})
+
+test("can set employment type to UNEMPLOYED", () => {
+  const type = "UNEMPLOYED"
+
+  // Test content here
+})
+
+test("can set employment type to RETIRED", () => {
+  const type = "RETIRED"
+
+  // Test content here
+})
+```
+
+## Multiple arguments per test
+
+Each item in the array can itself be an array of arguments.
+
+In the test name, you can use %s multiple times in order to print out the argument.
+
+```js numbered labeled
+test.each([
+  ['FULL_TIME', 'FULL_TIME'],
+  ['FULL_TIME', 'PART_TIME'],
+  ['FULL_TIME', 'SELF_EMPLOYED'],
+  ['FULL_TIME', 'UNEMPLOYED'],
+  ['FULL_TIME', 'RETIRED'],
+  ['PART_TIME', 'FULL_TIME'],
+  ['PART_TIME', 'PART_TIME'],
+  ['PART_TIME', 'SELF_EMPLOYED'],
+  ['PART_TIME', 'UNEMPLOYED'],
+  ['PART_TIME', 'RETIRED'],
+  ['SELF_EMPLOYED', 'FULL_TIME'],
+  ['SELF_EMPLOYED', 'PART_TIME'],
+  ['SELF_EMPLOYED', 'SELF_EMPLOYED'],
+  ['SELF_EMPLOYED', 'UNEMPLOYED'],
+  ['SELF_EMPLOYED', 'RETIRED'],
+  ['UNEMPLOYED', 'FULL_TIME'],
+  ['UNEMPLOYED', 'PART_TIME'],
+  ['UNEMPLOYED', 'SELF_EMPLOYED'],
+  ['UNEMPLOYED', 'UNEMPLOYED'],
+  ['UNEMPLOYED', 'RETIRED'],
+  ['RETIRED', 'FULL_TIME'],
+  ['RETIRED', 'PART_TIME'],
+  ['RETIRED', 'SELF_EMPLOYED'],
+  ['RETIRED', 'UNEMPLOYED'],
+  ['RETIRED', 'RETIRED'],
+])('can set employment type from %s to %s', ([ firstType, secondType ]) => {
+
+  // Test content here
+}),
+```
+
+```js numbered labeled
+test("can set employment type from FULL_TIME to FULL_TIME", () => {
+  const firstType = "FULL_TIME"
+  const secondType = "FULL_TIME"
+
+  // Test content here
+})
+
+test("can set employment type from FULL_TIME to PART_TIME", () => {
+  const firstType = "FULL_TIME"
+  const secondType = "PART_TIME"
+
+  // Test content here
+})
+
+test("can set employment type from FULL_TIME to SELF_EMPLOYED", () => {
+  const firstType = "FULL_TIME"
+  const secondType = "SELF_EMPLOYED"
+
+  // Test content here
+})
+
+// …and so on 22 more times
+```

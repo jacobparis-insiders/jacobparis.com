@@ -1,0 +1,118 @@
+---
+title: Server-side render dates across timezones with Remix
+description: Server-side rendering breaks when the server is in a different timezone than your browser. Make your Remix server timezone agnostic with a timezone offset cookie.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-03-27"
+---
+
+Frameworks like [Remix](https://remix.run) and [Next.js](https://nextjs.org) render each page twice: once on the server, and once on the client.
+
+This is great for performance, but it can cause problems when the server and client are in different timezones.
+
+If you have a page that renders the current date, the server will render the date in the server's timezone, and the client will render the date in the client's timezone.
+
+This can cause a [flash of unstyled content](https://en.wikipedia.org/wiki/Flash_of_unstyled_content) (FOUC) when the page loads.
+
+For example, if the server is in GMT+0 and your browser is in GMT+2, the server may render the time as 10:00 AM, and the client may render the time as 12:00 PM.
+
+If your server is streaming the HTML to the client, this mismatch will cause a hydration issue that aborts server-side rendering entirely, and the page will fall back to client-side rendering.
+
+Since javascript's `Date` object always prints in its current timezone, there's no way to force it to print in a different one. Instead, the solution is to send a fake date to the client that's offset by the difference between the server's timezone and the client's.
+
+We know that the server is always rendering the date 2 hours earlier than the client, so we can make a fake date that's 2 hours late and tell the page to use that for server-side rendering.
+
+Then, when the client renders the page, it will use the real date, and the page will look the same on both the server and the client, solving the hydration issue.
+
+## Getting the timezone offset
+
+There are several concerns with getting the timezone offset.
+
+A brand new visitor will never have this set, so we need to set it on the first request and then refetch the page. But not all users will have javascript enabled, so we need to make sure that the page still works without javascript.
+
+The javascript-free solution is to use the `Set-Cookie` header to a dummy value<SideNote> This dummy value doesn't match their timezone, but for non-javascript users, that doesn't matter. Their browser won't be client-side rendering the page, so there aren't any hydration issues in the first place.</SideNote> and then redirect the user to the same page. Setting the cookie in this way stops the user from getting trapped in an infinite loop of checking for the cookie and trying to set it, which would be the case if they didn't have javascript enabled.
+
+The javascript solution is to serve an HTML page that contains a small JS script that sets the cookie and then reloads the page.
+
+This check should happen as early as possible in the network request, either at the Express level or in Remix's `entry.server.tsx` file.
+
+```tsx
+if (
+  !request.headers.get("cookie")?.includes("clockOffset")
+) {
+  const script = `
+    document.cookie = 'clockOffset=' + (new Date().getTimezoneOffset() * -1) + '; path=/';
+    window.location.reload();
+  `
+
+  return new Response(
+    `<html><body><script>${script}</script></body></html>`,
+    {
+      headers: {
+        "Content-Type": "text/html",
+        "Set-Cookie": "clockOffset=0; path=/",
+        Refresh: `0; url=${request.url}`,
+      },
+    },
+  )
+}
+```
+
+## Using the timezone offset
+
+Now that we have the timezone offset, we can use it to offset the date on the server.
+
+In the loader of one of our pages that needs to render a date, we can use the `request.headers.get("Cookie")` method to get the cookie and then parse it to get the timezone offset.
+
+If the cookie is set, we create a new date and skew it by the offset. If the cookie isn't set, we just use the current date.
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const clockOffset = request.headers
+    .get("Cookie")
+    ?.match(/clockOffset=(\d+)/)
+
+  return json({
+    date: {
+      offsetValue: clockOffset
+        ? offsetDate(
+            new Date(),
+            parseInt(clockOffset[1], 10),
+          )
+        : new Date().toISOString(),
+      serverValue: new Date().toISOString(),
+    },
+  })
+
+  function offsetDate(date: Date, offset: number = 0) {
+    date.setMinutes(date.getMinutes() + offset)
+    return date.toISOString()
+  }
+}
+```
+
+Then, in the page component, we can use the [ClientOnly wrapper from remix-utils](https://github.com/sergiodxa/remix-utils#clientonly) to render the server-side date only on the server, and the client-side date only on the client.
+
+```tsx
+export default function Example() {
+  const { date } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      <h1>
+        Client date is{" "}
+        <time dateTime={date.serverValue}>
+          <Suspense>
+            <ClientOnly
+              fallback={formatDate(date.offsetValue)}
+            >
+              {() => formatDate(date.serverValue)}
+            </ClientOnly>
+          </Suspense>
+        </time>
+      </h1>
+    </div>
+  )
+}
+```

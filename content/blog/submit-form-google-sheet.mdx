@@ -1,0 +1,126 @@
+---
+title: Add data to a Google Sheet from a Node.js backend
+description: Learn how to add data to a Google sheet from a Node.js backend using Google's v4 REST API instead of any libraries. Great for collecting feedback, tracking bugs, or keeping a list of newsletter subscribers.
+tags: Remix, Advanced
+published: true
+guide: true
+timestamp: "2022-03-10"
+img: content/submit-form-google-sheet/cover.png
+---
+
+Google sheets are a powerful tool for collecting and organizing data. They can be used for a wide range of tasks such as tracking bugs, collecting feedback, or keeping a list of newsletter subscribers. In this guide, we'll show you how to add data to a Google sheet from a Node.js backend.
+
+This guide does not use any Google libraries. Instead, we'll be making requests to Google's v4 REST API with the Fetch API. You should be able to adapt these instructions to any backend language or framework.
+
+## Why use a Google Sheet?
+
+If you have multiple people working on a project, you can share a Google sheet with everyone. This makes it easy to keep track of the data and make changes to the sheet.
+
+They're also well supported. Many tools can import data from a Google sheet. For example, you can use Zapier to send an email to your subscribers every time a new row is added to the sheet. If you use a third party service to send emails, you can use Zapier to automatically add new subscribers to your email list.
+
+## Set up a Google Sheets Service Account
+
+1. Go to the Google Cloud Console and create a new project.
+2. Enable the Google Sheets API for your project by going to the "Library" page and searching for "Google Sheets API". Click on the API, then click on "Enable".
+3. Create a service account and download the JSON key file. Inside the JSON file is a private key and a service account email address. Add these to your environment variables
+
+```js numbered
+GOOGLE_SHEETS_SERVICE_ACCOUNT=serviceaccount@example.iam.gserviceaccount.com
+GOOGLE_SHEETS_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----…"
+```
+
+## Create a Google Sheet to store subscribers
+
+Create a new Google Sheet and add the service account email address as a collaborator with write access.
+
+Find the ID of the sheet in the URL. For example, the ID of `docs.google.com/spreadsheets/d/1X2Y3Z4W5V6U7T8S9R0Q/edit#gid=0` is `1X2Y3Z4W5V6U7T8S9R0Q`
+
+The page name is the name of the tab in the sheet, which is usually Sheet1 by default.
+
+Add both of these to your environment variables
+
+```js numbered
+GOOGLE_SHEETS_SUBSCRIBERS_ID=1X2Y3Z4W5V6U7T8S9R0Q
+GOOGLE_SHEETS_SUBSCRIBERS_PAGE=Sheet1!A2
+```
+
+## Authenticate with the Google Sheets API
+
+In order to make a request to the Google Sheets API, you need to get an access token.
+
+Make a POST request to the Google OAuth 2.0 token endpoint. The request body should include a JWT containing your service account email address signed with your private key.
+
+```js numbered
+import jwt from "jsonwebtoken"
+
+async function getGoogleSheetsAccessToken() {
+  const iat = Math.floor(Date.now() / 1000)
+  const exp = iat + 3600
+
+  const jwtToken = jwt.sign(
+    {
+      iss: process.env.GOOGLE_SHEETS_SERVICE_ACCOUNT,
+      scope: "https://www.googleapis.com/auth/spreadsheets",
+      aud: "https://accounts.google.com/o/oauth2/token",
+      exp,
+      iat,
+    },
+    process.env.GOOGLE_SHEETS_PRIVATE_KEY,
+    { algorithm: "RS256" },
+  )
+
+  const { access_token } = await fetch(
+    "https://accounts.google.com/o/oauth2/token",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        grant_type:
+          "urn:ietf:params:oauth:grant-type:jwt-bearer",
+        assertion: jwtToken,
+      }),
+    },
+  ).then((response) => response.json())
+
+  return access_token
+}
+```
+
+## Add a row to the Google Sheet
+
+After getting the access token, you can make a request to the Google Sheets API to append a row to the sheet.
+
+If you are collecting data from a form, this code should run in your server-side form handler. With Remix, this is the `action` function in your route. If you are using a different framework, you can use the code below as a reference.
+
+```js numbered
+const accessToken = await getGoogleSheetsAccessToken()
+
+await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${process.env.GOOGLE_SHEETS_SUBSCRIBERS_ID}/values/${process.env.GOOGLE_SHEETS_SUBSCRIBERS_PAGE}:append?valueInputOption=USER_ENTERED`,
+  {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${access_token}`,
+    },
+    body: JSON.stringify({
+      range,
+      values: [
+        // Row 1
+        [
+          // Column 1
+          new Date().toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+          // Column 2
+          "test@example.com",
+        ],
+      ],
+    }),
+  },
+)
+```

@@ -1,0 +1,27 @@
+---
+title: Use ActionData to get form post body in Remix
+description: The response of the `action` method is available through the `useActionData` hook
+tags: Remix, Basics
+published: true
+guide: true
+---
+
+Remix allows you to handle form submissions with the `action` method
+
+The response of the `action` method is available through the `useActionData` hook
+
+```js
+import { useActionData, json } from "remix"
+
+export const action = async ({ request }) => {
+  return json({
+    token: "1234567890",
+  })
+}
+
+export default function Page() {
+  const { token } = useActionData()
+
+  // do something with token
+}
+```

@@ -1,0 +1,211 @@
+---
+title: Set up multi-repo workspaces with Gitpod and Tailscale
+description:
+tags: Advanced
+published: true
+guide: true
+---
+
+A very common multi-repo software architecture involves having one "application" repository that runs a website or web app, and then one "API" repository that runs a backend service.
+
+In a conventional local development environment, you would have two repositories open in two IDE windows and every service can talk to every other service because they are all running on the same machine.
+
+![](/images/2022-02-10-15-43-48.png)
+
+With Gitpod, each workspace runs in a secure sandbox, and while ports can be exposed to localhost so that the browser can access it, the workspaces cannot communicate with one-another.
+
+The workspaces live in sandboxes with specific ports exposed to the browser, so the browser is able to communicate with them.
+
+![](/images/2022-02-10-15-54-36.png)
+
+As long as the browser is the only one interacting with the API, this will work. Many people develop SPAs (single page applications) and static sites where every network request is a client-side fetch. If this describes your development environment, then **you don't need Tailscale.**
+
+But if your application has a server component that fetches data to pre-render the page, it becomes a networking problem. In order for the application server to send a request outside of its own workspace and into the API workspace, it needs a secure network tunnel between them.
+
+**This is what Tailscale was made for.**
+
+![](/images/2022-02-11-17-46-14.png)
+
+## What is Tailscale?
+
+Tailscale markets itself as a peer-to-peer mesh-network zero-config VPN that can connect containers securely across the internet.
+
+In Gitpod terms, each workspace can log into Tailscale and receive a list of secure IP addresses of every service running on every one of their Gitpod workspaces.
+
+It is only possible to connect to these IPs from somewhere running Tailscale, which will be your workspaces, but could also be your local machine. Traffic over these connections is fully end-to-end encrypted with each workspace having its own private key, so not even Tailscale is capable of reading the traffic.
+
+## 1. Add Tailscale to your .gitpod.Dockerfile
+
+The Tailscale packages do not come pre-installed on the Gitpod base image, so you'll need to add them yourself.
+
+If you're not already using a custom Dockerfile, create a new `.gitpod.Dockerfile` and set the `.gitpod.yml` to use it.
+
+```diff
+- image: gitpod/workspace-full
++ image:
++   file: .gitpod.Dockerfile
+```
+
+If you're not using the `gitpod/workspace-full` image, tweak the first line of the Dockerfile to point to the image you were using. Since this new Dockerfile will extend the same base image, any dependencies you were previously relying on will still work.
+
+Add the following to the `.gitpod.Dockerfile`
+
+```sh
+FROM gitpod/workspace-full
+
+USER root
+
+RUN curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/focal.gpg | sudo apt-key add - \
+     && curl -fsSL https://pkgs.tailscale.com/stable/ubuntu/focal.list | sudo tee /etc/apt/sources.list.d/tailscale.list \
+     && apt-get update \
+     && apt-get install -y tailscale
+```
+
+## 2. Add Tailscale to your .gitpod.yml tasks
+
+> Scroll to the bottom of this page for an example `.gitpod.yml` file, or follow through these steps to set it up for yourself.
+
+The "Connect to Tailscale" task will prompt the developer to log in. That only has to happen once, and it saves the Tailscale login token into Gitpod's environment variables to skip the login next time.
+
+If you put this one at the bottom of the `tasks` list, it will be the first one the developer sees if they need to log in, but close itself after the login is complete.
+
+The "Restore Tailscale daemon" task that runs `sudo tailscaled` will run in the background and doesn't need any developer interaction, so putting it at the top of the `tasks` list will keep it out of the developer's way.
+
+```yml
+tasks:
+  - name: Restore Tailscale daemon
+    command: |
+      if [ -n "${TS_STATE_TAILSCALE_EXAMPLE}" ]; then
+        # restore the tailscale state from gitpod user's env vars
+        sudo mkdir -p /var/lib/tailscale
+        echo "${TS_STATE_TAILSCALE_EXAMPLE}" | sudo tee /var/lib/tailscale/tailscaled.state > /dev/null
+      fi
+      sudo tailscaled
+
+  - name: Connect to Tailscale
+    command: |
+      if [ -n "${TS_STATE_TAILSCALE_EXAMPLE}" ]; then
+        sudo -E tailscale up
+      else
+        sudo -E tailscale up --hostname "gitpod-${GITPOD_GIT_USER_NAME// /-}-$(echo ${GITPOD_WORKSPACE_CONTEXT} | jq -r .repository.name)"
+        # store the tailscale state into gitpod user
+        gp env TS_STATE_TAILSCALE_EXAMPLE="$(sudo cat /var/lib/tailscale/tailscaled.state)"
+      fi
+      exit
+```
+
+## 3. Open a workspace for each repo
+
+Commit the `gitpod.yml` and the `.gitpod.Dockerfile` to your repository. If there are other people working on the same codebase, you may want to try this out on a new branch. Wherever you make the changes, use that branch for your new workspace.
+
+The terminal in each workspace will give you a login link with a special token. Once you've logged in, it will connect your workspace to the Tailscale account.
+
+Tailscale allows you to log in via GitHub, Google, Microsoft, or email. As long as you log in with the same account in each of your repositories, they will be able to send requests to one another.
+
+## 4. View your connected workspaces
+
+Run `tailscale status` to see the private IP addresses for your other workspaces. These are only accessible to other Tailscale nodes, so your workspaces can communicate with each other but neither your browser nor anyone else will be able to access them.
+
+```sh
+$ tailscale status
+
+100.11.166.123  main-backend-service username@  linux   -
+100.11.201.28   main-application username@  linux   -
+```
+
+It doesn't make for a great experience if the developer has to hunt down IP addresses every time they make a workspace, and Gitpod is all about great developer experience.
+
+We can use a `gitpod.yml` task to search Tailscale and create environment variables for each connected service.
+
+Given a repository with a name of `backend-service`, you can find the IP address by running this script
+
+```sh
+$ tailscale status | grep backend-service | cut -d " " -f 1
+
+100.11.166.123
+```
+
+If you want your application to automatically connect to your API through Tailscale, you can use that script to set an environment variable in your `gitpod.yml` command
+
+In this example, the task looks for a `backend-service` and sets an environment variable named `API_URL` to the url for that service before running application.
+
+```yml
+- name: Start application
+  init: npm install
+  command: |
+    REPO_NAME=backend-service
+    API_IP=$(tailscale status | grep $REPO_NAME | cut -d " " -f 1)
+
+    if [ "${API_IP}" ]; then
+      echo "🐳 Connected to $REPO_NAME through Tailscale"
+      API_URL="http://$API_IP:5000/api" npm run dev
+    else
+      echo "🐳 Failed to connect to $REPO_NAME. Make sure a $REPO_NAME workspace is active and logged into Tailscale."
+      npm run dev
+    fi
+  env:
+    PORT: 3000
+    NODE_ENV: development
+```
+
+Add this task to the `tasks` list in your `.gitpod.yml` file, push the updated code, and try it out with a new workspace. Your workspaces should be able to send requests to each other through their secure Tailscale IP addresses and you'll be fully set up for multi-repo development on Gitpod.
+
+## Sample gitpod.yml
+
+```yml
+image:
+  file: .gitpod.Dockerfile
+
+ports:
+  - port: 3000
+    onOpen: ignore
+
+tasks:
+  - name: Restore Tailscale daemon
+    command: |
+      if [ -n "${TS_STATE_TAILSCALE_EXAMPLE}" ]; then
+        # restore the tailscale state from gitpod user's env vars
+        sudo mkdir -p /var/lib/tailscale
+        echo "${TS_STATE_TAILSCALE_EXAMPLE}" | sudo tee /var/lib/tailscale/tailscaled.state > /dev/null
+      fi
+      sudo tailscaled
+
+  - name: Start application
+    init: |
+      eval $(gp env -e)
+
+      npm install
+    command: |
+      REPO_NAME=backend-service
+      API_IP=$(tailscale status | grep $REPO_NAME | cut -d " " -f 1)
+
+      if [ "${API_IP}" ]; then
+        echo "🐳 Connected to $REPO_NAME through Tailscale"
+
+        API_URL="http://$API_IP:5000/api" npm run dev
+      else
+        echo "🐳 Failed to connect to $REPO_NAME. Make sure a $REPO_NAME workspace is active and logged into Tailscale."
+
+        npm run dev
+      fi
+    env:
+      PORT: 3000
+      NODE_ENV: development
+
+  - name: Connect to Tailscale
+    command: |
+      if [ -n "${TS_STATE_TAILSCALE_EXAMPLE}" ]; then
+        sudo -E tailscale up
+      else
+        sudo -E tailscale up --hostname "gitpod-${GITPOD_GIT_USER_NAME// /-}-$(echo ${GITPOD_WORKSPACE_CONTEXT} | jq -r .repository.name)"
+        # store the tailscale state into gitpod user
+        gp env TS_STATE_TAILSCALE_EXAMPLE="$(sudo cat /var/lib/tailscale/tailscaled.state)"
+      fi
+      exit
+```
+
+## Further tricks to explore
+
+- [ ] Set up tailscale on a real deployment and set your API_URL to fall back to that if it doesn't detect an active workspace, which should enable local development in a single repo when no changes are needed on the other
+- [ ] If you also install Tailscale on your local machine, you should be able to do all of your development on the Tailscale IP addresses and never need to use localhost
+- [ ] There shouldn't be much of a difference when using Gitpod in the browser, but include comparable instructions for that too

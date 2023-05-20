@@ -1,0 +1,107 @@
+---
+title: Filter an array in Typescript
+description: I had a typed array and wanted to remove elements with an empty value, but Array.Filter returns a regular array of regular objects, and the type information about the string unions was lost
+tags: Typescript
+published: true
+guide: true
+---
+
+I had a typed array and wanted to remove elements with an empty value. In vanilla Javascript that's easy enough, but instead of regular strings I was using string unions to restrict the available options.
+
+```ts numbered {40}
+type Property = {
+  measurements: Measurement[]
+}
+
+type Measurement = {
+  type: MeasurementType
+  value: number
+  unit: MeasurementUnit
+}
+
+type MeasurementType =
+  | "LOT_DEPTH"
+  | "LOT_AREA"
+  | "LIVING_AREA"
+
+type MeasurementUnit =
+  | "SQUARE_FEET"
+  | "SQUARE_METERS"
+  | "FEET"
+  | "METERS"
+
+function getProperty(input): Property {
+  return {
+    measurements: [
+      {
+        type: "LOT_DEPTH",
+        value: input.lotDepth.value,
+        unit: input.lotDepth.unit,
+      },
+      {
+        type: "LOT_AREA",
+        value: input.lotArea.value,
+        unit: input.lotArea.unit,
+      },
+      {
+        type: "LIVING_AREA",
+        value: input.livingArea.value,
+        unit: input.livingArea.unit,
+      },
+    ].filter((measurement) => measurement.value),
+  }
+}
+```
+
+Typescript was able to correctly infer the type of the `measurements` array, but as soon as I added the `filter` it broke. Why? Filter returns a regular array of regular objects, and the type information about the string unions was lost
+
+```sh
+Type 'string' is not assignable to type 'MeasurementName'
+```
+
+## Solutions
+
+The solution I ended up going with was to use type predicates to tell filter which type to use. I found out afterward that TS can infer correctly without the type predicate as long as it's split with an intermediate variable.
+
+### Type predicates
+
+```ts
+.filter((measurement): measurement is Measurement  => measurement.value)
+```
+
+### Type predicates (JSDoc)
+
+```js
+.filter(/** @type function(*): measurement is Measurement */ (measurement) => measurement.value)
+```
+
+### Intermediate variable (JSDoc)
+
+```js
+function getProperty(input): Property {
+  /** @type {Measurement[]} */
+  const measurements = [
+    {
+      type: "LOT_DEPTH",
+      value: input.lotDepth.value,
+      unit: input.lotDepth.unit,
+    },
+    {
+      type: "LOT_AREA",
+      value: input.lotArea.value,
+      unit: input.lotArea.unit,
+    },
+    {
+      type: "LIVING_AREA",
+      value: input.livingArea.value,
+      unit: input.livingArea.unit,
+    },
+  ]
+
+  return {
+    measurements: measurements.filter(
+      (measurement) => measurement.value,
+    ),
+  }
+}
+```

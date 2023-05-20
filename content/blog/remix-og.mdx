@@ -1,0 +1,437 @@
+---
+title: Generate open graph social preview images with Remix
+description: Learn how to generate social preview images for your website with Remix and Tailwind. Use Vercel's Satori package with Remix for dynamic open graph images. Fetch fonts from Google automatically.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-04-09"
+---
+
+When people share your website, blog posts, or other content on social media, those websites will often display a preview image of your content.
+
+Websites support this through a web standard called Open Graph. Open Graph is a set of tags that you can add to your HTML to tell websites how to present links to your content.
+
+In this guide, you'll learn
+
+- how to set a social preview image that works on Twitter, Facebook, Discord, and more
+- how to use Remix to generate a social preview image for your website automatically
+
+## Using a static image
+
+The easiest way to set a social preview image is to use a static image. You can upload an image to your website and use that as the preview image.
+
+For example, if you have an image called `social-preview.png` in your website's `public` folder, you can set the preview image by linking to it with a `meta` tag.<SideNote> Open graph does not support relative links, so you must include the full URL including your website domain in the link.</SideNote>
+
+```html
+<meta
+  property="og:image"
+  content="https://www.example.com/social-preview.png"
+/>
+```
+
+Remix gives each route a special function for setting meta tags. You can set one in your `root.tsx` to handle your whole site, and then override it with specific ones for pages that need different images.
+
+```tsx
+export const meta: MetaFunction = () => {
+  return {
+    title: "Website title",
+    ["og:image"]:
+      "https://www.example.com/social-preview.png",
+  }
+}
+```
+
+## Dynamically generating social preview images with Remix
+
+Using a dynamic image is the same process, but instead of linking to a static image, you'll link to an endpoint that generates the image dynamically.
+
+Vercel has first class support for generating social preview images with [Vercel OG](https://vercel.com/docs/concepts/functions/edge-functions/og-image-generation), but this requires running on Vercel's edge functions.
+
+Luckily, their package for turning HTML and CSS into SVG images is open source and does not require edge functions. It's called [Satori](https://github.com/vercel/satori) and it works great with Remix.
+
+There are 3 steps making this work:
+
+1. Write the HTML for your social preview image
+2. Use Satori to turn your HTML into an SVG image
+3. Use a package like `svg2img` to turn your SVG image into a PNG image<SideNote> This is the step that Vercel OG handles for you, but if you're not running on Vercel's edge functions, svg2img is a great alternative.</SideNote>
+
+Put that in a resource route<SideNote> A resource route is just a regular Remix route that doesn't return a component, and instead acts as a regular web endpoint.</SideNote> that you can link to from your meta function and you're all set!
+
+```tsx
+import satori from "satori"
+
+export async function loader({ request }: LoaderArgs) {
+  const jsx = <div style="color: black">hello, world</div>
+
+  // From satori docs example
+  const svg = await satori(jsx, {
+    width: 600,
+    height: 400,
+    fonts: [
+      {
+        name: "Roboto",
+        // Use `fs` (Node.js only) or `fetch` to read the font as Buffer/ArrayBuffer and provide `data` here.
+        data: robotoArrayBuffer,
+        weight: 400,
+        style: "normal",
+      },
+    ],
+  })
+
+  const { data, error } = await new Promise(
+    (
+      resolve: (value: {
+        data: Buffer | null
+        error: Error | null
+      }) => void,
+    ) => {
+      svg2img(svg, (error, buffer) => {
+        if (error) {
+          resolve({ data: null, error })
+        } else {
+          resolve({ data: buffer, error: null })
+        }
+      })
+    },
+  )
+
+  if (error) {
+    return new Response(error.toString(), {
+      status: 500,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    })
+  }
+
+  return new Response(data, {
+    headers: {
+      "Content-Type": "image/png",
+    },
+  })
+}
+```
+
+## Use dynamic text
+
+This resource route is a regular web endpoint, so you can use query parameters to pass in dynamic text.
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const url = new URL(request.url)
+  const title = url.searchParams.get("title")
+  const description = url.searchParams.get("description")
+
+  const jsx = (
+    <div>
+      <h1> {title} </h1>
+      <p> {description} </p>
+    </div>
+  )
+}
+```
+
+When you link to this resource route, you can pass in the dynamic text as query parameters.
+
+Remix's meta function has access to the data from its loader function, so you can use that to set the dynamic text.
+
+```tsx
+export const meta: MetaFunction = ({ data }) => {
+  const ogUrl = new URL(
+    "https://www.example.com/social-preview.png",
+  )
+  ogUrl.searchParams.set("title", data.title)
+  ogUrl.searchParams.set("description", data.description)
+
+  return {
+    title: "Website title",
+    ["og:image"]: ogUrl.toString(),
+  }
+}
+```
+
+## Using Tailwind for your image HTML
+
+Rather than bundling CSS or messing with inline styles, you may prefer to use Tailwind CSS to style your social preview image.
+
+Satori supports this out of the box, but instead of using the `className` attribute, you'll use the `tw` attribute instead.
+
+Typescript does not love this. You can fix it by adding a custom type definition for the `tw` attribute.
+
+```tsx
+declare module "react" {
+  interface HTMLAttributes<T> {
+    tw?: string
+  }
+}
+```
+
+```tsx
+const img = url.searchParams.get("img")
+
+const jsx = (
+  <div
+    tw="h-full w-full flex flex-col justify-end bg-gray-700 relative"
+    style={{
+      backgroundImage: img
+        ? `url(https://www.jacobparis.com/${img})`
+        : "",
+      backgroundSize: "1200px 600px",
+    }}
+  />
+)
+
+const svg = await satori(jsx, {
+  width: 600,
+  height: 400,
+})
+```
+
+## Loading fonts from Google Fonts automatically
+
+You can use Google Fonts to load fonts for your social preview images in Remix without needing to download and bundle them with your app.
+
+I've created a small helper function that will fetch them and pass them to Satori.
+
+```tsx
+async function getFont(
+  font: string,
+  weights = [400, 500, 600, 700],
+  text = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\!@#$%^&*()_+-=<>?[]{}|;:,.`'’\"–—",
+) {
+  const css = await fetch(
+    `https://fonts.googleapis.com/css2?family=${font}:wght@${weights.join(
+      ";",
+    )}&text=${encodeURIComponent(text)}`,
+    {
+      headers: {
+        // Make sure it returns TTF.
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_8; de-at) AppleWebKit/533.21.1 (KHTML, like Gecko) Version/5.0.5 Safari/533.21.1",
+      },
+    },
+  ).then((response) => response.text())
+
+  const resource = css.matchAll(
+    /src: url\((.+)\) format\('(opentype|truetype)'\)/g,
+  )
+
+  return Promise.all(
+    [...resource]
+      .map((match) => match[1])
+      .map((url) =>
+        fetch(url).then((response) =>
+          response.arrayBuffer(),
+        ),
+      )
+      .map(async (buffer, i) => ({
+        name: font,
+        style: "normal",
+        weight: weights[i],
+        data: await buffer,
+      })),
+  ) as Promise<SatoriOptions["fonts"]>
+}
+```
+
+To use this, include it in the `fonts` array when you pass your JSX to Satori.
+
+```tsx
+const svg = await satori(jsx, {
+  width: 600,
+  height: 400,
+  fonts: await getFont("Inter"),
+})
+```
+
+You can also load multiple fonts at once.
+
+```tsx
+const svg = await satori(jsx, {
+  width: 600,
+  height: 400,
+  fonts: await Promise.all([
+    getFont("Inter"),
+    getFont("Playfair Display"),
+  ]).then((fonts) => fonts.flat()),
+})
+```
+
+## Bonus: use Vercel's sandbox for rapid prototyping
+
+Vercel has a sandbox that lets you quickly prototype images using Satori.
+
+I like to use this to quickly test out different options and then paste the code into my Remix app.
+
+You can find the sandbox at [og-playground.vercel.app](https://og-playground.vercel.app/)
+
+## Code example
+
+This is the code for the image generator I use for this article as of April 9 2023. You can find the live endpoint by checking the source for this page and looking for the `og:image` meta tag under the `head` element.
+
+```tsx
+import type { LoaderArgs } from "@remix-run/node"
+import type { SatoriOptions } from "satori"
+import satori from "satori"
+import svg2img from "svg2img"
+import invariant from "tiny-invariant"
+
+// Code for getFont is in the previous section.
+import { getFont } from "./utils"
+
+declare module "react" {
+  interface HTMLAttributes<T> {
+    tw?: string
+  }
+}
+
+export async function loader({ request }: LoaderArgs) {
+  const params = new URL(request.url).searchParams
+  const titleInput = params.get("title")
+  invariant(titleInput, "title is required")
+  const title = decodeURIComponent(titleInput)
+
+  const titleSize =
+    title.length < 40 ? "text-6xl" : "text-5xl"
+
+  const descriptionInput = params.get("description")
+  const description = decodeURIComponent(
+    descriptionInput || "",
+  )
+  const descriptionSize =
+    description.length < 80 ? "text-2xl" : "text-xl"
+
+  const dateInput = params.get("date")
+  invariant(dateInput, "date is required")
+  const date = new Date(
+    decodeURIComponent(dateInput),
+  ).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  })
+
+  const imgInput = params.get("img") || "null"
+  const img =
+    imgInput !== "null"
+      ? decodeURIComponent(imgInput)
+      : null
+
+  // sanitize the params
+  const svg = await satori(
+    // If the blog post has an image, show only the image
+    img ? (
+      <div
+        tw="h-full w-full flex flex-col justify-end bg-gray-700 relative"
+        style={{
+          backgroundImage: img
+            ? `url(https://www.jacobparis.com/${img})`
+            : "",
+          backgroundSize: "1200px 600px",
+        }}
+      />
+    ) : (
+      // If the blog post doesn't have an image, show the title, description, and date
+      <div tw="h-full w-full flex flex-col bg-white pt-16 pl-24 relative text-2xl">
+        <div tw="bg-gray-100 rounded-l-3xl flex flex-col gap-0">
+          <div tw="flex px-8 pb-0 mb-0">
+            <div tw="h-6 w-6 mt-6 mr-2 rounded-full border border-red-600 border-opacity-30 bg-red-500"></div>
+            <div tw="h-6 w-6 mt-6 mx-2 rounded-full border border-yellow-600 border-opacity-30 bg-yellow-500"></div>
+            <div tw="h-6 w-6 mt-6 mx-2 rounded-full border border-green-600 border-opacity-30 bg-green-500"></div>
+            <div tw="bg-gray-200 text-gray-500 mt-4 mx-8 px-16 py-2 rounded-full flex w-full">
+              jacobparis.com
+            </div>
+          </div>
+
+          <div tw="flex flex-col w-full px-8 justify-between px-16 py-8">
+            {date !== "Invalid Date" ? (
+              <span tw="w-full uppercase text-lg font-bold text-gray-500">
+                {date}
+              </span>
+            ) : null}
+            <h2
+              tw={`flex flex-col text-left ${titleSize} font-bold text-gray-800 mb-0`}
+            >
+              {title}
+            </h2>
+
+            <p
+              tw={`text-gray-600 ${descriptionSize} mb-8`}
+              style={{ lineHeight: "2rem" }}
+            >
+              {description}
+            </p>
+
+            <div tw="flex justify-between items-end w-full">
+              <div tw="flex">
+                <img
+                  tw="w-24 rounded-full"
+                  src="https://jacobparis.com/images/jacob.png"
+                  alt=""
+                />
+                <div tw="flex flex-col px-8 py-2">
+                  <span tw="font-bold mb-2">
+                    {" "}
+                    Jacob Paris{" "}
+                  </span>
+                  <span tw="text-gray-500">
+                    {" "}
+                    @jacobmparis{" "}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div tw="absolute right-0 top-0 hidden px-4 py-4">
+          <img
+            tw="w-24 rounded-full"
+            src="https://jacobparis.com/images/jacob.png"
+            alt=""
+          />
+        </div>
+      </div>
+    ),
+    {
+      width: 1200,
+      height: 600,
+      fonts: await Promise.all([
+        getFont("Inter"),
+        getFont("Playfair Display"),
+      ]).then((fonts) => fonts.flat()),
+    },
+  )
+
+  const { data, error } = await new Promise(
+    (
+      resolve: (value: {
+        data: Buffer | null
+        error: Error | null
+      }) => void,
+    ) => {
+      svg2img(svg, (error, buffer) => {
+        if (error) {
+          resolve({ data: null, error })
+        } else {
+          resolve({ data: buffer, error: null })
+        }
+      })
+    },
+  )
+
+  if (error) {
+    return new Response(error.toString(), {
+      status: 500,
+      headers: {
+        "Content-Type": "text/plain",
+      },
+    })
+  }
+
+  return new Response(data, {
+    headers: {
+      "Content-Type": "image/png",
+    },
+  })
+}
+```

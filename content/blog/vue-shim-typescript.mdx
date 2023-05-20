@@ -1,0 +1,39 @@
+---
+title: Import Vue SFC files with Typescript
+description: If you're adding Typescript to a Vue project, you need to do a bit of extra work to make Single File Components load properly into the type system.
+tags: Typescript, Basics
+published: true
+guide: true
+---
+
+If you're adding Typescript to a Vue project, you need to do a bit of extra work to make Single File Components load properly into the type system.
+
+Typescript will throw an error if you try to import a `.vue` file if it doesn't understand how to parse it as a Vue SFC.
+
+```sh
+Error: Cannot resolve module './MyComponent.vue'
+```
+
+To resolve this, create a `shims-vue.d.ts` file in your project root.
+
+```ts
+declare module "*.vue" {
+  import Vue from "vue"
+  export default Vue
+}
+```
+
+Add the shim file to your `tsconfig.json` file.
+
+```json numbered {6}
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./lib" // Your outDir
+  },
+  "files": ["./shims-vue.d.ts"],
+  "include": ["./src", "./src/**/*.vue"]
+}
+```
+
+Then restart the TS engine, either by recompiling if you're doing so from the command line, or in VS Code by opening the command palette and searching for `Typescript: Restart TS Server`

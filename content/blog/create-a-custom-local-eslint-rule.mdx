@@ -1,0 +1,96 @@
+---
+title: Create a custom local eslint rule
+description: Running custom ESLint rules locally is really easy, so there's lots of room to explore automating rules and guidelines that are important to your project but maybe not anyone else.
+tags: Basics
+published: true
+guide: true
+---
+
+We have a styleguide at work that says all of our labels should be in sentence-case, so instead of "Add Products" it's "Add products" with a lowercase 'p', and instead of "User Account" it's "User account" with a lowercase 'a'.
+
+It's easy enough to follow when you're paying attention, and even when you're not it'll often be caught in code review, and even when it's not it's a fairly minor defect in the final product that will probably get fixed later. But the time spent fixing it later, plus the time spent finding it later, plus the time spent looking for it in code reviews, all adds up to more time than needs to be spent.
+
+And besides: reviewers with a preoccupation for being human linters are spending effort that could be better spent on their regular occupation of being human reviewers.
+
+As it turns out, running custom ESLint rules locally is really easy, so there's lots of room to explore automating rules and guidelines that are important to your project but maybe not anyone else. I used the package [eslint-plugin-local-rules](https://www.npmjs.com/package/eslint-plugin-local-rules) which makes this a breeze.
+
+```bash labeled
+npm install eslint-plugin-local-rules --save-dev
+```
+
+Local rules go in a local directory, so I made a new file at `./eslint-local-rules/no-title-case.js` and pieced together enough example code and stack overflow responses until I had a plugin that looked right
+
+```js numbered labeled filepath[./eslint-local-rules/no-title-case.js]
+function checkString(str, node, context) {
+  // \p{Ll} matches a lowercase letter that has an uppercase variant
+  // \s matches any whitespace character
+  // \p{Lu} matches an uppercase letter that has a lowercase variant
+
+  /**
+   * Look for the pattern {lowercase} {space} {uppercase} {lowercase}
+   */
+  const lowerToUpperCount = (
+    str.match(/\p{Ll}\s\p{Lu}\p{Ll}/gu) || []
+  ).length
+
+  if (lowerToUpperCount > 0) {
+    context.report({
+      node,
+      message:
+        'String literals should not use title case. For titles, where that may be wanted, use the class ".text-capitalize"',
+      fix(fixer) {
+        return fixer.replaceText(
+          node,
+          node.raw.replace(
+            /\s\p{Lu}\p{Ll}/gu,
+            (token) => token.toLowerCase(),
+          ),
+        )
+      },
+    })
+  }
+}
+
+module.exports = {
+  meta: {
+    docs: {
+      description:
+        "Enforce that string literals aren't in title case.",
+      recommended: false,
+    },
+    fixable: "code",
+  },
+
+  create: function (context) {
+    return {
+      Literal: (node) => {
+        if (typeof node.value === "string") {
+          checkString(node.value, node, context)
+        }
+      },
+      JSXText: (node) => {
+        checkString(node.value, node, context)
+      },
+    }
+  },
+}
+```
+
+The `eslint-local-rules` plugin actually looks for an index file containing all the rules, so I started a collection there at `./eslint-local-rules/index.js`
+
+```js numbered labeled filepath[./eslint-local-rules/index.js]
+module.exports = {
+  "no-title-case": require("./no-title-case"),
+}
+```
+
+And the last step was to add the plugin and enable the rule in the `.eslintrc` file. I didn't want to be too aggressive here and block CI from passing, so I set the rule to warn instead of throw errors.
+
+```js numbered labeled filepath[.eslintrc]
+module.exports = {
+  plugins: ["local-rules"],
+  rules: {
+    "local-rules/no-title-case": "warn",
+  },
+}
+```

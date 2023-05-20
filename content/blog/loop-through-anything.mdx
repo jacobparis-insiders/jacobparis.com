@@ -1,0 +1,178 @@
+---
+title: Basic javascript loops
+description: There are four ways to write for-loops and here's how to choose
+tags: Basics
+published: true
+guide: true
+---
+
+There are now four ways to open a for loop in javascript
+
+- [For of](#for-of)
+- [For await of](#for-await-of)
+- [For in](#for-in)
+- [Classic For](#classic-for)
+
+While they differ a bit on speed and the variables they declare implicitly, the actual body of the for loop doesn't change much between the different methods.
+
+## For of
+
+The easiest way to loop through an array is with the for…of loop
+
+```js numbered
+const fruits = ['apple', 'banana', 'cherry']
+
+for (const fruit of fruits) {
+  console.log(fruit)
+}
+
+// apple
+// banana
+// cherry
+```
+
+We're not limited to arrays though, since all iterators work the same in javascript. That means we can just as easily loop through a string
+
+```js numbered
+for (const letter of 'javascript') {
+  console.log(letter)
+}
+
+// j
+// a
+// v
+// a
+// s
+// c
+// r
+// i
+// p
+// t
+```
+
+Many emojis are stored as multiple codepoints, and some emojis are created by joining multiple other emojis.
+
+For…of will iterate over them one by return, returning every 👨 in a 👨‍👩‍👧‍👦
+
+```js numbered
+for (const person of '👨‍👩‍👧‍👦') {
+  console.log(person)
+}
+
+// 👨
+// 👩
+// 👧
+// 👦
+```
+
+We can use the `return` keyword to break out of a function early. In a loop, we can use the `continue` keyword to break out of the current iteration and start the next iteration immediately.
+
+```js numbered
+const sequence = [0, 1, 2, 3, 4, 5]
+
+for (const number of sequence) {
+  if (isOdd(number)) continue
+
+  console.log(number)
+}
+
+// 0
+// 2
+// 4
+```
+
+Loops also have the `break` keyword, which will cancel not only the current iteration but also the rest of the loop
+
+```js numbered
+const sequence = [0, 1, 2, 3, 4, 5]
+
+for (const number of sequence) {
+  if (number >= 3) break
+
+  console.log(number)
+}
+
+// 0
+// 1
+// 2
+```
+
+At the end of every iteration, the current scope is discarded and a new one is opened, so it's ok to use `const` or `let` at the start
+
+```js numbered
+for (const item of items)
+// or
+for (let item of items)
+```
+
+## For await of
+
+If you try to use `await` inside a loop, the execution will pause until the promise resolves and then it'll proceed as usual. To allow the loops to proceed concurrently, you can either await the promises before starting the loop or using `for await of` to do the same thing
+
+```js numbered
+for (const x of await Promise.all(arrayOfPromises))
+// or
+for await (const x of arrayOfPromises)
+```
+
+## For in
+
+In javascript, objects are not strictly iterable. If you want to loop through the keys of an object, you can either use `for in` or convert the keys to an array
+
+```js numbered
+const hashMap = {
+  abcd: { … },
+  abce: { … },
+  abcf: { … },
+  abcg: { … },
+  abch: { … }
+}
+```
+
+```js numbered
+for (const key of Object.keys(hashMap)) {
+  const value = hashMap[key]
+}
+// or
+for (const key in hashMap) {
+  const value = hashMap[key]
+}
+```
+
+If the only thing we need the key for is to access the value, we can skip a step and loop through the values directly
+
+```js numbered
+for (const value of Object.values(hashMap) { … }
+```
+
+If we need both key and value, my preferred method is to use `Object.entries`, which returns a `[key, value]` pair, and destructure them right in the head the loop
+
+```js numbered
+for (const [key, value] of Object.entries(hashMap)) { … }
+```
+
+Since arrays are just objects with numeric keys, we can use that same syntax to get the index of our array elements inside our loop
+
+```js numbered
+for (const [i, element] of Object.entries(array)) { … }
+```
+
+To run a loop a specific number of times, we can create an array with that many elements and then loop through it.
+
+Iterators skip over empty array slots, so we need to fill it with at least undefined first, and then optionally map its index
+
+```js numbered
+const array = Array(25).fill() // [ empty, empty, empty, …]
+// or
+const array = Array(25).fill().map((_, i) => i) // [ 0, 1, 2, … ]
+
+for (const i of array) { … }
+```
+
+## Classic for
+
+The other option is to use the classic for loop syntax. This gives you the most control at the cost of readability.
+
+```js numbered
+for (let i; i < 25; i++) { … }
+```

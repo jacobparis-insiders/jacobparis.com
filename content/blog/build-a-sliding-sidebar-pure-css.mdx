@@ -1,0 +1,121 @@
+---
+title: Build a sliding sidebar with pure CSS
+description:
+tags: Basics
+published: true
+guide: true
+---
+
+https://codepen.io/anon/pen/YbKvgR?editors=1100
+
+```html numbered
+<input
+  id="sidebar__trigger"
+  class="sidebar__trigger"
+  type="checkbox"
+/>
+<label for="sidebar__trigger">
+  <span class="sidebar__button sidebar__button-open"
+    >OPEN</span
+  >
+  <span class="sidebar__button sidebar__button-close"
+    >NOPE</span
+  >
+</label>
+```
+
+So this input is our trigger to open and close the menu. Since it's a checkbox, it already has the toggle functionality built in by the browser. We need to give it an ID so that we can link a label to it. Once we've attached a label we can toggle the checkbox simply by clicking on the label.
+
+Now you may be thinking that we can clean this code up by placing the input inside the label -- and normally you would be correct. If an input is the only input inside a label element, the browser will know they are paired together and you don't need to specify the `id` on the input or the `for` on the label. In this case, we are going to use CSS to toggle the menu based on the checkbox state and for that to work the menu must be a sibling downstream of the input. If the input was inside the label, the menu would also need to be inside the label, and then any time you click the sidebar it would toggle in or out. Useful in some cases perhaps, but not for us.
+
+If the double underscore `__` naming is unfamiliar, this is a design pattern called BEM which stands for Block\_\_Element--Modifier. By using this naming convention we can ensure that none of our CSS is going to interfere with any other code on the site. A generic class like `.input` is very likely to be used somewhere else, and that would cause adverse results.
+
+We have two `<span>` elements inside the label. Each of these has a different class `-open` and `-close` which we will later reference with CSS to toggle based on the checkbox state.
+
+```html numbered
+<ul class="sidebar">
+  <li>Home Page</li>
+  <li>Example 1</li>
+  <li>Example 2</li>
+  <li>Example 3</li>
+  <ul>
+    <li>Example 1</li>
+    <li>Example 2</li>
+    <li>Example 3</li>
+  </ul>
+  <li>Example 1</li>
+  <li>Example 2</li>
+  <li>Example 3</li>
+</ul>
+```
+
+This is just a generic placeholder menu. The only important part is that it has the class `.sidebar` because that's how we're going to refer to it in our CSS. It also must be placed below the input in source order.
+
+```css numbered
+.sidebar {
+  background: #333;
+  color: white;
+  max-width: 200px;
+  transition: transform 0.5s;
+}
+```
+
+We'll give the sidebar a basic styling so we can tell the difference between it and the rest of the page. Important here is the `transition` means every time the `transform` property is changed, it will gradually ease from the old value to the new one over 0.5 seconds. Increase this number to make the sidebar slide out slower, or decrease it to speed it up.
+
+```css numbered
+.sidebar__trigger {
+  display: none;
+}
+```
+
+We want to hide our checkbox so that we can see our fancy labels instead.
+
+```css numbered
+.sidebar__trigger:checked + label > .sidebar__button-open {
+  display: none;
+}
+```
+
+We'll break this down piece by piece
+
+```scss
+.sidebar__trigger: checked
+  // Find our input only when checked
+  + label // Move to a label element that is an immediate next sibling
+  > .sidebar__button-open; // And select the open-button that is an immediate child
+```
+
+The `display: none;` simply hides that element. Then we do the same thing for the close-button when the input is not checked.
+
+```css numbered
+.sidebar__trigger:not(:checked)
+  + label
+  > .sidebar__button-close {
+  display: none;
+}
+```
+
+The only new thing here is the `:not()` selector, which is essentially a negative match.
+
+```css numbered
+.sidebar__trigger:not(:checked) ~ .sidebar {
+  transform: translateX(-100%);
+}
+```
+
+The previous rule used `+ label` which selects only a `label` tag that is an _immediate next sibling_. This rule uses `~ .sidebar` which selects _any later sibling_. Now that we've selected the sidebar, we can move its position with a CSS transform to move it left 100% of its own width. This will obscure it off-screen until the input is checked which cancels this rule and brings it back to its original position.
+
+```css numbered
+.sidebar__button {
+  width: 300px;
+  border: 1px solid #ddf;
+  padding: 1rem;
+  border-radius: 0.25rem;
+}
+```
+
+This is just a little styling for the button to make it look like a button and not just some text.
+
+A working example is shown here at this Codepen
+
+https://codepen.io/anon/pen/YbKvgR?editors=1100

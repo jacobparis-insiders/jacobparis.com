@@ -1,0 +1,96 @@
+---
+title: Build a sliding sidebar with vanilla javascript
+description:
+tags: Basics
+published: true
+guide: true
+---
+
+https://codepen.io/anon/pen/YbKjxo
+
+```html
+<button
+  id="sidebar__trigger"
+  class="sidebar__button"
+>
+  CLOSE
+</button>
+
+<ul id="sidebar" class="sidebar">
+  <li>Home Page</li>
+  <li>Example 1</li>
+  <li>Example 2</li>
+  <li>Example 3</li>
+  <ul>
+    <li>Example 1</li>
+    <li>Example 2</li>
+    <li>Example 3</li>
+  </ul>
+  <li>Example 1</li>
+  <li>Example 2</li>
+  <li>Example 3</li>
+</ul>
+```
+
+We need a basic button with an ID so we can reference it in javascript, and a sidebar with an ID for the same reason.
+
+```scss
+.sidebar {
+  background: #333;
+  color: white;
+  max-width: 200px;
+  transition: transform 0.5s;
+
+  &.isClosed {
+    transform: translateX(-100%);
+  }
+
+  &__button {
+    width: 300px;
+    border: 1px solid #ddf;
+    padding: 1rem;
+    border-radius: 0.25rem;
+  }
+}
+```
+
+Here the styles are all written in SCSS so we can take advantage of nesting. This saves a lot of repeated code, but requires that we precompile the CSS before serving it to the browser.
+
+The `&` refers to the parent selector, so once this compiles out the `.isClosed` class will look like this:
+
+```css
+.sidebar.isClosed {
+  transform: translateX(-100%);
+}
+```
+
+This class translates the sidebar by its width to the left. Add the class, sidebar hides. remove the class, sidebar appears. Simple!
+
+```js
+const sidebar = document.getElementById("sidebar")
+const sidebarTrigger = document.getElementById(
+  "sidebar__trigger",
+)
+```
+
+Our first step is to select both of our elements so we can use them in our Javascript.
+
+```js
+sidebarTrigger.addEventListener("click", () => {
+  if (sidebar.classList.contains("isClosed")) {
+    sidebar.classList.remove("isClosed")
+    sidebarTrigger.innerText = "CLOSE"
+  } else {
+    sidebar.classList.add("isClosed")
+    sidebarTrigger.innerText = "OPEN"
+  }
+})
+```
+
+Here we add an event listener for the `click` event. Every time we click on the `sidebarTrigger`, the function we specify here will run.
+
+If the sidebar has the `.isClosed` class, remove it and change the button text to `CLOSE`. Otherwise, add it and change the button text to `OPEN`.
+
+And that's it! CSS handles all the animation and all the javascript has to do is toggle a class.
+
+https://codepen.io/anon/pen/YbKjxo

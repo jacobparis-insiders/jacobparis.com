@@ -1,0 +1,94 @@
+---
+title: Serving files as routes with Remix
+tags: Remix
+published: true
+guide: true
+---
+
+I needed to host some legal documents on a website, but I also wanted to be able to provide a plain text source so that the legal team could make their own modifications.
+
+Then, if they have any changes, all I have to do is upload the new file instead of changing specific lines piece by piece.
+
+The result of this is a `/terms-of-service` route that renders a well formatted article and a `/terms-of-service.md` route that shows the raw markdown source.
+
+Create a layout route `__markdown.tsx`
+
+```js
+import {Link, Outlet, useLocation} from 'remix'
+
+export default function MarkdownLayout() {
+  const location = useLocation()
+
+  return (
+    <>
+      <article className="mx-auto max-w-prose">
+        <div className="pb-12 mx-auto my-6 prose text-gray-500 prose-sky">
+          <Outlet />
+
+          <Link
+            reloadDocument
+            to={`${location.pathname}.md`}
+          >
+            View printable
+          </Link>
+        </div>
+      </article>
+    </>
+  )
+}
+```
+
+Create a dynamic route that serves the file `__markdown/$file.tsx`
+
+```js
+import ReactDOMServer from 'react-dom/server'
+import {
+  LoaderFunction,
+  redirect,
+  useLoaderData,
+} from 'remix'
+
+const allowedFiles = [
+  'terms-of-sale',
+  'privacy-policy',
+  'terms-of-use',
+  'financial-disclosure',
+]
+
+export const loader: LoaderFunction = async ({
+  params,
+}) => {
+  if (!allowedFiles.includes(params.file)) {
+    return redirect('/')
+  }
+
+  const files = {
+    'terms-of-sale': import(
+      '../../../public/terms-of-sale.md'
+    ),
+    'terms-of-use': import(
+      '../../../public/terms-of-use.md'
+    ),
+    'privacy-policy': import(
+      '../../../public/privacy-policy.md'
+    ),
+    'financial-disclosure': import(
+      '../../../public/financial-disclosure.md'
+    ),
+  }
+
+  const file = await files[params.file].then(
+    (mod) => mod.default,
+  )
+
+  return ReactDOMServer.renderToString(file())
+}
+
+export default function PostSlug() {
+  const __html = useLoaderData()
+
+  return (
+    <div dangerouslySetInnerHTML={{__html}} />
+  )
+}
+```

@@ -1,0 +1,41 @@
+---
+title: Create databases with Docker Compose
+tags: Basics
+published: true
+cheatsheet: true
+---
+
+## MongoDB
+
+```yml
+mongo:
+  image: prismagraphql/mongo-single-replica:5.0.3
+  environment:
+    MONGO_INITDB_ROOT_USERNAME: root
+    MONGO_INITDB_ROOT_PASSWORD: password
+    MONGO_INITDB_DATABASE: admin
+  expose:
+    - 27017
+  ports:
+    - "27017:27017"
+  volumes:
+    - ${PWD}/init.mongodb:/docker-entrypoint-initdb.d/init.mongodb:ro
+    - dbdata:/data/db
+```
+
+## PostGres
+
+```yml
+postgres:
+  image: postgres:14
+  ports:
+    - 5432:5432
+  restart: always
+  user: postgres
+  environment:
+    POSTGRES_PASSWORD: password
+    POSTGRES_HOST_AUTH_METHOD: password
+  volumes:
+    - ${PWD}/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+    - dbdata:/var/lib/postgresql/data
+```

@@ -1,0 +1,68 @@
+---
+title: Write good scrum tickets
+description: If your ticket is actually ready to pick up, it'll be completed in half the time. And if the definition of done is clear, development will double in speed again. This is what's needed to get twice the work done in half the time. This is the reason Scrum exists.
+tags: Basics
+published: true
+blog: true
+---
+
+Planning out the work that needs to be done to complete a project is a highly skilled trade – that's why good project managers are in such demand – but it's a set of work that often rests on the shoulders of people not trained to do it.
+
+This guide will provide some clarity into how to write good tickets.
+
+## When is the ticket done?
+
+I know it's weird to start an article about writing tickets by asking how you know when the ticket has been completed, but bear with me for a moment.
+
+A ticket must have a test to be complete. That doesn't need to mean a software test, or a unit test, or a user test. It doesn't have to be those, but it could be any of them.
+
+How do you know that it's not built already? Write that down. What are you trying to build? Write that down too.
+
+Now, whoever picks up the ticket will be able to read the **Definition of Done**, know what they need to make, and know exactly when it's ready.
+
+Example ticket: _As a user, I want links at the bottom of each page, so that I can navigate to the next section without having to scroll back to the top._
+
+The definition of done here could be that a user can go to the bottom of each page (which pages? clarify that) and follow a link to the next section (what does next section mean? clarify that)
+
+It could be that you have an automated test (that passes) to simulate that navigation
+
+The important part is that you write down the criteria so that expectations are clear. If your ticket does not have a clear definition of done, then you have no way of knowing that any work was actually done.
+
+## When is the ticket ready?
+
+There must be enough information on the ticket that it can be completed by whoever picks it up. They must understand the entire scope of the problem and how to know when it's complete.
+
+A good definition of done covers most of that.
+
+The ticket should also include the reason _why_ this work needs to be done. Developers have to make many small decisions and assumptions throughout the development process, and the more knowledge they have about why the feature needs to be built, the closer those decisions will be to what the end user would have wanted.
+
+As long as a ticket is in the backlog, it is open to changes. Sometimes the problem that the ticket intends to solve has been solved through other means and you can delete the ticket. Sometimes the problem becomes better understood, and the ticket can be revised to reflect that.
+
+Tickets should be as small as the smallest amount of work a single person can do to ship the feature. If there are two components to the work that can be done in parallel, make them separate tickets. If they must be done sequentially, make it one ticket. "Follow-up" tickets are expressly discouraged, as those are symptoms of half-finishing work. If other work needs to be done first, _this story is not ready_.
+
+If your ticket is actually ready to pick up, it'll be completed in half the time. And if the definition of done is clear, development will double in speed again. This is what's needed to get twice the work done in half the time. This is the reason Scrum exists.
+
+## What is the ticket named?
+
+The more of a top-down approach you follow, the more your tickets will read like tasks.
+
+Tasks are verb-first work orders requiring a specific thing to be done in a specific way.
+
+- Enlarge font size on text inputs
+- Add navigation links to page footer
+- Disable link underlines except when hovered
+- Redirect user to contact page on errors
+
+Tasks can be a suitable format for smaller tickets and for when none of the developers who will be taking the tickets are domain experts. Writing tickets in this way requires the implementation to be planned by the person writing the ticket. If there are flaws
+
+Stories are agent-first requirements that describe a solution to a problem.
+
+- As a customer, I need to be able to log in, so only I can make changes to my account
+
+The advantage of a story over a task is that a story empowers the developer to discover and implement the best solution for the problem, rather than simply implementing a predetermined solution.
+
+There will always be some amount of error in each batch of tickets, and the story model allows developers to recover from that error with as little downtime as possible.
+
+If a developer has questions about a ticket with a specific implementation, they must speak to the person who wrote the ticket to resolve the issues. If that person is unavailable, the developer will either have to wait (slowing down the process) or come to their own conclusions and move forward with the ticket. Depending on how wrong they are, that could be catastrophic.
+
+Instead, if the ticket is written as a story, any questions can be resolved by anyone

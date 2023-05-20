@@ -1,0 +1,7 @@
+.prose .bg-code {
+  background-color: #35435f;
+}
+
+.prose p:has([role="complementary"]) + * {
+  clear: both;
+}

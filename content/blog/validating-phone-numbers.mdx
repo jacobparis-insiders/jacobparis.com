@@ -1,0 +1,30 @@
+---
+title: Guidelines for validating phone numbers
+tags: Basics
+published: true
+cheatsheet: true
+---
+
+Phone numbers have a [maximum length of 15](https://en.wikipedia.org/wiki/Telephone_numbering_plan#cite_ref-2:~:text=maximum%20length%20of%2015%20digits%20to%20telephone%20numbers) set by the International Telecommunication Union
+
+The shortest phone number appears to be 8, including the country code, for [numbers coming from the Solomon Islands](https://en.wikipedia.org/wiki/Telephone_numbers_in_Solomon_Islands).
+
+Since users may leave out the country code, that makes the largest reasonable minimum as 5 characters.
+
+Phone number extensions are largely unregulated, with the US using a [maximum of 4 digits](https://en.wikipedia.org/wiki/Dial_plan#Private_telephone_systems:~:text=Internal%20extension%20numbers%20of%20two%2C%20three%2C%20or%20four%20digits). It's common for the user to label the extension as `EXT: 4725`, which introduces the requirement for letters in the input as well as additional length
+
+There are a variety of formatting symbols used internationally, most prominently `+`, `()`, `.`, and `-` as well as whitespace.
+
+Google has a service called [libphonenumber](https://github.com/google/libphonenumber) which can validate specific numbers to ensure they comply to their specific regional code.
+
+### Recommended rules
+
+- Minimum length of 5 characters (Optional)
+- Maximum length of at least 40 (Optional)
+- No character set restriction
+
+### Valid phone numbers
+
+- +1 (780) 445 2524 EXT: 2245
+- +44 113 496 0000
+- 12341

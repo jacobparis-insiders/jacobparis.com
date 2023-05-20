@@ -1,0 +1,134 @@
+---
+title: 3 runtime validation libraries for Typescript that all look the same to me
+description: Joi, Yup, and Zod all have a similar API, but only one supports static type inference properly.
+tags: Typescript, Reviews
+published: true
+blog: true
+timestamp: "2023-04-21"
+---
+
+Typescript gives us the ability to check types statically, in both front-end and back-end applications. In full-stack applications, Typescript is can give us type-safety from the server-side to the client-side, but **not from the client to the server**.
+
+As a developer, you can be in charge of a server, and you have the power to guarantee what the server is going to output. You can define types for your endpoints and achieve **downstream type-safety**.
+
+But you aren't **really** in charge of the client applications. Users will find new ways to use to your app. They'll try it on all sorts of browsers and devices. They'll disable required fields and try to submit invalid data. Malicious users may even tweak network requests.
+
+For this reason, you can't achieve **upstream type-safety** with Typescript alone. You need to validate requests on the server-side with some runtime type-checking.
+
+## Vanilla JS
+
+Validation is mostly about throwing errors if the input is invalid, and doing nothing otherwise.
+
+If you're packaging your validation logic into a function, it's best to handle success cases by returning the input. This way, you can use the function as a drop-in replacement in any expression.
+
+```ts
+function validate(input: any) {
+  if (typeof input !== "string") {
+    throw new Error("Input must be a string")
+  }
+
+  if (input.length < 3) {
+    throw new Error(
+      "Input must be at least 3 characters long",
+    )
+  }
+
+  if (!input.length.startsWith("$")) {
+    throw new Error("Input must start with a $")
+  }
+
+  return input
+}
+```
+
+This is just for a simple string, but already we're at dozens of lines of code. If you want to validate a complex object, you'll need to write a lot more code, or use a library to help you.
+
+## Validation libraries all look the same to me
+
+All of these libraries have a similar API. They all let you define a schema for your input, and then validate it with a single function call.
+
+### Joi
+
+```ts
+import Joi from "joi"
+
+const schema = Joi.object({
+  name: Joi.string().min(3),
+  price: Joi.string().regex(/^\$/),
+})
+
+schema.validate({
+  name: "foo",
+  price: "$10",
+})
+```
+
+### Yup
+
+[Yup]() is another incredibly popular library, and it has a very similar API to Zod.
+
+```ts
+import { object, string } from "yup"
+
+const schema = object({
+  name: string().min(3),
+  price: string().matches(/^\$/),
+}).defined()
+
+schema.validateSync({
+  name: "foo",
+  price: "$10",
+})
+```
+
+### Zod
+
+```ts
+import { z } from "zod"
+
+const schema = z.object({
+  name: z.string().min(3),
+  price: z.string().regex(/^\$/),
+})
+
+schema.parse({
+  name: "foo",
+  price: "$10",
+})
+```
+
+## But only one supports static type inference properly
+
+Joi doesn't support static type inference<SideNote> This is what allows you to hover over a variable and see its type, or get autocomplete in your IDE </SideNote> at all. You can use Joi to validate your code, but you'll need to use type assertions to use the result in your application.
+
+Yup technically supports static type inference but making the runtime type match the static type is tricky.
+
+By default, the object schema will successfully validate objects that are missing keys, while the resulting type will claim the key is defined. To make Yup's validate match what Typescript will infer from it, you need to use the `.defined()` modifier.
+
+Zod was built from the ground up to have static type inference matching Typescript 1:1. You can use Zod to validate your code and immediately use the result in your application without any type assertions.
+
+## None of them handle FormData or URLSearchParams out of the box
+
+Focusing on Zod in particular, if you want to validate form submissions or query parameters, you'll need a custom parser.
+
+I like to use [zod-form-data](https://github.com/airjp73/remix-validated-form/tree/main/packages/zod-form-data) for this. It's a small library that lets you parse `FormData` and `URLSearchParams` objects into Zod schemas.
+
+```ts
+import { zfd } from "zod-form-data"
+
+export async function loader({
+  request,
+  params,
+}: LoaderArgs) {
+  const query = zfd
+    .formData({
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).default(10),
+    })
+    .parse(new URL(request.url).searchParams)
+}
+```
+
+## Conclusion
+
+Zod is the best option for runtime validation in Typescript. It has a great API, it supports static type inference, and it has a small ecosystem of plugins to make it even more powerful

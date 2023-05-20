@@ -1,0 +1,91 @@
+---
+title: Set route headers and loader headers with Remix
+description: Remix uses route headers for document requests and loader headers for data requests. Learn how to set both.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-04-29"
+---
+
+If you're like most devs, you haven't spent very much time thinking about the response headers your server is sending to the client.
+
+With Remix, you need to know the difference between document and data requests, and learn how to set both route and loader headers.
+
+## Document requests use route headers
+
+On a full page load, Remix will run all of your loaders in parallel and then use the data to server-side render your page body. Then, it takes both the rendered body and the exported document headers from the leaf route<SideNote> Remix supports nested routes, and some routes can act as parents of other routes. The leaf route is the bottom-most route with no children of its own.</SideNote> and sends them to the client.
+
+Route headers are set using the `headers` export from your route file. To set a header named `Server`, you can do either of these.
+
+```ts
+export const headers: HeadersFunction = () => {
+  return {
+    Server: "Remix",
+  }
+}
+
+export const headers: HeadersFunction = () => {
+  const headers = new Headers()
+  headers.set("Server", "Remix")
+  return headers
+}
+```
+
+## Data requests use loader headers
+
+Loader headers come into play whenever Remix needs to fetch data on your behalf.
+
+- On a client-side navigation
+- a useFetcher call
+- a prefetch
+
+Data requests are for a single loader at a time, so Remix will often make multiple requests in parallel to fetch all the data it needs.
+
+Not every loader will run on every request. If you do a client-side navigation from one deeply nested route to a sibling route, any common parent loaders will not re-run.
+
+Headers for data requests are set directly in the loader response object.
+
+```ts
+export async function loader() {
+  const items = await fetchData()
+
+  return json(items, {
+    headers: {
+      Server: "Remix",
+    },
+  })
+}
+```
+
+## Merging headers
+
+If you want certain headers to be set consistently on both document and data requests, it's up to you to merge them together.
+
+You have access to the loaderHeaders object in your route headers function, so you can do something like this to set them automatically
+
+```ts
+export const headers: HeadersFunction = ({
+  loaderHeaders,
+}) => {
+  const headers = new Headers()
+  const settableHeaders = [
+    "Cache-Control",
+    "Vary",
+    "Server-Timing",
+  ]
+  for (const header of settableHeaders) {
+    if (loaderHeaders.has(header)) {
+      headers.set(header, loaderHeaders.get(header)!)
+    }
+  }
+
+  return headers
+}
+```
+
+To make it reusable, save it in a file named `defaults.server.ts` and import it into your route files.
+
+```ts
+// in any route file
+export { headers } from "~/defaults.server"
+```

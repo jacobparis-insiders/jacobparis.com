@@ -1,0 +1,23 @@
+---
+title: Animate a Stripe Checkout with Framer and React
+description: An animated stripe checkout using XState and React. This uses the Stripe API and the Stripe Elements tools to create an actual payment.
+tags: UI/UX
+guide: true
+published: true
+---
+
+An animated stripe checkout using XState and React. This uses the Stripe API and the Stripe Elements tools to create an actual payment. You can swap out the test keys for your own keys and and accept payments with this code.
+
+The backend is provided via a Netlify Function
+
+You can view the [source on GitHub](https://github.com/JacobParis/stripe-machine-example)
+
+## Demo
+
+![An animated credit card, where the details are inputs. As they are entered, the card flips to allow editing the CVV, then the card flies into an envelope and off-screen as it's submitted.](https://user-images.githubusercontent.com/5633704/82744168-cbc04800-9d42-11ea-8f18-70592639b014.gif)
+
+## State Machine
+
+Using XState to handle application logic is a very effective pattern that leaves React in charge of nothing more than rendering UI. All of the logic to instantiate the stripe API and orchestrate its requests is handled by the state machine.
+
+![A state machine with submachines for the above animation and for the underlying Stripe checkout logic](https://user-images.githubusercontent.com/5633704/82744117-3a50d600-9d42-11ea-9d1f-70e32dfd9c0d.png)

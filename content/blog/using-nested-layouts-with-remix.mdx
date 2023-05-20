@@ -1,0 +1,45 @@
+---
+title: Structure your website with nested layouts with Remix
+description: This pattern lets you share the layout across many routes, for example both a `/posts` and `/users` route with the same sidebar
+tags: Remix
+published: true
+guide: true
+---
+
+Using ReactRouter, we can create a layout route with the `element` attribute and then also passing child routes
+
+```jsx
+<Route element={<SidebarLayout />}>
+  <Route path="/something" element={<Something />} />
+</Route>
+```
+
+Using Remix's file based routing, the equivalent file system would look like this
+
+```sh
+routes/__sidebar/something.tsx
+routes/__sidebar.tsx
+```
+
+Where the `__sidebar.tsx` renders this
+
+```jsx
+<div>
+  <Sidebar />
+  <Outlet />
+</div>
+```
+
+A route file beginning in \_\_ will not add segments to the URL, but they can still have loaders if you need data but don't want to mess with the URL. For example, a sidebar layout can have a loader that gets the information needed to render the sidebar, which will only be included on pages where you want to display the sidebar.
+
+Other pages that don't show the sidebar, won't have the layout and won't call its loader.
+
+and inside `routes/\_\_sidebar.tsx` or SidebarLayout render the sidebar and an Outlet, inside the Outlet the nested routes will be rendered
+
+This pattern lets you share the layout across many routes, for example both a `/posts` and `/users` route with the same sidebar.
+
+```sh
+routes/__sidebar
+routes/__sidebar/posts
+routes/__sidebar/users
+```

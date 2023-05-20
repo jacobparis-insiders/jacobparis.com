@@ -1,0 +1,120 @@
+---
+title: Thumbnails for file input images in React
+description:
+tags: Advanced
+timestamp: "2023-05-19"
+published: true
+localUrl: http://localhost:3000/content/file-image-thumbnails
+---
+
+As you select an image from a file input, most browsers only show you the name of the file.
+
+<input type="file" />
+
+For a better user experience, show the user a thumbnail of the image they've selected. This is especially useful when you're uploading multiple images.
+
+```tsx
+function Example() {
+  const [files, setFiles] = useState<File[]>([])
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(event) => {
+          const files = Array.from(event.target.files || [])
+          setFiles(files)
+        }}
+        multiple
+      />
+      {files.map((file) => (
+        <img
+          key={file.name}
+          // ! There's a bad memory leak here
+          src={URL.createObjectURL(file)}
+          alt={file.name}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+## Avoiding memory leaks with useObjectUrls
+
+The `URL.createObjectURL` function will take the file and create a blob URL for it. This is a URL that points to the file in memory, and as long as that URL exists, the browser will keep the file in memory.
+
+With the code above, every time you select a file, that file will load into memory and use up your tab's RAM. Every time the component re-renders, it will load another instance into memory, multiplying the RAM usage. This can quickly get out of control and cause your tab to crash.
+
+To avoid this, you need to clean up the blob URLs when the component unmounts.
+
+We'll use a custom hook to manage the blob URLs. This hook will create a map of files to blob URLs, and clean up the URLs when the component unmounts.<SideNote> My original implementation broke in a few edge cases. This solution was proposed by [Dan Abramov on Twitter](https://twitter.com/dan_abramov/status/1657441489478139906) </SideNote>
+
+```tsx
+import { useEffect, useRef } from "react"
+
+export function useObjectUrls() {
+  const mapRef = useRef<Map<File, string> | null>(null)
+
+  useEffect(() => {
+    const map = new Map()
+    mapRef.current = map
+
+    return () => {
+      for (let [file, url] of map) {
+        URL.revokeObjectURL(url)
+      }
+      mapRef.current = null
+    }
+  }, [])
+
+  return function getObjectUrl(file: File) {
+    const map = mapRef.current
+    if (!map) {
+      throw Error("Cannot getObjectUrl while unmounted")
+    }
+    if (!map.has(file)) {
+      const url = URL.createObjectURL(file)
+      map.set(file, url)
+    }
+
+    const url = map.get(file)
+    if (!url) {
+      throw Error("Object url not found")
+    }
+
+    return url
+  }
+}
+```
+
+Now we can use this hook to get the blob URL for each file, and the hook will clean up the URLs when the component unmounts.
+
+```tsx
+export default function Example() {
+  const [files, setFiles] = useState<File[]>([])
+  const getObjectUrl = useObjectUrls()
+
+  return (
+    <div>
+      <input
+        type="file"
+        onChange={(event) => {
+          const files = Array.from(event.target.files || [])
+          setFiles(files)
+        }}
+        multiple
+      />
+      {files.map((file) => (
+        <img
+          key={file.name}
+          src={getObjectUrl(file)}
+          alt={file.name}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+No more memory leaks!

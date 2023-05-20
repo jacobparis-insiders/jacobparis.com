@@ -1,0 +1,27 @@
+---
+title: Understanding React's useMemo
+description: A guide explaining the use-cases and differences between a few of React's Hooks
+tags: Basics
+published: true
+blog: true
+---
+
+Unlike useEffect, `React.useMemo` does not trigger every time you change one of its dependencies.
+
+A memoized function will first check to see if the dependencies have changed since the last render. If so, it executes the function and returns the result. If false, it simply returns the cached result from the last execution.
+
+This is good for expensive operations like transforming API data or doing major calculations that you don't want to be re-doing unnecessarily
+
+```js numbered
+const posts = Redux.useSelector((state) => state.posts)
+
+const tags = React.useMemo(() => {
+  return getTagsFromPosts(posts)
+}, [posts])
+```
+
+# Further Reading
+
+https://kentcdodds.com/blog/usememo-and-usecallback
+
+https://stackoverflow.com/questions/54963248/whats-the-difference-between-usecallback-and-usememo-in-practice/54965033#54965033

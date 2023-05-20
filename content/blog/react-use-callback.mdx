@@ -1,0 +1,39 @@
+---
+title: Understanding React's useCallback
+description: A guide explaining the use-cases and differences between a few of React's Hooks
+tags: Basics
+published: true
+blog: true
+---
+
+This is a special case for memoizing functions. Since javascript compares equality by reference, the function you create the first time a component renders will be different than the one created in subsequent renders.
+
+If you try passing a function as props or state, this means that it will be treated as a prop change every single time. By wrapping it in useCallback, React will know that it's the same function. You can still add a dependency array to trigger a recalculation if the dependencies change.
+
+A strong use-case here to avoid child component re-renders
+
+Every time this component renders, it will also trigger a whole re-render of the Button component because the `removeFromCart` function is unique every time.
+
+```js numbered
+const dispatch = useDispatch()
+
+const removeFromCart = () => dispatch(removeItem(product.id))
+
+return <Button onClick={removeFromCart}>Delete</Button>
+```
+
+Replacing our callback with _this_ will avoid that problem entirely. Now the Button will only re-render when our product ID changes, so that it will function to remove the new product from our cart.
+
+```js numbered
+const removeFromCart = React.useCallback(() => {
+  dispatch(removeItem(product.id))
+}, [product.id])
+```
+
+# Further Reading
+
+https://kentcdodds.com/blog/usememo-and-usecallback
+
+https://stackoverflow.com/questions/54371244/what-is-the-intention-of-using-reacts-usecallback-hook-in-place-of-useeffect
+
+https://stackoverflow.com/questions/54963248/whats-the-difference-between-usecallback-and-usememo-in-practice/54965033#54965033

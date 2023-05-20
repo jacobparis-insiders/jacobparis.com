@@ -1,0 +1,37 @@
+---
+title: Configure Prettier for Opt-In Usage
+description:
+tags: Basics
+published: true
+guide: true
+---
+
+With a large existing codebase, adding a tool like Prettier can be daunting. Any branch existing before the Prettier refactor will be filled with merge conflicts, and this is often enough to make a team decide against using it entirely.
+
+That would be a mistake.
+
+Formatting code manually is a way of tricking yourself into thinking you're spending time improving the codebase while providing zero business value.
+
+Fortunately, there is a solution.
+
+By adding a `.prettierignore` file, you can stop Prettier from formatting certain files and directories.
+
+```yml
+# Ignore everything:
+/**/*.*
+```
+
+It's important to target only files `*.*` and not directories, as [you cannot "un-ignore" the child of an ignored directory](https://git-scm.com/docs/gitignore#_pattern_format).
+
+> An optional prefix "!" which negates the pattern; any matching file excluded by a previous pattern will become included again. It is not possible to re-include a file if a parent directory of that file is excluded. Git doesn’t list excluded directories for performance reasons, so any patterns on contained files have no effect, no matter where they are defined.
+
+To selectively enable Prettier for every file underneath a `__tests__` directory, you can add another rule to target those.
+
+```yml
+# Ignore everything:
+/**/*.*
+
+
+# Except tests:
+!/**/__tests__/**/*.*
+```

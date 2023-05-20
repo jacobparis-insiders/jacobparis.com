@@ -1,0 +1,133 @@
+---
+title: The Developer's Guide to Hoisting
+description: I often think that if we knew why interviewers continue to ask about hoisting, we'd know a lot more about how to conduct better interviews
+tags: Basics
+published: true
+blog: true
+---
+
+Languages like Java and the C Family are compiled – that is, the code we write is not the code that gets executed. Compilers read, parse, disassemble, analyze, and eventually, reassemble the code into a series of instructions that the processor can understand.
+
+Javascript is not<a id="reference-1" href="#footnote-1">[1]</a> one of these languages.
+
+If you ask a javascript runtime engine (like V8, which powers Chrome, Slack, VS Code, the occasional Mustang, and Figma) to run a bit of code, it will execute it line by line top to bottom in much the same way a human might read it.
+
+If I were to start talking about the milk protein casein, you would be hard pressed to follow the conversation, and for good reason too. First of all, this is a technical article about Javascript. Second of all, I don't introduce that topic for another several paragraphs.
+
+In the same way that you, a human, are reading this article from top to bottom with no expectation that you've read the words you haven't read yet, an **interpreted** language like Javascript reads your code from top to bottom with no expectation that it's read the code it hasn't read yet.
+
+Therefore, the code
+
+```js numbered
+console.log(cheese) // ! Error
+let cheese = "mozzarella"
+```
+
+would predictably be met with the error `1: Uncaught ReferenceError: cheese is not defined`
+
+In our universe, cheese is defined as a dairy product formed by the coagulation of milk proteins, and has been defined as such since 8000 BCE. But in the universe created by Javascript to run our code, a parser on line 1 is equally as confused at the unknown variable as a primitive 9000 BCE human would be faced with a plate of gouda<a id="reference-2" href="#footnote-2">[2]</a>.
+
+> Aside: For those readers studying in preparation for a technical interview, it is at this point in the interview where you present a surprise dish of camembert, or, for extra credit, brie.
+
+To eliminate some of the confusion, Javascript has some optimizations in place.
+
+Before Javascript starts trudging through each line of code, it does a quick scan for anything interesting that might be useful to know in advance. One thing Javascript finds particularly interesting is when a variable is declared with the `var` keyword.
+
+For example, this code
+
+```js numbered
+console.log(cheese) // undefined
+var cheese = "mozzarella"
+```
+
+unintuitively does **not** result in an error at all.
+
+Unlike let and const, the `var` keyword is hoisted. Hoisting means that Javascript will make note of it on its initial scan before running the code. By the time your code is running, it actually looks like this:
+
+```js numbered
+var cheese
+console.log(cheese) // undefined
+cheese = "mozzarella"
+```
+
+You may be thinking such questions as "But why?" and "So it doesn't hoist the assignment?" and "How does that help anything?"
+
+These are all excellent questions and I hope one day someone smarter than I can come up with a reasonable answer.
+
+Until then, variable hoisting is more or less useless, and you can rest easy knowing that all the effort involved in dealing with this particular bit of trivia consists entirely of learning it exists.
+
+Luckily for Javascript, and for those who enjoy actually _doing_ something with the concepts they learn, `var` declarations aren't the only thing that gets hoisted.
+
+Of the five ways to write functions in javascript, the named function declaration is the only one that is hoistable.
+
+```js numbered
+const sausage = slice("cacciatore")
+
+function slice(sausage) {
+  return sausage.split("")
+}
+```
+
+Once javascript is done looking for `var` keywords to hoist, it embarks on the much more useful task of hoisting all the named function declarations.
+
+Any function declared in the form `function name() { }` will be accessible throughout its entire scope, and that has opened the doors to new ways of writing code.
+
+Some developers enjoy listing their module exports at the highly visible top of the file, and letting the implementation details settle down to the bottom where they can be easily ignored.
+
+<a id="reference-3" href="#footnote-3">
+  [3]
+</a>
+
+```js numbered
+export default {
+  create,
+  read,
+  update,
+  delete // [3]
+}
+
+function create() { … }
+function read() { … }
+function update() { … }
+function delete() { … }
+```
+
+If ever there was a need for two functions to call one another, hoisting makes that possible too
+
+```js numbered
+// Flips a switch at $0.25 a flip until it runs out of money
+function turnOn(quarters) {
+  if (quarters > 0) {
+    turnOff(quarters - 1)
+  }
+}
+
+function turnOff(quarters) {
+  if (quarters > 0) {
+    turnOn(quarters - 1)
+  }
+}
+```
+
+<p id="footnote-1">
+  <a href="#reference-1"> [1] </a>
+  While Javascript is traditionally an interpreted language and
+  not a compiled one, that fact has been getting less and less
+  true as time goes on. Currently, the plan is to compile it
+  just-in-time during the first interpretation. The second time
+  a block of code is read, Javascript is instead reading the
+  compiled instructions for performance reasons.
+</p>
+
+<p id="footnote-2">
+  <a href="#reference-2"> [2] </a>
+  Assuming you used era-appropriate dishware and cheese can be
+  isolated as the only new concept being introduced, to reduce
+  statistical noise
+</p>
+
+<p id="footnote-3">
+  <a href="#reference-3"> [3] </a>
+  Javascript treats `delete` as a reserved keyword, but CRUR
+  doesn't roll of the tongue quite so nicely
+</p>

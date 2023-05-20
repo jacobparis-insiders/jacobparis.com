@@ -1,0 +1,60 @@
+---
+title: Break text responsively
+description: Use `<br>` tags and media queries to break text into smaller paragraphs on smaller screens
+tags: Basics
+published: true
+guide: true
+---
+
+Every once in a while I find myself writing paragraphs of text that look fine on desktop, but on mobile are an indecipherable wall of text that would make Tolkien proud.
+
+To get around this, I've started using `<br />` elements between each sentence in my paragraphs and then using media queries to hide them on larger screen sizes.
+
+https://codepen.io/anon/pen/dEyPep
+
+```html numbered
+<p>
+  Spicy jalapeno bacon ipsum dolor amet ball tip
+  meatball burgdoggen cupim buffalo elit beef
+  shank.
+  <br class="minor" />
+  Ball tip biltong shoulder, officia tenderloin
+  duis ut voluptate proident cupidatat bacon
+  reprehenderit capicola.
+  <br class="major" />
+  Sunt in in, non filet mignon flank chuck cow
+  eiusmod laboris officia alcatra aute.
+  <br class="minor" />
+  Officia commodo ut in, meatloaf veniam velit eu
+  consequat.
+  <br class="major" />
+  Magna corned beef tail short loin enim, pastrami
+  picanha shank meatloaf in burgdoggen pancetta
+  frankfurter t-bone.
+</p>
+```
+
+```scss numbered
+br {
+  line-height: 2rem;
+  @media screen and (min-width: 500px) {
+    &.minor {
+      display: none;
+    }
+  }
+  @media screen and (min-width: 800px) {
+    &.major {
+      line-height: 1rem;
+    }
+  }
+  @media screen and (min-width: 1000px) {
+    &.major {
+      display: none;
+    }
+  }
+}
+```
+
+You can tweak the breakpoints to match your specific layout.
+
+Demo here: https://codepen.io/anon/pen/dEyPep

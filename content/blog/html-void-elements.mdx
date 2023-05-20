@@ -1,0 +1,37 @@
+---
+title: Understanding HTML's mysterious Void elements
+description: Void elements are HTML elements that cannot have any content, and cannot have separate closing tags. br, hr, img, and input are some of the most common void elements, but there are many more.
+tags: Basics
+published: true
+blog: true
+---
+
+HTML has several **void** elements. These cannot have any content, and cannot have separate closing tags.
+
+- `<br>`
+- `<hr>`
+- `<img>`
+- `<input>`
+- `<link>`
+- `<meta>`
+- `<area>`
+- `<base>`
+- `<col>`
+- `<embed>`
+- `<param>`
+- `<source>`
+- `<track>`
+
+Closing a void element like this is invalid html.
+
+```html
+<img alt></img>
+```
+
+Void elements can optionally be self-closing, so these are both correct and identical.
+
+{/* prettier-ignore */}
+```html
+<img alt>
+<img alt />
+```

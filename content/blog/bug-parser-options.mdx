@@ -1,0 +1,84 @@
+---
+title: Solve parserOptions.project bug with Typescript and ESLint
+description: If you get the error "parserOptions.project" has been set for @typescript-eslint/parser, you need to add files to the "include" array in your tsconfig.json file.
+tags: Typescript
+published: true
+guide: true
+---
+
+**TL:DR: Add the file to the "include" array in your tsconfig.json**
+
+Typescript and ESLint are both static analysis tools, but they're better used together than apart. ESLint can be configured to use Typescript as a parser, and Typescript can be configured to use ESLint as a linter.
+
+But getting the eslint configuration right can be tricky, and it's doubly complicated when you also need to get the tsconfig right. I've been working on a project that uses both, and I ran into a bug that took me a while to figure out.
+
+> Parsing error: "parserOptions.project" has been set for @typescript-eslint/parser.
+
+> The file does not match your project config: babel.config.js.
+
+> The file must be included in at least one of the projects provided
+
+To debug this, I started with the `eslintrc.js` file where parserOptions was set
+
+```js
+module.exports = {
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: "module",
+    project: './tsconfig.json', // The error starts here
+  },
+```
+
+That field is supposed to point at the `tsconfig.json`, so it looks correct, but maybe the bug is in that file. I'm only using the typescript engine for static analysis, like an advanced linter, so my `tsconfig` was a bit immature.
+
+```json
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "commonjs",
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [".eslintrc.js", "./app/**/*"]
+}
+```
+
+Since the error message mentions "The file does not match your project config: babel.config.js." and I don't see that file in the `include` array, I added it.
+
+```diff
+{
+  "compilerOptions": {
+    "target": "es2020",,
+    "module": "commonjs",
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "noImplicitAny": false,
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./*"]
+    },
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+    ".eslintrc.js",
+    "./app/**/*",
++   "./babel.config.js",
++   "./jest.config.js"
+  ]
+}
+```
+
+I was also getting the error for `jest.config.js`, so I added that one as well. After restarting ESLint<SideNote> Open the command pallette in VS Code with CMD Shift P and run ESLint: Restart ESLint Server. </SideNote>, the error has gone away, so this fix appears to be successful.

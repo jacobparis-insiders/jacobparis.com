@@ -1,0 +1,54 @@
+---
+title: Add footnotes to your content
+description: Use HTML anchor tags to add accessible semantic footnotes to your article or webpage
+tags: Basics
+published: true
+---
+
+Footnotes, fine print, disclaimers, citations: these are secondary locations for extra information that doesn't necessarily need to be shown with the same importance of the primary content.
+
+## Key points
+
+- A footnote should be wrapped in [&lt;small&gt;](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/small) tags to mark them as lower importance information. This does not correlate at all to the font size, despite the misleading tag name. Use the &lt;small&gt; tag regardless of whether or not you intend to display the text at a smaller size.
+
+- A footnote should have a unique id attribute
+
+- The reference should contain an &lt;a&gt; tag anchored to the footnote's id.
+
+## Example
+
+<p id="reference">
+  You can afford a $1,000,000 house
+  <a
+    href="#footnote"
+    title="By house, we mean studio apartment, and by can, we mean can't."
+  >
+    *
+  </a>
+</p>
+
+```html numbered
+<p id="reference">
+  You can afford a $1,000,000 house<a
+    href="#footnote"
+    title="By house, we mean studio apartment, and by can, we mean can't."
+    >*</a
+  >
+</p>
+
+<p id="footnote">
+  <a href="#reference"> * </a>
+  By house, we mean studio apartment, and by can,
+  we mean can't.
+</p>
+```
+
+Clicking the `*` on the reference will scroll you to the footnote. It is optional, but recommended to also backlink the footnote to its reference. This is not expected behaviour, but often delightful anyway.
+
+HTML whitespace rules apply, so if you don't want a space before the `*`, then don't use line breaks or leave spaces around the &lt;a&gt; tag. Both patterns are shown here.
+
+<p id="footnote">
+  <a href="#reference"> * </a>
+  By house, we mean studio apartment, and by can, we
+  mean can't.
+</p>

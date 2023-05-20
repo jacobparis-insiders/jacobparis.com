@@ -1,0 +1,154 @@
+---
+title: Dynamic form inputs with Remix
+description: Learn to use just enough React to build dynamic forms without Reinventing the Form by controlling every input. Use Remix to pre-load the form with saved data and to handle the form submission.
+tags: Remix
+timestamp: "2023-03-26"
+published: true
+guide: true
+---
+
+When you submit a form with multiple inputs, the browser will check every input for its name and value and send them all to the server.
+
+This is a basic browser behavior that has existed since the dawn of the web in the early 90s.
+
+Despite that, developers often reinvent the form with javascript
+
+They use React's useState to track the value and state of every input in the form, suppress the browser's default submission, and then manually send the data to the server themselves.
+
+By refactoring your React code to output your form in a way that the browser can understand, you can write dynamic forms without switching everything to controlled inputs.
+
+The only part of the form that needs to be dynamic is the **number** of inputs, so that's the part we'll use React to control.
+
+With useState, track the number of inputs in the form and use that to generate uncontrolled inputs.
+
+```tsx
+const [inputCount, setInputCount] = useState(1)
+
+return (
+  <div>
+    {Array.from({ length: inputCount }, (_, i) => (
+      <input key={i} type="text" name="input[]" />
+    ))}
+
+    <button
+      type="button"
+      onClick={() => setInputCount((count) => count + 1)}
+    >
+      +
+    </button>
+  </div>
+)
+```
+
+Twitter allows users to mute words they don't want to see in their timeline using a similar dynamic input pattern. Let's build a similar feature in Remix.
+
+First, we'll need a way to store the muted words on the server. We'll use a global variable to store the words, but in an actual application you would probably use a database.
+
+```tsx
+declare global {
+  var mutedWords: string[]
+}
+
+if (!global.mutedWords) {
+  global.mutedWords = []
+}
+```
+
+Next, we'll need to update the global variable when the form is submitted.
+
+```tsx
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData()
+  const mutedWords = formData.getAll("mutedWords[]")
+  global.mutedWords = mutedWords.filter(Boolean) as string[]
+
+  return null
+}
+```
+
+Finally, we'll need to load the muted words from the server and pass them to the client.
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  return json({
+    mutedWords: global.mutedWords,
+  })
+}
+```
+
+Having access to the existing muted words allows two things:
+
+- We can set the inputCount to the number of muted words, so that the form will always have the right number of inputs
+- We can set the defaultValue of each input to the existing muted word
+
+Here is a full code example with a [live demo](/examples/remix-dynamic-form-inputs)
+
+```tsx
+import type {
+  ActionArgs,
+  LoaderArgs,
+} from "@remix-run/node"
+import { json } from "@remix-run/node"
+import { useLoaderData } from "@remix-run/react"
+import { useState } from "react"
+
+declare global {
+  var mutedWords: string[]
+}
+
+if (!global.mutedWords) {
+  global.mutedWords = []
+}
+
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData()
+  const mutedWords = formData.getAll("mutedWords[]")
+  global.mutedWords = mutedWords.filter(Boolean) as string[]
+
+  return null
+}
+
+export async function loader({ request }: LoaderArgs) {
+  return json({
+    mutedWords: global.mutedWords,
+  })
+}
+
+export default function Example() {
+  const { mutedWords } = useLoaderData<typeof loader>()
+
+  const [inputCount, setInputCount] = useState(
+    mutedWords.length + 1,
+  )
+  return (
+    <div>
+      <h1>Example: Dynamic Form Inputs</h1>
+
+      <form method="post">
+        <fieldset>
+          <legend>Muted words</legend>
+          {Array.from({ length: inputCount }, (_, i) => (
+            <input
+              key={i}
+              type="text"
+              name="mutedWords[]"
+              defaultValue={mutedWords[i]}
+            />
+          ))}
+          <button
+            type="button"
+            aria-label="Add another word"
+            onClick={() =>
+              setInputCount((count) => count + 1)
+            }
+          >
+            +
+          </button>
+        </fieldset>
+
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  )
+}
+```

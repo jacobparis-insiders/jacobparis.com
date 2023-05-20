@@ -1,0 +1,59 @@
+---
+title: Wait for a BullMQ job to complete with Remix Deferred Loaders
+description: Learn how to use Remix's Defer API to wait for a BullMQ queued job to complete.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-03-22"
+---
+
+Remix's Defer API is a feature that allows you to return an unresolved Promise from a loader. The page will server-side render without waiting for the promise to resolve, and then when it finally does, the client will re-render with the new data.
+
+This works especially well with queued jobs, where a user may try to look at result data before the job has finished processing. In this case, we can return a Promise that will resolve when the job is finished, and the client will re-render with the new data.
+
+BullMQ is a modern, fast, and robust queue system for Node.js. It is a successor to the popular Bull library, and is built on top of Redis. If you've [integrated BullMQ into your app](/content/bullmq-integration-guide), you can use the Defer API to return a Promise that will resolve when the job is finished.
+
+```tsx
+import { defer, redirect } from "@remix-run/node"
+import { processItemQueue } from "~/queue.server"
+
+export async function loader({ params }: LoaderArgs) {
+  const hash = params.hash
+  if (!hash) {
+    return redirect("/")
+  }
+
+  const job = await processItemQueue.getJob(hash)
+  if (!job) {
+    return redirect("/")
+  }
+
+  const TIMEOUT_MILLISECONDS = 30 * 1000
+
+  return defer({
+    job: job.waitUntilFinished(
+      processItemQueue.events,
+      TIMEOUT_MILLISECONDS,
+    ),
+  })
+}
+
+export default function Index() {
+  const data = useLoaderData()
+
+  return (
+    <div>
+      <Suspense fallback={<p> loading… </p>}>
+        <Await
+          resolve={data.job}
+          errorElement={<p>Error loading job</p>}
+        >
+          {(results) => <pre>{results}</pre>}
+        </Await>
+      </Suspense>
+    </div>
+  )
+}
+```
+
+As a next step, you can use [event streams](/content/remix-stream-bullmq-queue) to update the page as the job progresses.

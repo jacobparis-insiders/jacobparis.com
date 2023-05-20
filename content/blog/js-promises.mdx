@@ -1,0 +1,257 @@
+---
+title: Basic javascript promises
+description: An overview of promises, async functions, and await
+tags: Basics
+published: true
+blog: true
+---
+
+A Promise is a class that executes a callback and allows you to trigger other promises when the callback completes or fails.
+
+```js numbered
+function promiseTimeout(delay) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), delay)
+  }).then(() => {
+    setTitle('Async, Await, and Promises')
+  })
+}
+
+promiseTimeout(1000)
+```
+
+There's a lot going on here, so we'll break it down from the inside out
+
+First, `setTimeout` waits until the delay is up, then triggers the callback by running the Promise's `resolve()` function
+
+The callback to a Promise is defined by chaining a method called `.then(callback)`
+
+Right now it seems like it's just a more complicated way of writing callbacks, but the advantage comes in when you want to refactor
+
+```js numbered
+function promiseTimeout(delay) {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(), delay)
+  })
+}
+
+promiseTimeout(1000).then(() => setTitle('Async, Await, and Promises'))
+```
+
+The `.then()` method always returns a promise. If you try to return a regular value, it will return a promise that resolves instantly to that value
+
+Since it returns a promise, you can chain .then() onto the result indefinitely
+
+So either of these patterns are valid
+
+```js numbered
+promiseTimeout(1000).then(() => {
+  setTitle('Async, Await, and Promises')
+  setTitle('Async, Await, and Promises')
+  setTitle('Async, Await, and Promises')
+})
+```
+
+```js numbered
+promiseTimeout(1000)
+  .then(() => setTitle('Async, Await, and Promises'))
+  .then(() => setTitle('Async, Await, and Promises'))
+  .then(() => setTitle('Async, Await, and Promises'))
+```
+
+If the callback passed to `.then()` is a promise, it will wait for the promise to resolve before executing the next `.then()`
+
+```js numbered
+promiseTimeout(1000)
+  .then(() => setTitle('One second'))
+  .then(() => promiseTimeout(5000)
+  .then(() => setTitle('Six total seconds'))
+```
+
+## Constructor
+
+One way to create a Promise is through the constructor. This is most useful when you're wrapping a function that uses non-promise callbacks.
+
+```js numbered
+const promise = new Promise((resolve, reject) => {
+  resolve(data) // Trigger .then(callback(data))
+  reject(error) // Trigger .catch(callback(error))
+})
+```
+
+To use a real-world example, Node.js has a method for loading files called `readFileAsync` that looks like this
+
+```js numbered
+fs.readFileAsync('image.png', (error, data) => {})
+```
+
+If we want to turn that into a promise, we're going to have to wrap it in one.
+
+```js numbered
+function getImage(index) {
+  return new Promise((resolve, reject) => {
+    fs.readFileAsync('image.png', (error, data) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve(data)
+      }
+    })
+  })
+}
+```
+
+> Tip: Node.js includes a promisify method that transforms a function that uses traditional callbacks to one that returns a promise. The implementation is exactly like the example above.
+
+## Class Method
+
+Another way to create a promise is use the static class methods
+
+`Promise.resolve('value')` will return a resolved promise. It will immediately begin to execute the next `.then()` method it has, if any.
+
+`Promise.reject('error')` will return a rejected promise. It will immediately begin to execute the next `.catch()` method it has, if any.
+
+```js numbered
+function getProducts() {
+  if (!isCacheExpired) {
+    return Promise.resolve(getProductsFromCache())
+  }
+
+  // The built-in method fetch() returns a promise
+  return fetch('api/products')
+    .then((response) => response.json())
+    .then((products) => {
+      saveProductsToCache(products)
+
+      return products
+    })
+}
+```
+
+Imagine you're trying to download a list of products from an API. Since it doesn't change very often, and API requests can be expensive, you might want to only make API requests if the list you already have is more than a few minutes old.
+
+First we check if the cache has expired, and if not we return a promise resolving to the products we've already saved to it.
+
+Otherwise the products are out of date, so we return a promise that fetches them from the API, saves them to the cache, and resolves to them.
+
+## Catch
+
+While `.then()` triggers when a previous promise **resolves**, `.catch()` triggers when a previous promise either **rejects** or throws an error.
+
+If either of those happen, it will skip every `.then()` and execute the nearest `.catch()`
+
+```js numbered
+fetch('api/products')
+  .then((response) => response.json())
+  .then((products) => {
+    saveProductsToCache(products)
+
+    return products
+  })
+  .catch(console.error)
+```
+
+If `.catch()` returns anything or throws another error, it will continue down the chain just like before
+
+## Async Functions
+
+To make writing promises easier, ES7 brought us the `async` keyword for declaring functions
+
+A function declared with the `async` keyword **always** returns a promise. The return value is wrapped in a promise if it isn't already one, and any errors thrown within the function will return a rejected promise.
+
+### Usage
+
+This is how to use it in a function
+
+```js numbered
+async function getProducts() { }
+
+const getProducts = async function() => { }
+
+const getProducts = async () => { }
+```
+
+And in a method:
+
+```js numbered
+const products = {
+  async get() {},
+}
+```
+
+### Return
+
+Whenever an async function returns, it ensures its return value is wrapped in a promise.
+
+```js numbered
+async function getProducts() {
+  return [
+    {id: 1, code: 'TOOL', name: 'Shiny Hammer'},
+    {id: 2, code: 'TOOL', name: 'Metal Corkscrew'},
+    {id: 3, code: 'TOOL', name: 'Rusty Screwdriver'},
+    {id: 1, code: 'FOOD', name: 'Creamy Eggs'},
+    {id: 2, code: 'FOOD', name: 'Salty Ham'},
+  ]
+}
+
+getProducts().then((products) => {
+  console.log(products)
+  // Array (5) [ {…}, {…}, {…}, {…}, {…} ]
+})
+```
+
+### Throw
+
+If an async function throws an error, it returns a rejected promise instead. This can be caught with the promise.catch() method instead of wrapping the function in try/catch statements
+
+```js numbered
+async function failInstantly() {
+  throw new Error('oh no')
+}
+
+failInstantly().catch((error) => {
+  console.log(error.message)
+  // 'oh no'
+})
+```
+
+In a regular function, you need to catch errors using the classic try/catch statement syntax
+
+```js numbered
+function failInstantly() {
+  throw new Error('oh no')
+}
+
+try {
+  failInstantly()
+} catch (error) {
+  console.log(error.message)
+  // 'oh no'
+}
+```
+
+## Await
+
+The other difference between regular functions and async functions is that async functions allow the use of the await keyword inside.
+
+Await works like the `.then()` method, but instead of being a chained callback, it pulls the value out of the promise entirely.
+
+Consider the previous example
+
+```js numbered
+getProducts().then((products) => {
+  console.log(products)
+  // Array (5) [ {…}, {…}, {…}, {…}, {…} ]
+})
+```
+
+And the same with await
+
+```js numbered
+const products = await getProducts()
+
+console.log(products)
+// Array (5) [ {…}, {…}, {…}, {…}, {…} ]
+```
+
+It's important to remember that since **await** can only be used inside async functions (which always return a promise) you can't use this to pull asynchronous data out into synchronous code. In order to use await on a promise you must be inside another promise.

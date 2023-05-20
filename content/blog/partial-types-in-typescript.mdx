@@ -1,0 +1,85 @@
+---
+title: Partially match a subset of an object's fields in Typescript
+description: I had a type that acted as a schema, but one implementation only needed a subset of its fields, so I had to find a solution.
+tags: Typescript
+published: true
+guide: true
+---
+
+I have a type `Contact` that gets used in multiple places. A `Person` can have a contact, so it becomes a field on their type, but also a `Company` can have a contact.
+
+```ts
+export interface Contact {
+  firstName: string
+  lastName: string
+  phoneNumber: string
+}
+
+export type Person = {
+  id: string
+  contact: Contact
+}
+
+export type Company = {
+  id: string
+  contact: Contact
+}
+```
+
+```js
+const company = {
+  id: uuid(),
+  contact: {
+    phoneNumber: "+123456790",
+  },
+}
+```
+
+produces the error
+
+```sh
+Type '{ phoneNumber: string; }' is missing the following properties from type 'Contact': firstName, lastName
+```
+
+Typescript expects that all implementations of the `Contact` type use every defined field, but since a business doesn't need to have a first or last name, I don't want to have to add those.
+
+## The solution
+
+There are several typescripty ways to solve this
+
+### New type
+
+One solution is to stop messing around with reusability and just make a new type for this clearly different use-case.
+
+```ts
+export interface CompanyContact {
+  phoneNumber: string
+}
+
+export type Company = {
+  id: string
+  contact: CompanyContact
+}
+```
+
+### Partial
+
+The Partial type makes every field optional
+
+```ts
+export type Company = {
+  id: string
+  contact: Partial<Contact>
+}
+```
+
+### Pick
+
+Pick allows you to pick specifically which fields you want
+
+```ts
+export type Company = {
+  id: string
+  contact: Pick<Contact, "phoneNumber">
+}
+```

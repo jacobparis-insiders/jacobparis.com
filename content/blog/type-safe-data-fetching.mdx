@@ -1,0 +1,159 @@
+---
+title: The state of type-safe data fetching
+description: A comparison of the different ways to achieve type-safe data fetching in Next.js, Remix, and tRPC.
+tags: Typescript, Remix, Reviews
+published: true
+guide: true
+timestamp: "2023-04-22"
+---
+
+When it comes to data fetching, there are two directions to consider.
+
+- Downstream type-safety is about ensuring that the client knows the type of the data the server sends. Typescript is great at this.
+- Upstream type-safety is making sure the server knows the type of the data the client sends. Since the server can't guarantee it's always getting data from a non-malicious client running the correct version of the codebase, this requires [runtime validation](/content/typescript-runtime-validation)<SideNote> In this article, we'll use [Zod]() for runtime validation. If you don't like Zod, it's easy to swap out with something else.</SideNote>
+
+Developing software with full-stack type safety is fantastic. If you can change the database schema and immediately get type errors on the client, you know exactly what you need to update. When you fix those errors, you'll have a high degree of confidence that your types are in sync from client to server to database.
+
+## tRPC
+
+tRPC (Type-safe Remote Procedure Calls<SideNote> RPC is just a fetch with the URL built in. </SideNote>) is the closest to full-stack type safety you're likely to get.
+
+With tRPC you have access to the tRPC router on both the client and server, so wherever you want to fetch some data, you can use the same API.
+
+```tsx
+// works on both client and server!
+const user = await trpc.userById.query("1")
+```
+
+The available procedures are defined in the tRPC router, which is a central place to register all your API endpoints.
+
+```ts
+export const appRouter = router({
+  users: users.query(() => {
+    return db.user.findMany()
+  }),
+
+  userById: users.query(({ input }) => {
+    return db.user.findById(input)
+  }),
+
+  deleteUser: users.mutation(({ input }) => {
+    return db.user.delete(input)
+  }),
+})
+```
+
+Importantly, types are preserved end-to-end.
+
+When you call the procedure (like a fetch), the response type will be inferred directly from the server-side function, and you'll get full intellisense and auto-completion anywhere you want to use it.
+
+If the client is passing arguments along with the request, you can use the `input` method as a validator. If the input fails validation, tRPC will throw an error, and the argument that gets passed to the query/mutation will be properly typed.
+
+```ts
+import { z } from "zod"
+
+export const appRouter = router({
+  userById: users.input(z.string()).query(({ input }) => {
+    return db.user.findById(input)
+  }),
+})
+```
+
+## Next JS
+
+Next.js handles type-safety well, but it doesn't have automatic inference. You will need to annotate your props with `InferGetServerSidePropsType<typeof getServerSideProps>`.<SideNote> Who told them it was ok to make a name that long? </SideNote>
+
+Zod doesn't immediately play well with FormData or URLSearchParams, but there are many packages that add this support, such as [zod-form-data](https://www.npmjs.com/package/zod-form-data).
+
+```tsx
+import {
+  GetServerSideProps,
+  InferGetServerSidePropsType,
+} from "next"
+
+import { zfd } from "zod-form-data"
+
+export const getServerSideProps: GetServerSideProps<{
+  data: Data
+}> = async () => {
+  const query = zfd
+    .formData({
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).default(10),
+    })
+    .parse(new URL(request.url).searchParams)
+
+  const users = db.users.find(
+    {},
+    {
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    },
+  )
+
+  return {
+    props: {
+      users,
+    },
+  }
+}
+
+export default function Page({
+  users,
+}: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+
+export default Page
+```
+
+Next.js doesn't have a built-in pattern for data mutations, with users often leveraging libraries like Tan Query<SideNote> Formerly react-query </SideNote> or Vercel's own SWR.
+
+## Remix actions and loaders
+
+Remix achieves downstream type-safety in a similar way to Next.js, requiring you to annotate your server data hooks like `useLoaderData<typeof loader>` and `useActionData<typeof action>`
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const query = zfd
+    .formData({
+      page: z.number().min(1).default(1),
+      limit: z.number().min(1).default(10),
+    })
+    .parse(new URL(request.url).searchParams)
+
+  const users = db.users.find(
+    {},
+    {
+      skip: (query.page - 1) * query.limit,
+      take: query.limit,
+    },
+  )
+
+  return { users }
+}
+
+export default function UsersPage() {
+  const { users } = useLoaderData<typeof loader>()
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+Unlike Next.js, Remix DOES have built-in mutation support. Remix provides the `<Form>` component and `useFetcher` hooks to send data to the page actions.
+
+These tools build upon the browser's native form handling, so they submit data as either FormData or URLSearchParams.
+
+Unfortunately, there is no way to communicate a schema to either of these and get type errors when a form doesn't have the right fields, which means no full upstream type-safety.

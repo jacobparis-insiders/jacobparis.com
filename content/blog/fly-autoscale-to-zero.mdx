@@ -1,0 +1,111 @@
+---
+title: Save money by autoscaling your Fly apps to zero when inactive
+description: Fly is a serverless platform. Learn how to autoscale your Fly apps to zero when they're not in use, and then start them back up immediately on the first request to the app.
+tags: Advanced
+published: true
+guide: true
+timestamp: "2023-04-28"
+---
+
+When people hear serverless, they think of AWS Lambda, Google Cloud Functions, or Azure Functions. But serverless is more than just functions. It's a way to run code without having to worry about the underlying infrastructure.
+
+[Fly.io](https://fly.io) is still a serverless platform, it's just serverless containers instead of functions.
+
+Generally, people use Fly to run their apps when they want long-lived servers deployed to the edge anywhere in the world.
+
+But long-lived servers cost money all the time. There are many apps that don't need to be running all the time. For example:
+
+- small projects that don't get much traffic
+- demo sites that are only used occasionally
+- apps that are only used during business hours
+- staging environments for testing changes before deploying to production
+
+For these types of apps, you can save money by autoscaling your Fly apps to zero when inactive.
+
+_Fly allows you to autoscale your apps to zero when they're not in use, and then start them back up immediately on the first request to the app._<SideNote> My staging server gives me a cold start of about 5 seconds from request time to when the page loads. </SideNote>
+
+## Setting up the autoscaling infrastructure
+
+Enable autoscaling for your app by running the following command. If your terminal is in a directory with the `fly.toml` for your app, and this is the app you want to enable autoscaling for, you don't need to specify the `--app`.<SideNote> I only want my staging environment to scale to zero, so I specify `--app app-name-staging`. </SideNote>
+
+```sh
+fly autoscale set min=0 max=1 --app app-name
+```
+
+In your `fly.toml`, add the `auto_start_machines`and `auto_stop_machines` options to your service.
+
+```toml
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+  processes = ["app"]
+  auto_stop_machines = true
+  auto_start_machines = true
+```
+
+Fly won't actually scale your app down itself. By setting the minimum number of instances to zero, you're telling Fly that it's okay for there to be zero instances running, and it doesn't need to automatically start more.
+
+## Allowing your app to sleep when inactive
+
+Now that you've told Fly that it's okay for your app to scale down to zero, you need to tell your app to `process.exit(0)` when it's inactive.
+
+Fly has an official [autoscale to zero demo](https://github.com/fly-apps/autoscale-to-zero-demo) on their Github, and I like their approach as a starting point.
+
+Create a new file `sleep.server.ts` in your project, and add the following code:
+
+```ts
+let sleepTimeout: NodeJS.Timeout
+
+export function keepAwake() {
+  if (sleepTimeout) {
+    clearTimeout(sleepTimeout)
+  }
+
+  if (process.env.AUTOSLEEP_MINUTES) {
+    const minutes = Number(process.env.AUTOSLEEP_MINUTES)
+
+    if (Number.isNaN(minutes)) {
+      throw new Error(
+        `AUTOSLEEP_MINUTES is set to ${process.env.AUTOSLEEP_MINUTES}, which is not a number`,
+      )
+    }
+
+    sleepTimeout = setTimeout(
+      () => process.exit(0),
+      1000 * 60 * minutes,
+    )
+  }
+}
+```
+
+We will control the timeout with an environment variable called `AUTOSLEEP_MINUTES`. On moments of human activity, we will call `keepAwake()` to reset the timeout, and if the timeout ever elapses the app will exit.
+
+We will need to determine human activity from bot activity, such as the healthcheck ping that Fly uses to ensure our app hasn't crashed.<SideNote> We definitely don't want the healthcheck to keep our app awake forever! </SideNote>
+
+I like the `isBot` package for this purpose. It's a simple package that checks the user agent string for common bot strings, and it properly recognizes the healthcheck ping from Fly as a bot.
+
+In your the loader of your `root.tsx`, call `keepAwake()` on every request that isn't a bot.
+
+```ts
+import { keepAwake } from "./sleep.server"
+
+import isBot from "isbot"
+
+export function loader({ request }: { request: Request }) {
+  const isBot = await isbot(
+    request.headers.get("user-agent"),
+  )
+  if (!isBot) {
+    void keepAwake()
+  }
+
+  // …
+}
+```
+
+And that's it! You can now deploy your app, and it will autoscale to zero when inactive.
+
+```sh
+fly secrets set AUTOSLEEP_MINUTES=5 --stage --app app-name
+fly deploy
+```

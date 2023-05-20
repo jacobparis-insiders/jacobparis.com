@@ -1,0 +1,622 @@
+---
+title: Notes for Modern Redux with Redux Toolkit (RTK) and TypeScript
+description: Redux Toolkit simplifies the process of setting up your redux application including building slices, reducers, selectors and thunks. Everything we do in the course is typed with TypeScript to make your application development process as smooth and powerful as possible.
+tags: Reviews
+published: true
+blog: true
+---
+
+These are the notes I wrote while following along with [Modern Redux with Redux Toolkit (RTK) and TypeScript](https://egghead.io/courses/modern-redux-with-redux-toolkit-rtk-and-typescript-64f243c8) by [Jamund Ferguson](https://twitter.com/xjamundx)
+
+## Creating a RootState type and Typed Hooks for Type-Aware Redux Interactions
+
+```ts numbered filename[store.ts]
+export const store = configureStore({
+  reducer: {
+    cart: cartReducer,
+    products: productsReducer,
+  },
+})
+
+// ReturnType is a utility to help us type our reducers
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+```
+
+Redux provides useSelector and useDispatch hooks, but in order to type them we need to wrap the selector and dispatch functions to allow them to accept our types
+
+```ts
+import {TypedUseSelectorHook, useSelector, useDispatch} from 'react-redux'
+
+import type {RootState, AppDispatch} from './store'
+
+export const useAppDispatch = () => useDispatch<AppDispatch>()
+export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+```
+
+## Access Redux Data in a Component with the TypeScript-enabled useAppSelector hook
+
+`useAppSelector` now works just like Redux's useSelector, but contains type information to help us autocomplete our selectors.
+
+```tsx
+import {useAppSelector, useAppDispatch} from '../../app/hooks'
+import {receivedProducts} from './productSlice'
+
+export function Products() {
+  const products = useAppSelector((state) => state.products.products)
+
+  return (
+    <ul>
+      {Object.values(products).map((product) => (
+        <li key={product.id}> {product.name} </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Create a Reducer with Redux Toolkit and Dispatch its Action with the useAppDispatch hook
+
+```ts
+const initialState: ProductsState = {
+  products: {},
+}
+
+const productsSlice = createSlice({
+  initialState,
+  name: 'products',
+  reducers: {
+    receivedProducts(state, action: PayloadAction<Product[]>) {
+      const products = action.payload
+
+      products.forEach((product) => {
+        state.products[product.id] = product
+      })
+    },
+  },
+})
+
+// RTK automatically generates action creators for each of the reducers we define
+export const {receivedProducts} = productsSlice.actions
+export default productsSlice.reducer
+```
+
+Instead of using setState to set the products, use the `dispatch` hook to dispatch the action to the store.
+
+```js
+import {useAppDispatch} from '../../app/hooks'
+import {receivedProducts} from './productSlice'
+
+export function Products() {
+  const dispatch = useAppDispatch()
+
+  React.useEffect(() => {
+    getProducts().then((products) => {
+      dispatch(receivedProducts(products))
+    })
+  })
+}
+```
+
+## Building a Reducer Method to add an Item to the Shopping Cart
+
+```ts numbered filename[cartSlice.ts]
+import {createSlice, PayloadAction} from '@reduxjs/toolkit'
+
+export interface CartState {
+  items: {
+    [id: string]: number
+  }
+}
+
+const initialState: CartState = {
+  items: {},
+}
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addToCart(state, action: PayloadAction<string>) {
+      const id = action.payload
+
+      if (state.items[id]) {
+        state.items[id]++
+      } else {
+        state.items[id] = 1
+      }
+    },
+  },
+})
+
+export const {addToCart} = cartSlice.actions
+export default cartSlice.reducer
+```
+
+I'm not sure I know what a Slice is yet
+
+Now as we click on items in the list, the reducer will add them to the cart.
+
+```tsx
+import {useAppSelector, useAppDispatch} from '../../app/hooks'
+import {receivedProducts} from './productSlice'
+import {addToCart} from './cartSlice'
+
+export function Products() {
+  const products = useAppSelector((state) => state.products.products)
+  const dispatch = useAppDispatch()
+
+  return (
+    <ul>
+      {Object.values(products).map((product) => (
+        <li key={product.id}>
+          <button onClick={() => dispatch(addToCart(product.id))}>
+            Add {product.name} to cart
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Create a Selector to Aggregate Data from our Redux Store
+
+```ts numbered filename[cartSlice.ts]
+import {RootState} from './store'
+
+export function getNumberOfItems(state: RootState) {
+  return Object.values(state.cart.items).reduce((sum, count) => sum + count, 0)
+}
+```
+
+```tsx numbered filename[CartLink.ts]
+export function CartLink() {
+  const numberOfItems = useAppSelector(getNumberOfItems)
+
+  return (
+    <Link to="/cart">
+      <span>{numberOfItems ? numberOfItems : 'Cart'}</span>
+    </Link>
+  )
+}
+```
+
+## Use createSelector from Redux Toolkit to build a Memoized Selector
+
+Look at this line here
+
+```js
+const numberOfItems = useAppSelector(getNumberOfItems)
+```
+
+This will run again every time the CartLink component is rendered.
+We can use `createSelector` to create a memoized selector that will only run once.
+
+```ts numbered filename[cartSlice.ts]
+export const getMemoizedNumberOfItems = createSelector(
+  (state: RootState) => state.cart.items,
+  (items) => Object.values(items).reduce((sum, count) => sum + count, 0),
+)
+```
+
+This will only re-run when state.cart.items changes. In this case, it's a premature optimization, but it's important to know the pattern for when more intensive selectors are being used.
+
+```tsx numbered filename[CartLink.ts] {2}
+export function CartLink() {
+  const numberOfItems = useAppSelector(getMemoizedNumberOfItems)
+
+  return (
+    <Link to="/cart">
+      <span>{numberOfItems ? numberOfItems : 'Cart'}</span>
+    </Link>
+  )
+}
+```
+
+## Combining Data from Two Redux Slices to Build our Shopping Cart
+
+```tsx
+import {useAppSelector} from '../../app/hooks'
+
+export function Cart() {
+  const products = useAppSelector((state) => state.products.products)
+  const items = useAppSelector((state) => state.cart.items)
+
+  return (
+    <ul>
+      {Object.entries(items).map(([id, quantity]) => (
+        <li key={products[id].name}>
+          <span>
+            There are {quantity} {products[id].name}s in your cart
+          </span>
+          <button>Remove {products[id].name} from cart</button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Aggregate Price Information From Two Different Slices with createSelector
+
+If you pass two arguments to createSelector, the first argument is a function that takes the state and returns the first slice.
+
+The second argument is a function that takes the state and returns the second slice.
+
+The third argument is a function that takes the first and second slices and returns a new slice.
+
+```tsx numbered filename[CartSlice.ts]
+export const getTotalPrice = createSelector(
+  (state: RootState) => state.cart.items,
+  (state: RootState) => state.products.products,
+  (items, products) => {
+    return Object.values(items).reduce(
+      (sum, item) => sum + products[item.id].price * item.quantity,
+      0,
+    )
+  },
+)
+```
+
+```tsx numbered filename[Cart.tsx]
+import {useAppSelector} from '../../app/hooks'
+import {getTotalPrice} from './cartSlice'
+
+export function Cart() {
+  const totalPrice = useAppSelector(getTotalPrice)
+
+  return (
+    <div>
+      <span> Total Price: ${totalPrice} </span>
+    </div>
+  )
+}
+```
+
+## How to Apply Types to Redux Selectors
+
+Even with just regular type inference, the IDE is already able to infer the types of getTotalPrice
+
+But you can also apply types to selectors.
+
+```ts
+const getTotalPrice = createSelector<RootState, any, any, string>()
+```
+
+## Adding a Button that Dispatches an Action To Redux to Remove an Item from the ShoppingCart
+
+```ts numbered filename[cartSlice.ts]
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addToCart(state, action: PayloadAction<string>) {
+      const id = action.payload
+
+      if (state.items[id]) {
+        state.items[id]++
+      } else {
+        state.items[id] = 1
+      }
+    },
+
+    removeAllFromCart(state, action: PayloadAction<string>) {
+      const id = action.payload
+
+      if (state.items[id]) {
+        delete state.items[id]
+      }
+    },
+  },
+})
+
+export const {addToCart, removeAllFromCart} = cartSlice.actions
+```
+
+```tsx
+import {useAppSelector, useAppDispatch} from '../../app/hooks'
+import {removeAllFromCart} from './cartSlice'
+
+export function Cart() {
+  const products = useAppSelector((state) => state.products.products)
+  const items = useAppSelector((state) => state.cart.items)
+  const dispatch = useAppDispatch()
+
+  return (
+    <ul>
+      {Object.entries(items).map(([id, quantity]) => (
+        <li key={products[id].name}>
+          <span>
+            There are {quantity} {products[id].name}s in your cart
+          </span>
+          <button onClick={() => dispatch(removeAllFromCart(id))}>
+            Remove {products[id].name} from cart
+          </button>
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Dispatching Actions to Redux when an Input Field Fires its Blur Event with TypeScript
+
+```ts numbered filename[cartSlice.ts]
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  reducers: {
+    addToCart,
+    removeAllFromCart,
+    updateQuantity(
+      state,
+      action: PayloadAction<{
+        id: string
+        quantity: number
+      }>,
+    ) {
+      const {id, quantity} = action.payload
+
+      state.items[id] = quantity
+    },
+  },
+})
+
+export const {addToCart, removeAllFromCart, updateQuantity} = cartSlice.actions
+```
+
+```tsx
+import {useAppSelector, useAppDispatch} from '../../app/hooks'
+import {updateQuantity} from './cartSlice'
+
+export function Cart() {
+  const products = useAppSelector((state) => state.products.products)
+  const items = useAppSelector((state) => state.cart.items)
+  const dispatch = useAppDispatch()
+
+  function onQuantityChanged(
+    e: React.FocusEvent<HTMLInputElement>,
+    id: string,
+  ) {
+    const quantity = parseInt(e.target.value, 10)
+
+    dispatch(updateQuantity({id, quantity}))
+  }
+
+  return (
+    <ul>
+      {Object.entries(items).map(([id, quantity]) => (
+        <li key={products[id].name}>
+          <input
+            type="text"
+            defaultValue={quantity}
+            onBlur={(e) => onQuantityChanged(e, id)}
+          />
+        </li>
+      ))}
+    </ul>
+  )
+}
+```
+
+## Using TypeScript and Redux to Model the Different States of our Checkout Form
+
+```tsx numbered filename[cartSlice.tsx]
+type CheckoutState = 'LOADING' | 'READY' | 'ERROR'
+
+export interface CartState {
+  items: { [productId: string]: number }
+  checkoutState: CheckoutState
+}
+
+const intialState: CartState = {
+  items: {}
+  initialCheckoutState: 'READY',
+}
+```
+
+```tsx
+import {useAppSelector, useAppDispatch} from '../../app/hooks'
+import {updateQuantity} from './cartSlice'
+
+export function Cart() {
+  const products = useAppSelector((state) => state.products.products)
+  const items = useAppSelector((state) => state.cart.items)
+  const dispatch = useAppDispatch()
+
+  const checkoutState = useAppSelector((state) => state.cart.checkoutState)
+
+  if (checkoutState === 'LOADING') {
+    return (
+      <div>
+        <p> Loading... </p>
+      </div>
+    )
+  }
+
+  if (checkoutState === 'ERROR') {
+    return (
+      <div>
+        <p> Error! </p>
+      </div>
+    )
+  }
+
+  if (checkoutState === 'READY') {
+    return (
+      <ul>
+        {Object.entries(items).map(([id, quantity]) => (
+          <li key={products[id].name}>
+            <input type="text" defaultValue={quantity} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  throw new Error('Unknown checkout state: ' + checkoutState)
+}
+```
+
+## Using createAsyncThunk and the builder API to Generate Redux Actions for an API call
+
+`createAsyncThunk` generates three actions
+
+- checkoutCart.pending
+- checkoutCart.fulfilled
+- checkoutCart.rejected
+
+and these are automatically dispatched to Redux based on the lifecycle of the Promise in the second argument
+
+```tsx number filename[cartSlice.tsx]
+export const checkoutCart = createAsyncThunk(
+  'cart/checkout', // the cart slice and the checkout action name
+  async (items: CartItems) => {
+    const response = await checkout(items)
+
+    return response
+  },
+)
+
+const cartSlice = createSlice({
+  name: 'cart',
+  initialState,
+  // These are defined inline, so we use `reducers`
+  reducers: {
+    addToCart,
+    removeAllFromCart,
+    updateQuantity,
+  },
+  // The checkoutCart thunk already exists, so we use `extraReducers` to imperatively attach it to this slice
+  extraReducers(builder) {
+    // The builder methods tell redux to update the state (argument 2) when an action occurs (argument 1)
+    builder.addCase(checkoutCart.pending, (state) => {
+      state.checkoutState = 'LOADING'
+    })
+
+    builder.addCase(checkoutCart.fulfilled, (state) => {
+      state.checkoutState = 'READY'
+    })
+
+    builder.addCase(checkoutCart.rejected, (state) => {
+      state.checkoutState = 'ERROR'
+    })
+  },
+})
+```
+
+```tsx numbered filename[Cart.tsx]
+import {useAppDispatch} from '../../app/hooks'
+import {checkoutCart} from './cartSlice'
+
+export function Cart() {
+  const dispatch = useAppDispatch()
+
+  function onCheckout(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+
+    dispatch(checkoutCart(items))
+  }
+
+  return (
+    <form onSubmit={onCheckout}>
+      <button type="submit"> Checkout </button>
+    </form>
+  )
+}
+```
+
+## Handling Errors in Async Thunks with builder.addCase()
+
+```tsx numbered filename[cartSlice.tsx]
+export interface CartState {
+  items: { [productId: string]: number }
+  checkoutState: CheckoutState,
+  errorMessage: string
+}
+
+const intialState: CartState = {
+  items: {}
+  initialCheckoutState: 'READY',
+  errorMessage: ''
+}
+```
+
+The payload of the action for `checkoutCart.rejected` contains the error
+
+```tsx number filename[cartSlice.tsx]
+builder.addCase(checkoutCart.rejected, (state, action) => {
+  state.checkoutState = 'ERROR'
+  state.errorMessage = action.error.message || ''
+})
+```
+
+```tsx numbered filename[Cart.tsx]
+import {useAppSelector} from '../../app/hooks'
+import {checkoutCart} from './cartSlice'
+
+export function Cart() {
+  const checkoutState = useAppSelector((state) => state.cart.checkoutState)
+  const errorMessage = useAppSelector((state) => state.cart.errorMessage)
+
+  return (
+    <form onSubmit={onCheckout}>
+      {checkoutState === 'ERROR' && errorMessage ? (
+        <p> {errorMessage} </p>
+      ) : null}
+      <button type="submit"> Checkout </button>
+    </form>
+  )
+}
+```
+
+## Using the Response from an Async Thunk to Update the Redux State
+
+The action of `checkoutCart.fulfilled` is dispatched when the Promise returned by `checkoutCart` is fulfilled.
+The payload of this action is the response from the API call.
+
+```tsx numbered filename[cartSlice.tsx]
+builder.addCase(
+  checkoutCart.fulfilled,
+  (state, action: PayloadAction<{success: boolean}>) => {
+    const {success} = action.payload
+    if (success) {
+      state.checkoutState = 'READY'
+      state.items = {}
+    } else {
+      state.checkoutState = 'ERROR'
+    }
+  },
+)
+```
+
+## Accessing Global State inside of Async Thunks with TypeScript
+
+So far we've been submitting onCheckout like `dispatch(checkoutCart(items))` with items passed as an argument.
+
+We can modify the checkoutCart thunk to use global state instead of this argument
+
+The IDE was able to infer the type of `items` because it knew the type of the items we were passing in as an argument. If we're no longer passing that in as an argument, we'll have to manually tell the IDE to use `as RootState`
+
+```tsx numbered filename[cartSlice.tsx]
+export const checkoutCart = createAsyncThunk(
+  'cart/checkout',
+  async (_, thunkApi) => {
+    const state = thunkApi.getState() as RootState
+    const items = state.cart.items
+
+    const response = await checkout(items)
+
+    return response
+  },
+)
+```
+
+```tsx numbered filename[Cart.tsx] {4}
+function onCheckout(e: React.FormEvent<HTMLFormElement>) {
+  e.preventDefault()
+
+  dispatch(checkoutCart())
+}
+```

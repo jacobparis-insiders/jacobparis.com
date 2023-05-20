@@ -1,0 +1,33 @@
+---
+title: "Feature Request: Can you let us set the mortgage balance?"
+description: A post mortem of a load bearing feature request and where the counter-intuitive solution became the correct one
+tags: Basics
+published: true
+blog: true
+---
+
+We had a seemingly simple feature request: the agent wanted to be able to manually set the current mortgage balance, in case what the system calculated was not the same as the documented balance.
+
+That wasn't as easy as it sounded.
+
+To the agent, the balance is just a number on the screen, but that number is heavily derived.
+
+Given an initial balance, some interest rates, and some term lengths, the mortgage balance is projected from its start date to any date after.
+
+By manually setting the current balance, we lose the ability to extrapolate into the future. What will the balance be next month? We can't just draw a curve between the origin and the manually set balance to guess at a future balance without foregoing the interest rate and accuracy in general.
+
+So instead of running the math to offset the balance, I decided to offset time instead.
+
+Since the loan balance would eventually extrapolate to 0, any reduced amount was a real amount that the balance would eventually be. The loan amount would follow its normal curve burning down to the present date, and then jump into the future until it hit the target loan amount, at which point it could continue on its normal predictable path.
+
+All I needed to do that was start date and an end date. Anytime the balance was calculated, that chunk of time could be eliminated from consideration.
+
+The end date of each chunk could itself be derived from the start date and a balance offset, getting me back to solving the why now that the how was sorted out.
+
+So the final API was an array of dates and balance offsets, which could instead be modeled as an array of additional payments made on the mortgage by the borrower.
+
+The user could enter their current loan balance, but it would be modelled in the system as an extra loan payment made at just the right amount to bring it into accuracy.
+
+That solves the feature request while remaining faithful to the existing calculation, and in fact unlocking a whole new suite of functionality: historical payments can now be tracked. We can show them on amortization tables and account for them in prepayment penalty calculations.
+
+All without the technical debt that the "solution-as-requested" would have caused.

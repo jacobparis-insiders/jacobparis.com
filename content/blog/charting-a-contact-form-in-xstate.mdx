@@ -1,0 +1,409 @@
+---
+title: Write a contact form in XState
+description: A series of statecharts representing a contact form
+tags: Basics
+published: true
+guide: true
+---
+
+State machines have been around forever, and still there's no better way to graphically represent application logic
+
+By offloading your application state management into a platform-agnostic library like [XState](https://xstate.js.org/), you can [render it out into a chart](https://xstate.js.org/viz), use it to [generate automated tests](https://css-tricks.com/model-based-testing-in-react-with-state-machines/), avoid framework lock-in, and get all the benefits that a finite state machine can offer.
+
+Here we'll step through some progressively more featureful examples of a state machine for a form. None of these are more correct than the others — instead, each represents a specific set of business logic and it's up to you to decide what level of state you want to support for your application.
+
+## Submit only with no validation
+
+The most basic form has no client side validation.
+
+The user hits submit. If the submission succeeds, we let the user know their submission has been received. If the submission fails, we allow them to retry.
+
+The logic here is all focused around the submission of the form, rather than the time spent filling out the form. Since there's no required fields, and no conditions that stop us from submitting, all states up until the submitting state are identical from this machine's point of view.
+
+With a machine like this, any validation would be done server-side, and an invalid form would cause the submit to fail and transition to a failure state.
+
+![A state machine with an initial state of editing. From the editing state, an event of SUBMIT leads to the submitting state. The submitting state can either transition to success with a RESOLVE event, or failure with a REJECT event. The failure state has a RETRY event which transitions back to submitting.](https://dev-to-uploads.s3.amazonaws.com/i/acdaex2meir1v6v5732x.png)
+
+```js numbered labeled
+// View in the XState Visualizer
+// https://xstate.js.org/viz/?gist=6e7e6b7258c805c85ea273b03172605d
+
+const formMachine = Machine(
+  {
+    id: "form",
+    initial: "editing",
+    context: {
+      retries: 0,
+    },
+    states: {
+      editing: {
+        on: {
+          SUBMIT: {
+            target: "submitting",
+          },
+        },
+      },
+      submitting: {
+        on: {
+          RESOLVE: "success",
+          REJECT: "failure",
+        },
+      },
+      success: {
+        type: "final",
+      },
+      failure: {
+        on: {
+          RETRY: {
+            target: "submitting",
+            actions: "incrementRetries",
+          },
+        },
+      },
+    },
+  },
+  {
+    actions: {
+      incrementRetries: assign(
+        (context, event) => context.retries + 1,
+      ),
+    },
+  },
+)
+```
+
+## Submit only if input is valid
+
+Even in a world where server-side validation is free and easy, we're still going to want some basic client side validation. It doesn't make sense to allow users to submit empty forms, so let's add one input.
+
+Consider a form with a single input for a message, and we want to ensure that the message is at least ten characters long before submitting.
+
+There are a few new requirements our machine needs to implement in order to support that feature:
+
+- a context value for the message
+- an INPUT event that caches our message text in the machine context
+- a guard on the SUBMIT event that stops the transition if our message is empty or too short
+
+![A state machine with an initial state of editing. From the editing state, an INPUT event triggers a self-transition with a cache action. The SUBMIT action first has a conditional self transition to validate the message, and otherwise transitions to submitting. ](https://dev-to-uploads.s3.amazonaws.com/i/w74gy5d921lrv66uy9zx.png)
+
+```js numbered labeled {9, 15-18, 36-38}
+// View in the XState Visualizer
+// https://xstate.js.org/viz/?gist=365c0512bcdd1d187a8fda64f4211daa
+
+const formMachine = Machine({
+    id: 'form',
+    initial: 'editing',
+    context: {
+      retries: 0,
+      message: ''
+    },
+    states: {
+      editing: {
+        on: {
+          SUBMIT: [
+            {
+              target: 'editing',
+              cond: 'isMessageTooShort'
+            },
+            {
+              target: 'submitting'
+            }
+          ],
+          INPUT: {
+            target: 'editing',
+            actions: 'cache'
+          }
+        }
+      },
+      …
+    }
+  }, {
+    actions: {
+      cache: assign((context, event) => event),
+      incrementRetries: assign((context, event) => context.retries + 1)
+    },
+    guards: {
+      isMessageTooShort: (context) => context.message.length < 10
+    }
+  })
+```
+
+## Inputs with an error state
+
+Forms that fail without telling you why are categorically inelegant. At the very least, we should know which input is invalid.
+
+To do this, we'll use a parallel nested state machine.
+
+Since a parallel nested machine is in every state at once, we give it one state for each input whose validation we care about.
+
+Each of those states contains yet another machine (not parallel this time) with the state of the input: either valid or error
+
+If this sounds complicated to you, that's because it is. State charts give an accurate representation of the complexity of a system. This is just exposing how complex forms actually are.
+
+The good news is, once you're familiar with the pattern it's a copy paste job to extend it to new inputs.
+
+![A state machine with an initial state of editing. The editing state contains a parallel state machine with one state named message. The message state contains a nested state machine with two states, named valid and error. From the editing state, an INPUT event triggers a self-transition with a cache action. The SUBMIT action first has a conditional  transition which transitions to editing.message.error, and otherwise transitions to submitting.](https://dev-to-uploads.s3.amazonaws.com/i/o8hwbz10ej3h8e293ws9.png)
+
+```js numbered labeled {8, 20-29}
+// View in the XState Visualizer
+// https://xstate.js.org/viz/?gist=28dfc6298fc233eb10a5ff8795570ce3
+…
+editing: {
+  on: {
+    SUBMIT: [
+      {
+        target: 'editing.message.error',
+        cond: 'isMessageTooShort'
+      },
+      {
+        target: 'submitting'
+      }
+    ],
+    INPUT: {
+      target: 'editing',
+      actions: 'cache'
+    }
+  },
+  type: 'parallel',
+  states: {
+    message: {
+      initial: 'valid',
+      states: {
+        valid: {},
+        error: {}
+      }
+    }
+  }
+},
+…
+```
+
+## Inputs with specific error states
+
+A well designed form will tell you not only which field is invalid, but exactly what's wrong with it too. The trick to that is another state machine inside in the error state of an input
+
+For demonstration purposes, we'll add a new guard `isMessageEmpty` to show how we can target specific error states
+
+![A state machine with an initial state of editing. The editing state contains a parallel state machine with one state named message. The message state contains a nested state machine with two states, named valid and error. The error state contains yet another nested machine with two states named empty and tooShort. From the editing state, an INPUT event triggers a self-transition with a cache action. The SUBMIT action first has two conditional  transitions which transition to either editing.message.error, and otherwise transitions to submitting.](https://dev-to-uploads.s3.amazonaws.com/i/bfk178lec1w5l73kfvfp.png)
+
+```js numbered labeled {7-10, 31-35}
+// View in the XState Visualizer
+// https://xstate.js.org/viz/?gist=28dfc6298fc233eb10a5ff8795570ce3
+…
+editing: {
+  on: {
+    SUBMIT: [
+      {
+        target: 'editing.message.error.empty',
+        cond: 'isMessageEmpty'
+      },
+      {
+        target: 'editing.message.error.tooShort',
+        cond: 'isMessageTooShort'
+      },
+      {
+        target: 'submitting'
+      }
+    ],
+    INPUT: {
+      target: 'editing',
+      actions: 'cache'
+    }
+  },
+  type: 'parallel',
+  states: {
+    message: {
+      initial: 'valid',
+      states: {
+        valid: {},
+        error: {
+          initial: 'empty',
+          states: {
+            empty: {},
+            tooShort: {}
+          }
+        }
+      }
+    }
+  }
+},
+…
+```
+
+## Forms with multiple inputs
+
+Lets try a real-world scenario. Imagine a contact form on your website, where clients can pitch jobs.
+
+We can imagine several inputs would be required
+
+- Name - required
+- Email - required, formatted like an email
+- Website - not required
+- Budget - required, must be a positive number at least $1000
+- Deadline - required, must be future date at least three days away
+- Message - required, must be at least 10 characters long
+
+These are general business requirements, so there's lots of room for flexibility here.
+
+We can copy and paste our `message` state for each of these form fields, and add the additional error states we want to track.
+
+```js numbered labeled {2-56}
+states: {
+  name: {
+    initial: 'valid',
+    states: {
+      valid: {},
+      error: {
+        initial: 'empty',
+        states: {
+          empty: {}
+        }
+      }
+    }
+  },
+
+  email: {
+    initial: 'valid',
+    states: {
+      valid: {},
+      error: {
+        initial: 'empty',
+        states: {
+          empty: {},
+          badFormat: {}
+        }
+      }
+    }
+  },
+
+  budget: {
+    initial: 'valid',
+    states: {
+      valid: {},
+      error: {
+        initial: 'empty',
+        states: {
+          empty: {},
+          badFormat: {},
+          tooLow: {}
+        }
+      }
+    }
+  },
+
+  deadline: {
+    initial: 'valid',
+    states: {
+      valid: {},
+      error: {
+        initial: 'empty',
+        states: {
+          empty: {},
+          tooEarly: {}
+        }
+      }
+    }
+  },
+
+  message: {
+    initial: 'valid',
+    states: {
+      valid: {},
+      error: {
+        initial: 'empty',
+        states: {
+          empty: {},
+          tooShort: {}
+        }
+      }
+    }
+  }
+}
+```
+
+It would not be wrong to forego the nested error type state when the only type is `empty`, and instead have `valid` and `empty` as two sibling states. I've found keeping a consistent error pattern is easier to grok in my own head, but your mileage may vary.
+
+We get away easy with the website input, because any input we don't need to validate doesn't need to be part of the state machine.
+
+Next, lets implement the guards for these inputs
+
+```js
+guards: {
+  isNameEmpty: context => context.name.length === 0,
+
+  isEmailEmpty: context => context.email.length === 0,
+  isEmailBadFormat: context => !context.email.includes('@'),
+
+  isBudgetEmpty: context => context.budget.length === 0,
+  isBudgetBadFormat: context => !context.budget.match(MONETARY_VALUE_REGEX),
+  isBudgetTooLow: context => parseFloat(context.budget) < 1000,
+
+  isDeadlineEmpty: context => !context.deadline,
+  isDeadlineTooEarly: context => context.deadline <= THREE_DAYS_FROM_NOW,
+
+  isMessageEmpty: context => context.message.length === 0,
+  isMessageTooShort: context => context.message.length < 10
+}
+```
+
+You can decide for yourself how fine-grained the validation should be. If you want different language on the website for a budget that's a little under or way under, add a new state and a new guard to accommodate that.
+
+There are real names in the world that are only a single character long, and it's not unrealistic to have special characters or even a number in a valid name, so don't go overboard on trying to catch bad formats there. That's one extra state to track and at least one segment of the population you'd be excluding.
+
+Emails are impossible to accurately validate client-side, and especially not with regex. Maintaining that it has at least one @ is about the safest check you can do.
+
+Once you're happy with your guards, we can put them together and add the conditional transitions on the SUBMIT event
+
+```js numbered labeled {2-33}
+SUBMIT: [
+  {
+    target: 'editing.name.error.empty',
+    cond: 'isNameEmpty'
+  },
+  {
+    target: 'editing.email.error.empty',
+    cond: 'isEmailEmpty'
+  },
+  {
+    target: 'editing.email.error.badFormat',
+    cond: 'isEmailBadFormat'
+  },
+  {
+    target: 'editing.budget.error.empty',
+    cond: 'isBudgetEmpty'
+  },
+  {
+    target: 'editing.budget.error.badFormat',
+    cond: 'isBudgetBadFormat'
+  },
+  {
+    target: 'editing.budget.error.tooLow',
+    cond: 'isBudgetTooLow'
+  },
+  {
+    target: 'editing.deadline.error.empty',
+    cond: 'isDeadlineEmpty'
+  },
+  {
+    target: 'editing.deadline.error.tooEarly',
+    cond: 'isDeadlineTooEarly'
+  },
+  {
+    target: 'editing.message.error.empty',
+    cond: 'isMessageEmpty'
+  },
+  {
+    target: 'editing.message.error.tooShort',
+    cond: 'isMessageTooShort'
+  },
+  {
+    target: 'submitting'
+  }
+],
+```
+
+And that's it! We've now mapped out a robust contact form with field level validation, that can't end up in impossible states and allows for retry on failure.
+
+Check out [the completed chart on XState Visualizer](https://xstate.js.org/viz/?gist=4265381c7de1c9de2077cc22f52a8284)
+
+![Alt Text](https://dev-to-uploads.s3.amazonaws.com/i/vs4cqz4tmwguiedycyej.png)

@@ -1,0 +1,200 @@
+---
+title: Custom HTML5 browser form validation with React
+description: Browsers have built-in form validation support. You can customize the validation logic and behavior by using the HTML5 Constraints API
+tags: Basics
+published: true
+guide: true
+img: content/react-form-validation/cover.png
+timestamp: "2023-03-29"
+---
+
+Developers have been marking form inputs as `required` since the dawn of the web, but there's more to browser form validation than that.
+
+There are built in constraints to make sure text is a certain length, or a numeric input is within a certain range. You can use regex to make sure an input matches a certain pattern, like an email address or phone number.
+
+For most developers, that's as far as they go with the native browser behavior.
+
+The moment they need more complex validation, like to check inputs against an API or validate one input against another, they start reaching for form libraries, preventing default form submission, adding custom form error messages, and so on.
+
+But you can extend the built-in browser validation behavior with any custom logic you want.
+
+## Example
+
+Let's say you're building a mortgage calculator. You want to make sure the user enters a purchase price that's greater than $50,000, and a down payment that's at least 20% of the purchase price.
+
+You also need to make sure the numbers they're entering are parseable as monetary values, and they'll want to be able to enter currency signs and commas for readability.
+
+<form action="#example">
+  <div className="flex gap-x-4">
+    <div className="mb-4 flex flex-col">
+      <label htmlFor="Purchase price"> Purchase price</label>
+      <input
+        id="purchasePrice"
+        name="purchasePrice"
+        type="text"
+        required
+        onInput={(event) => {
+          function parseMonetaryValue(value) {
+            return Number(value.replace(/[^0-9.-]+/g, ""))
+          }
+
+          if (!(event.target instanceof HTMLInputElement)) return
+
+          const purchasePrice = parseMonetaryValue(event.target.value)
+          if (isNaN(purchasePrice)) {
+            return event.target.setCustomValidity(
+              `Purchase price must be a monetary value`,
+            )
+          }
+
+          if (purchasePrice <= 0) {
+            return event.target.setCustomValidity(
+              `Purchase price must be greater than 0`,
+            )
+          }
+
+          if (purchasePrice <= 50000) {
+            return event.target.setCustomValidity(
+              `You can't get a mortgage for a purchase price less than $50,000`,
+            )
+          }
+
+          return event.target.setCustomValidity("")
+        }}
+      />
+    </div>
+
+    <div className="mb-4 flex flex-col">
+      <label htmlFor="downPayment">Down payment</label>
+      <input
+        id="downPayment"
+        name="downPayment"
+        type="text"
+        required
+        onInput={(event) => {
+          function parseMonetaryValue(value) {
+            return Number(value.replace(/[^0-9.-]+/g, ""))
+          }
+          console.log({ event })
+          const input = event.target
+          const form = input.form
+
+          if (!(form instanceof HTMLFormElement)) return
+
+          const purchasePriceInput = form["purchasePrice"]
+          if (!(purchasePriceInput instanceof HTMLInputElement)) return
+
+          const purchasePrice = parseMonetaryValue(
+            purchasePriceInput.value,
+          )
+          const downPayment = parseMonetaryValue(input.value)
+
+          console.log({ purchasePrice, downPayment })
+          if (isNaN(downPayment)) {
+            return input.setCustomValidity(
+              `Down payment must be a monetary value`,
+            )
+          }
+          if (downPayment > purchasePrice) {
+            return input.setCustomValidity(
+              `Down payment cannot be greater than purchase price`,
+            )
+          }
+
+          if (downPayment < purchasePrice * 0.2) {
+            return input.setCustomValidity(
+              `Down payment must be at least 20% of purchase price`,
+            )
+          }
+
+          return input.setCustomValidity("")
+        }}
+      />
+    </div>
+
+  </div>
+
+  <div>
+    <button type="submit" className="bg-gray-100 rounded hover:bg-gray-200 px-4 py-2 ">Submit</button>
+  </div>
+</form>
+
+## How it works
+
+The `onInput` event handler for each input is where we hook into the validation.
+
+```tsx
+<input
+  id="purchasePrice"
+  name="purchasePrice"
+  type="text"
+  required
+  onInput={(event) => {
+    const purchasePrice = parseMonetaryValue(
+      event.target.value,
+    )
+
+    if (isNaN(purchasePrice)) {
+      return event.target.setCustomValidity(
+        `Purchase price must be a monetary value`,
+      )
+    }
+
+    if (purchasePrice <= 0) {
+      return event.target.setCustomValidity(
+        `Purchase price must be greater than 0`,
+      )
+    }
+
+    if (purchasePrice <= 50000) {
+      return event.target.setCustomValidity(
+        `You can't get a mortgage for a purchase price less than $50,000`,
+      )
+    }
+
+    return event.target.setCustomValidity("")
+  }}
+/>
+```
+
+The `setCustomValidity` method is what sets the error message for the input. To mark the input as valid, you can pass an empty string.<SideNote> The `setCustomValidity` method doesn't return anything, we're only using return here to break out of the function early if the input is invalid. You could use an else-if chain instead if you prefer that over the early return. </SideNote>
+
+The second input is handled similarly, but since the down payment's range depends on the purchase price's value, we need to look that up.
+
+```tsx
+<input
+  id="downPayment"
+  name="downPayment"
+  type="text"
+  required
+  onInput={(event) => {
+    const input = event.target
+
+    const purchasePriceInput = input.form["purchasePrice"]
+
+    const purchasePrice = parseMonetaryValue(
+      purchasePriceInput.value,
+    )
+    const downPayment = parseMonetaryValue(input.value)
+
+    if (isNaN(downPayment)) {
+      return input.setCustomValidity(
+        `Down payment must be a monetary value`,
+      )
+    }
+    if (downPayment > purchasePrice) {
+      return input.setCustomValidity(
+        `Down payment cannot be greater than purchase price`,
+      )
+    }
+
+    if (downPayment < purchasePrice * 0.2) {
+      return input.setCustomValidity(
+        `Down payment must be at least 20% of purchase price`,
+      )
+    }
+
+    return input.setCustomValidity("")
+  }}
+/>
+```

@@ -1,0 +1,108 @@
+---
+title: Basic javascript functions
+description: An overview of functions and callbacks
+tags: Basics
+published: true
+blog: true
+---
+
+A function is a block of code that can be called and executed at will
+
+```js numbered
+function setTitle() {
+  document.title = "Async, Await, and Promises"
+}
+```
+
+This gives us a function named `setTitle`. To execute it, call it by name with parentheses after, like `setTitle()`
+
+Before: ![Alt Text](https://thepracticaldev.s3.amazonaws.com/i/cn6mlby0h94y0bl7c36n.png)
+
+After: ![Alt Text](https://thepracticaldev.s3.amazonaws.com/i/8c55lbq0t11w1lzc7g41.png)
+
+## Arguments
+
+Functions can also have **arguments**, which are variables you pass into a function when you call it.
+
+```js numbered
+function setTitle(title) {
+  document.title = title
+}
+
+setTitle("Async, Await, and Promises")
+```
+
+This makes functions much more reusable, since you can call it with any value you want
+
+```js numbered
+setTitle("Who me?")
+setTitle("Yes you.")
+setTitle("Couldn't be")
+setTitle("Then who?")
+```
+
+## Callbacks
+
+When you call a function, sometimes it can **call back** to another function
+
+The `setTimeout` function accepts two arguments: a callback function, which it executes when it's finished waiting, and a delay, which is the number of milliseconds to wait
+
+```js numbered
+function setTimeout(callback, delay)
+```
+
+We can use this to call our original setTitle function automatically after one second.
+
+```js numbered
+function setTitle() {
+  document.title = "Async, Await, and Promises"
+}
+
+setTimeout(setTitle, 1000)
+```
+
+This works since we're setting the title explicitly, but if we try to pass it in as an argument it just clears the title, shown below
+
+```js numbered
+function setTitle(title) {
+  document.title = title
+}
+
+setTimeout(setTitle, 1000)
+```
+
+What happened? Since the callback (setTitle) is executed by the function (setTimeout) we don't have control over what arguments setTitle is called with.
+
+So instead of passing `setTitle` as our callback, we can make our callback a wrapper function instead
+
+```js numbered
+// Pattern 1: Named Function
+function wrappedSetTitle() {
+  setTitle("Async, Await, and Promises")
+}
+setTimeout(wrappedSetTitle, 1000)
+```
+
+```js numbered
+// Pattern 2: Anonymous Function
+setTimeout(function () {
+  setTitle("Async, Await, and Promises")
+}, 1000)
+```
+
+```js numbered
+// Pattern 3: Arrow Function
+setTimeout(() => {
+  setTitle("Async, Await, and Promises")
+}, 1000)
+```
+
+```js numbered
+// Pattern 4: Inline Arrow function
+setTimeout(
+  () => setTitle("Async, Await, and Promises"),
+  1000,
+)
+```
+
+Now setTimeout will wait until 1000 milliseconds have passed, then invoke our wrapper function which calls `setTitle` with a title of our choice

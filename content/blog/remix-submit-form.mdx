@@ -1,0 +1,72 @@
+---
+title: Submit a form with basic HTML
+description: When a user submits a form, the browser will send a request to the current route.
+tags: Basics
+published: true
+guide: true
+---
+
+When a user submits a form, the browser will send a request to the current route. By default, this is a GET request. The request type can be set using either `method="GET"` or `method="POST"`.
+
+```html
+<form method="POST">
+  <label>
+    Username
+    <input type="text" name="username" />
+  </label>
+
+  <label>
+    Password
+    <input type="password" name="password" />
+  </label>
+
+  <button type="submit">Submit</button>
+</form>
+```
+
+You can change the route for the submission with the `action` attribute. This is useful for submitting forms to other pages.
+
+```html
+<form action="/"></form>
+<form action="/app/products/new"></form>
+```
+
+This can be used to make a log out button
+
+```html
+<form method="POST" action="/logout">
+  <button type="submit">Log out</button>
+</form>
+```
+
+This form will submit a GET request to Google Search.
+
+<form action="https://google.com/search">
+  <div className="flex gap-4">
+    <input
+      aria-label="search"
+      type="text"
+      name="q"
+      className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+      defaultValue="@jacobmparis"
+    />
+    <button
+      type="submit"
+      className="flex items-center px-5 py-1.5 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+    >
+      Search
+    </button>
+  </div>
+</form>
+
+```html
+<form action="https://google.com/search">
+  <input
+    aria-label="search"
+    type="text"
+    name="q"
+  />
+
+  <button type="submit">Search</button>
+</form>
+```

@@ -1,0 +1,103 @@
+---
+title: Reset React state when a prop changes with useResetCallback
+description: A custom hook to reset state when a prop changes. Useful for optimistic UI.
+tags: Basics
+published: true
+timestamp: "2023-05-10"
+---
+
+The more interactive your React app is, the more likely it is that you'll have some pieces of state that depend on other pieces of state. 
+
+Especially when implementing Optimistic UI, you may use your server data as a source of truth, but want to manipulate it client side for a better user experience. 
+
+> Jump straight to the [custom hook](#extracting-the-logic-into-a-custom-hook) if you're already familiar with the problem.
+
+For example, when uploading a file, you may want to **show a semi-transparent placeholder image with elements to indicate that the file is uploading, but once it's complete, you want to show the actual image.**
+
+A common implementation in Remix would look like this
+
+```tsx
+const { images } = useLoaderData()
+const [pendingImages, setPendingImages] = useState<string[]>([])
+
+return (
+  <div>
+    {pendingImages.map((blob) => (
+      <ImagePlaceholder src={blob} />
+    ))}
+
+    {images.map((image) => (
+      <Image src={image} />
+    ))}
+  </div>
+)
+```
+
+When you upload a new image, you'd add it to the `pendingImages` array, and once the upload is complete, Remix would re-render the component with the new `images` data.
+
+You would then have to clear the `pendingImages` array, so users won't see both the placeholder and the actual image.
+
+The best way to do that is with a state variable that tracks the previous images prop, and clears the pending images when it changes.<SideNote> This is a [documented pattern in the React docs](https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes) </SideNote>
+
+If you're tempted to reach for useEffect instead, note that useEffect will run after the component renders, so you'll see the placeholder image for a split second before it's cleared.
+
+```tsx
+const { images } = useLoaderData()
+const [prevImages, setPrevImages] = useState<string[]>([])
+const [pendingImages, setPendingImages] = useState<string[]>([])
+
+if (images !== prevImages) {
+  setPendingImages([])
+  setPrevImages(images)
+}
+
+return (
+  <div>
+    {pendingImages.map((blob) => (
+      <ImagePlaceholder src={blob} />
+    ))}
+
+    {images.map((image) => (
+      <Image src={image} />
+    ))}
+  </div>
+)
+```
+
+React will synchronously call `setPendingImages` and then re-render the component before painting to the screen, so you won't see the placeholder image. 
+
+## Extracting the logic into a custom hook
+
+Thanks to the composability of hooks, we can take the reset logic and put it in a custom `useResetCallback`<SideNote> If you have a better name, [let me know on Twitter](https://twitter.com/jacobmparis) </SideNote> hook that we can reuse across our app.
+
+```tsx
+function useResetCallback(initialValue, resetFn: () => any) {
+  const [prevValue, setPrevValue] = useState(initialValue)
+  if (prevValue !== initialValue) {
+    resetFn()
+    setPrevValue(initialValue)
+  }
+}
+
+function ImageUploader() {
+  const { images } = useLoaderData()
+  const [pendingImages, setPendingImages] = useState<string[]>([])
+
+  // Whenever images changes, call setPendingImages 
+  useResetCallback(images, () => {
+    setPendingImages([])
+  })
+
+  return (
+  <div>
+    {pendingImages.map((blob) => (
+      <ImagePlaceholder src={blob} />
+    ))}
+
+    {images.map((image) => (
+      <Image src={image} />
+    ))}
+  </div>
+)
+}
+```

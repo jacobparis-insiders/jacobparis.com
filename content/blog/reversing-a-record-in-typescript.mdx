@@ -1,0 +1,116 @@
+---
+title: Reverse a Record in Typescript
+description: I had an API adapter that went one direction, and I wanted to make it go the other direction without losing type information
+tags: Typescript
+published: true
+guide: true
+---
+
+Imagine an adapter that converts the names of countries into their country codes
+
+```ts
+type CountryName =
+  | "Canada"
+  | "United States"
+  | "Mexico"
+
+type CountryCode = "CA" | "US" | "MX"
+
+const countryNameToCode: Record<
+  CountryName,
+  CountryCode
+> = {
+  Canada: "CA",
+  "United States": "US",
+  Mexico: "MX",
+}
+```
+
+I wanted to also have the reverse adapter, but didn't want to have to manually update it every time it changed. Historically the number of countries are reasonably stable and shouldn't be expected to change often, but this pattern will be used elsewhere too.
+
+Since `countryNameToCode` is a typed Record, I know that `countryNameToCode['Canada']` will output a `CountryCode` string, and the Typescript engine will enforce that.
+
+The quick function to reverse such a record is to split it into key/value pairs, reverse the pair, and turn back into an object
+
+```js
+function reverseRecord(input) {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [
+      value,
+      key,
+    ]),
+  )
+}
+```
+
+Unfortunately that also strips the type information from the record.
+
+```js
+reverseRecord(countryNameToCode)
+// function reverseRecord(input: any): any
+```
+
+## Solution
+
+The Typescript solution is to use type parameters to track the input type, and then cast the result as a Record with those reversed<SideNote id={1}>Thanks to <a href="https://twitter.com/intent/follow?screen_name=fildon_dev" rel="noopener" target="_blank"> Rupert </a> for this solution and thanks to <a href="https://twitter.com/intent/follow?screen_name=eddyw_dev" rel="noopener" target="_blank"> Eddy </a> for the idea to use the built in `PropertyKey`</SideNote>
+
+We'll end up with a signature looking like this
+
+```ts
+reverseRecord(countryNameToCode)
+
+function reverseRecord<CountryName, CountryCode>(
+  input: Record<CountryName, CountryCode>,
+): Record<CountryCode, CountryName>
+```
+
+### Typescript
+
+```ts
+function reverseRecord<
+  T extends PropertyKey,
+  U extends PropertyKey,
+>(input: Record<T, U>) {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [
+      value,
+      key,
+    ]),
+  ) as Record<U, T>
+}
+```
+
+### JSDoc
+
+I was unable to translate the `as Record<U, T>` to JSDoc, and passing the output of `entries` directly into `fromEntries` wasn't playing well.
+
+```js
+// ! Type 'Record<any, string>' is not assignable to type 'Record<U, T>'
+function reverseRecord(input) {
+  return Object.fromEntries(
+    Object.entries(input).map(([key, value]) => [
+      value,
+      key,
+    ]),
+  ) // This does not work
+}
+```
+
+For reasons I don't yet understand, splitting it into two lines does seem to fix this.
+
+```js
+/**
+ * @template {PropertyKey} T
+ * @template {PropertyKey} U
+ *
+ * @param {Record<T, U>} input
+ * @returns {Record<U, T>}
+ */
+function reverseRecord(input) {
+  const entries = Object.entries(input).map(
+    ([key, value]) => [value, key],
+  )
+
+  return Object.fromEntries(entries)
+}
+```

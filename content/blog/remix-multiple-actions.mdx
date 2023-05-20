@@ -1,0 +1,101 @@
+---
+title: Multiple forms and actions on a page with Remix
+description: A Remix action is an endpoint for POST requests, and all forms will submit to the same action. Add a name and value to your submit button to know which form was submitted, and use that to determine which action to take.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-03-28"
+---
+
+Remix uses a file-based approach to routing, so each file in your `/routes` folder corresponds to a particular URL.
+
+A page's loader function can be treated like a handler for all `GET` and `HEAD` requests to that endpoint, while a page's action function can be treated like a handler for all other requests (`POST`, `PUT`, `PATCH`, `DELETE`, etc…)
+
+Since all forms on a page will submit to the same action, there's no built-in way of determining which form was submitted.
+
+## Multiple forms on a page
+
+To work around this, you can add a hidden input with a `name` and `value` to your submit button. The `name` will be the same for all forms on the page, and the `value` will be unique to that form.
+
+```html
+<input type="hidden" name="_action" value="LIKE" />
+```
+
+## Multiple actions from a single form
+
+When you submit a form, the browser will include all of its form elements, including hidden inputs, in the request body.
+
+One exception to this rule is the submit buttons themselves. The only submit button that will be included in the request body is the one that was clicked.
+
+So if you want to submit multiple actions from a single form, you can add `name="_action"` to the submit button
+
+```tsx
+<form method="post">
+  <input
+    type="hidden"
+    name="tweetId"
+    value="asdfasdfasdfasdf"
+  />
+
+  <button type="submit" name="_action" value="LIKE">
+    Like
+  </button>
+
+  <button type="submit" name="_action" value="RETWEET">
+    Retweet
+  </button>
+
+  <button type="submit" name="_action" value="REPLY">
+    Reply
+  </button>
+
+  <button type="submit" name="_action" value="SHARE">
+    Share
+  </button>
+</form>
+```
+
+## Determining which action to take
+
+In your action, you can use the value of the `_action` input to determine which action to take.
+
+```ts
+export async function action(args: ActionArgs) {
+  const formData = await args.request.clone().formData()
+
+  const _action = formData.get("_action")
+  if (_action === "LIKE") {
+    return likeTweetAction(args)
+  }
+
+  if (_action === "RETWEET") {
+    return retweetAction(args)
+  }
+
+  if (_action === "REPLY") {
+    return replyAction(args)
+  }
+
+  if (_action === "SHARE") {
+    return shareAction(args)
+  }
+
+  throw new Error("Unknown action")
+}
+
+async function likeTweetAction({ request }: ActionArgs) {
+  const formData = await request.formData()
+  const id = formData.get("id")
+
+  console.log("🧡 likeTweetAction", id)
+  return null
+}
+
+async function retweetAction({ request }: ActionArgs) {
+  const formData = await request.formData()
+  const id = formData.get("id")
+
+  console.log("🔁 retweetAction", id)
+  return null
+}
+```

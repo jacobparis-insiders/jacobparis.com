@@ -1,0 +1,175 @@
+---
+title: Find and fix performance bottlenecks in your Remix app with Server Timing
+description: Use the Server Timing API to measure the performance of your app and find bottlenecks. I've built a server timing utility function for Remix. Merge the timing info from multiple loaders into a single request.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-04-30"
+---
+
+Most websites are fast when they're new, but get slower and slower over time.
+
+Tiny inefficencies add up, and it's hard to know where to start when you want to improve performance. By measuring the performance of your app, you can find the bottlenecks and fix them.
+
+The web has a standard for measuring performance called [Server Timing](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Server-Timing). It's a header that you can add to your responses that will show up in the browser's dev tools with information on which functions ran and how long they took.
+
+That's easy enough on your own for a single endpoint, but Remix runs multiple loaders in parallel and distinguishes between data and document responses to enable fine-grained caching. Coordinating these headers is tricky.
+
+To make it easier to profile your app, I've created a server timing utility that looks like this
+
+It exposes a function `getServerTiming` that you can call in your loaders to get some timing utilities.
+
+One is a function `time` that you can use to wrap any function and it will track the time it takes to run in microseconds.
+
+The other is a function `getServerTimingHeader` that you can use to get a header that you can pass to Remix's `json` function. This is linked to the `time` function, so it will include the timing info for any functions you wrapped with `time` in the loader.
+
+```ts
+export function getServerTiming() {
+  const serverTimings: PerformanceServerTimings = {}
+
+  return {
+    time<T>(
+      serverTiming:
+        | string
+        | {
+            name: string
+            description: string
+          },
+      fn: Promise<T> | (() => T | Promise<T>),
+    ) {
+      return time(serverTimings, serverTiming, fn)
+    },
+    getHeaderField() {
+      return getServerTimeHeaderField(serverTimings)
+    },
+    getServerTimingHeader() {
+      return {
+        "Server-Timing":
+          getServerTimeHeaderField(serverTimings),
+      }
+    },
+  }
+}
+```
+
+Grab the full [server timing implementation from this Gist](https://gist.github.com/jacobparis/1e428524be3a31096ba3ecb35a7a15bb). Copy it and paste into a new file `timing.server.ts` in your app.
+
+## Profiling your loaders
+
+To start tracking the performance of your app, use the `getServerTiming()` function and wrap blocks of code with the `time` function.
+
+Then return the `getServerTimingHeader()` in your loader's response headers.
+
+```ts
+export async function loader() {
+  const { time, getServerTimingHeader } = getServerTiming()
+
+  // pass a function directly
+  const filepaths = await time("getFilesInDir", getFilesInDir)
+
+  // or pass an arrow function
+  const articles = await time("download", () =>{
+    return download(filepaths),
+  })
+
+  // optional: you can use a name and description
+  const content = await time(
+    {
+      name: "content",
+      description: "Compile MDX",
+    },
+    () => compileMdx(articles),
+  )
+
+  return json(
+    { content },
+    {
+      headers: getServerTimingHeader(),
+    },
+  )
+}
+```
+
+If you check your network tab during client side navigations, you should see this show up in the timing section, but we're about to make this more apparent.
+
+## Merging headers
+
+Each loader can add a server timing entry to the response headers, and we'll want to merge them together so we can see the timing info for all the loaders that ran.
+
+If you aren't familiar with response headers, you'll want to know [how to set route and document headers in Remix](/content/remix-headers).
+
+Create a new file `defaults.server.ts`
+
+Let's take the loader headers as the source of truth, and whenever there is a Server-Timing header set in the loader, we will also set it for the document.
+
+On document requests, since multiple loaders are running, we'll also need to get all the Server-Timing headers from any parent loaders and merge them together too.
+
+I recommend exporting the logic for setting default headers as a function so you can still use it when you want to customize the headers for a specific route.
+
+```ts
+export const headers: HeadersFunction = ({
+  loaderHeaders,
+  parentHeaders,
+}) => {
+  return setDefaultHeaders(new Headers(), {
+    loaderHeaders,
+    parentHeaders,
+  })
+}
+
+export function setDefaultHeaders(
+  headers: Headers,
+  args: {
+    loaderHeaders: Headers
+    parentHeaders: Headers
+  },
+) {
+  if (args.loaderHeaders.has("Server-Timing")) {
+    headers.set(
+      "Server-Timing",
+      args.loaderHeaders.get("Server-Timing")!,
+    )
+  }
+
+  if (args.parentHeaders.has("Server-Timing")) {
+    headers.append(
+      "Server-Timing",
+      args.parentHeaders.get("Server-Timing")!,
+    )
+  }
+
+  return headers
+}
+```
+
+Then re-export this in every route.<SideNote> You only need it in the leaf routes, so no resource routes and no layout routes. </SideNote>
+
+Some people like to keep their imports and exports separate as a matter of preference, but you can also do it as a one-liner with `export from`.
+
+```ts
+export { headers } from "~/defaults.server"
+
+// separate imports and exports look like this
+// import { headers as mergeHeaders } from "~/defaults.server"
+// export const headers = mergeHeaders
+```
+
+## Seeing the results
+
+Now you should be able to see the timing info in your network tab.
+
+Open your browser's dev tools and go to the network tab. You can filter some of the noise out: document requests are under `Doc` and data requests are under `Fetch/XHR`.
+
+![The devtools network tab](https://user-images.githubusercontent.com/5633704/235328644-0aaacf60-007b-4fcc-a174-70346f86bf2a.png)
+
+Select a request and you'll see the timing info in the `Timing` tab at the bottom.
+
+![Server timings: bot detection, 2ms; dirList, 18ms; downloadMdx, 40ms; languageSamples, 480ms; renderToPipeableString, 0.2ms](https://user-images.githubusercontent.com/5633704/235328694-a03e783d-34c8-4266-b710-ea8a845308b6.png)
+
+As you navigate from route to route client side, check the data requests to each of your routes and you'll see the timing info for those loaders.
+
+On a full page refresh, or after a form submission<SideNote> Remix revalidates all loaders after a mutation, unless you specify otherwise in `shouldRevalidate`.</SideNote>, you'll see all the loaders re-run with their timing info merged together.
+
+Continue to go through your app and add additional timing info to your loaders, and you'll start to see where the bottlenecks are.
+
+In the above screenshot, I realized that my `languageSamples` loader was taking half a second to run, and it wasn't even very important on the page. I was able to remove it and speed up the page load immediately.

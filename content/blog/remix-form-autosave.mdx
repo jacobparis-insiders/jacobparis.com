@@ -1,0 +1,83 @@
+---
+title: Autosave form inputs on change or blur with Remix's useFetcher (not useSubmit)
+description: Save forms automatically with useFetcher instead of useSubmit. Show a loading state while saving.
+tags: Remix, UI/UX
+published: true
+guide: true
+timestamp: "2023-04-08"
+---
+
+In the past, it was common for users to explicitly press a save button regularly as they used an application, like Adobe Photoshop or Microsoft Word.
+
+If they forgot to save, or the program crashed, or they overwrote their save file, they would lose hours of work or more.
+
+But as the world moved toward cloud-based applications, autosave became the norm, and users have come to expect that if they make a change, it will be remembered.
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/OeOOdYZ17eY"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+  />
+</div>
+
+In this guide, we'll show you how to use Remix's useFetcher hook to autosave form inputs on change or blur, and show a loading state while saving.
+
+## The useSubmit hook is canceled on navigation but useFetcher isn't
+
+The natural choice for submitting a form programmatically is the `useSubmit` hook, but it's not a good choice for auto-saving forms.
+
+Remix uses a global navigation state, so if you click a link to one page and then before it loads, you click a link to a different page, the request for the first page will be cancelled.
+
+Unfortunately, `useSubmit` also uses the same navigation state. If you use `useSubmit` to submit a form, and then navigate to a different page before it completes, the form submission will be cancelled.
+
+That might make sense for a form that you explicitly submit, but for an input that is expected to save automatically, you don't want the save to fail just because the user clicked a link too quickly.
+
+Every `useFetcher` hook gets its own state, so you can use it to make a request that will not be cancelled if the user navigates away.
+
+If you use one `useFetcher` hook for all of the inputs in a form, the saves **will** be auto-cancelled and replaced with the latest save request if there are more changes before one has completed.
+
+And that's great, because it means that if the user makes a bunch of changes, the last one will be the one that is saved.
+
+## Implementing a fetcher.Form with the useFetcher hook
+
+Instead of using the regular Remix `<Form />` component, use one returned by the fetcher at `fetcher.Form`.
+
+Add an `onBlur` handler to the form that calls `fetcher.submit` with the form element and `{ replace: true }` as the second argument.<SideNote> In javascript, events "bubble" up the DOM tree, so we can just put this event listener here instead of having to add it to every input. </SideNote>
+
+```tsx
+export default function Example() {
+  const fetcher = useFetcher()
+
+  return (
+    <fetcher.Form
+      method="post"
+      onBlur={(e) =>
+        fetcher.submit(e.currentTarget, { replace: true })
+      }
+    >
+      <Input />
+      <Input />
+      <Input />
+
+      <button
+        type="submit"
+        className={`rounded px-4 py-2 text-sm text-white hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
+          fetcher.state === "submitting"
+            ? "bg-indigo-400"
+            : "bg-indigo-600 hover:bg-indigo-500"
+        }`}
+      >
+        {fetcher.state === "submitting"
+          ? "Saving…"
+          : "Save"}
+      </button>
+    </fetcher.Form>
+  )
+}
+```

@@ -1,0 +1,412 @@
+---
+title: Develop and deploy multiple Remix apps with an integrated Nx monorepo
+description: Learn how to develop and deploy multiple Remix apps with an integrated Nx monorepo
+tags: Remix
+published: true
+guide: true
+img: content/develop-remix-apps-nx-monorepo/cover.png
+timestamp: "2022-11-16"
+---
+
+<div className="not-prose flex gap-4">
+  <a href="https://gitpod.io/#https://github.com/jacobparis/remix-nx-fly">
+    <img
+      src="https://img.shields.io/badge/Open%20with-Gitpod-908a85?logo=gitpod"
+      alt="Open with Gitpod"
+    />
+  </a>
+  <a href="https://github.com/jacobparis/remix-nx-fly">
+    <img
+      src="https://img.shields.io/badge/View%20the%20code%20on-Github-blue"
+      alt="View the code on GitHub"
+    />
+  </a>
+</div>
+
+<div className="not-prose py-4 rounded-xl bg-gray-100 px-8  text-center my-20">
+    <h2 className="text-4xl font-medium mb-4"> Work in progress </h2>
+
+    <p className="leading-snug font-bold text-gray-500"> This page may be inaccurate, incomplete, or incoherent.</p>
+
+</div>
+
+[Remix](https://remix.run/docs/en/v1/pages/philosophy) is a web framework for rapidly building production-grade applications, like websites, web apps, and APIs. It's built on top of React and React Router, and it's designed to be a great fit for all web developers.
+
+Since Remix is so versatile, and the developer experience makes it so easy to create new apps, it's easy to end up with a lot of them. When these app are plit across several repositories, the maintenance burden of keeping them up to date, reusing components, and deploying them can be a lot of work.
+
+[Nx](https://nx.dev/) is a monorepo tool that helps you develop and deploy multiple apps and libraries in a single repository. Integrating several Remix apps into a single Nx monorepo can help you manage your apps more easily, and it can help you reuse components and code between them, such as
+
+- UI components
+- Auth systems
+- Logging setups
+- Linters and formatters
+- Testing setups
+- And more
+
+In this post, we'll walk through how to create a new Nx monorepo, and then add several Remix apps to it. We'll also cover how to deploy the apps to [Fly](https://fly.io/), a modern cloud platform that makes it easy to deploy apps to the edge.
+
+1. [Set up an Nx monorepo](#set-up-an-nx-monorepo)
+2. [Begin adding Remix apps](#begin-adding-remix-apps)
+3. [Manage dependencies at the monorepo level](#manage-dependencies-at-the-monorepo-level)
+4. [Configure Prisma to work in a monorepo](#configure-prisma-to-work-in-a-monorepo)
+5. [Wrap Docker compose with an Nx target](#wrap-docker-compose-with-an-nx-target)
+6. [Build the app with Docker](#build-the-app-with-docker)
+7. [Deploy it all to Fly](#deploy-it-all-to-fly)
+8. [Understand CI for monorepos](#understanding-ci-for-monorepos)
+9. [Use GitHub Actions to build and deploy the app](#use-github-actions-to-build-and-deploy)
+10. [Conclusion](#conclusion)
+
+## Set up an Nx monorepo
+
+First, create a new Nx workspace with the following command
+
+```bash
+npx create-nx-workspace@latest --preset=ts
+```
+
+If you are new to Nx, you can read more about it in the [Nx Docs](https://nx.dev/getting-started/intro)
+
+## Begin adding Remix apps
+
+To add an existing application to the monorepo, you can `git clone` it directly into the `/packages` folder, and then delete its `.git` directory.
+
+New applications will each get their own directory within `/packages`. [Remix's Blues Stack](https://github.com/remix-run/blues-stack) is a production ready full stack application. Prisma and docker, so its a good example. run the following command
+
+```bash
+npx create-remix@latest --template remix-run/blues-stack
+```
+
+## Manage dependencies at the monorepo level
+
+The main difference between a standalone Remix app and an app in an integrated Nx monorepo is that in the monorepo, all apps share the same modules. There is one `package.json` at the top level that contains all the modules for all applications.
+
+Remix requires that each app has its own `package.json` file, so a bit of work is required to reconcile this disconnect.
+
+Copy all of the dependencies and devDependencies from the app `package.json` into the root `package.json`.
+
+In the app folder, create a new file `deps.ts` and import every dependency in the project. Nx will use this to determine which dependencies are used by each app.
+
+```js
+import "@prisma/client"
+import "@remix-run/express"
+import "@remix-run/node"
+import "@remix-run/react"
+import "@remix-run/server-runtime"
+import "bcryptjs"
+import "compression"
+import "cross-env"
+import "express"
+import "express-prometheus-middleware"
+import "isbot"
+import "morgan"
+import "prom-client"
+import "react"
+import "react-dom"
+import "tiny-invariant"
+```
+
+Create a new file `project.json`. We will set up three scripts that will run in sequence to keep the app's dependencies in sync with the monorepo.
+
+```json
+{
+  "targets": {}
+}
+```
+
+The first target uses the `@nrwl/js:tsc` executor, which supports generating a package.json file with only the dependencies that are used by the app, at the versions specified by the monorepo level package.json
+
+```json
+"deps:json": {
+  "executor": "@nrwl/js:tsc",
+  "options": {
+    "main": "packages/blues-stack/deps.ts",
+    "generatePackageJson": true,
+    "outputPath": "packages/blues-stack/temp",
+    "tsConfig": "tsconfig.json",
+    "cwd": "packages/blues-stack",
+    "buildableProjectDepsInPackageJsonType": "dependencies",
+    "updateBuildableProjectDepsInPackageJson": true
+  }
+},
+```
+
+Next, take the `package.json` file generated by the previous step, embeds every devDependency for the monorepo and then generates a package-lock.json based on that. Every `devDependency` for every app is copied into each app's `package.json`. These do not make it in to the production build, but are sometimes necessary for building.
+
+```json
+"deps": {
+  "executor": "nx:run-commands",
+  "dependsOn": ["deps:json"],
+  "options": {
+    "commands": [
+      "mv ./temp/package.json package.json",
+      "rm -rf ./temp",
+      "echo \"$(jq --argjson a \"$(cat ../../package.json | jq '.devDependencies')\" '.devDependencies = ($a)' package.json)\" > package.json",
+      "npm --prefix . install --package-lock-only",
+      "cat package.json"
+    ],
+    "cwd": "packages/blues-stack",
+    "parallel": false
+  }
+},
+```
+
+Finally, read the package-lock and install dependencies
+
+```json
+"install": {
+  "executor": "nx:run-commands",
+  "dependsOn": ["deps"],
+  "options": {
+    "commands": ["npm --prefix . ci"],
+    "cwd": "packages/blues-stack"
+  }
+}
+```
+
+You can now install modules for every app in the monorepo with
+
+```sh
+npm install && nx run-many --target=install --all
+```
+
+## Configure Prisma to work in a monorepo
+
+The Prisma client installs by default in the root monorepo's modules, but we want it to be installed at the app level so there's no conflicts between multiple instances of Prisma in the monorepo.
+
+In the `prisma/schema.prisma` file, add an `output` property to the `generator` block and pass a relative path to the app level `node_modules` folder.
+
+```js
+generator client {
+  provider = "prisma-client-js"
+  output = "../node_modules/.prisma/client"
+}
+```
+
+When the application is built into a Docker image, the Prisma code needs to run from a location that can use the same relative output path and still find the correct `node_modules` folder.
+
+In the Dockerfile, adjust the `ADD prisma .` line to copy those files into a subfolder.
+
+```diff
+- ADD prisma .
++ ADD prisma ./prisma
+```
+
+## Wrap Docker Compose with an Nx target
+
+The Blues Stack app uses Docker Compose to run the database.
+
+In the `project.json`, add a new target to spin up the database. Optionally, add a `dev` target that will ensure the database starts before starting the dev server.
+
+```json
+"dev:db": {
+  "executor": "nx:run-commands",
+  "options": {
+    "commands": ["docker compose up -d"],
+    "cwd": "packages/blues-stack"
+  }
+},
+
+"dev": {
+  "executor": "nx:run-script",
+  "dependsOn": ["dev:db"],
+  "options": {
+    "script": "dev"
+  }
+},
+```
+
+To pull images for all docker-compose files in the monorepo, run
+
+```sh
+docker compose $(find . -name "docker-compose.yml" | sed 's/.*/--file=&/' | sed 's/\n/ /') pull
+```
+
+## Build the app with Docker
+
+```sh
+npm i @nx-tools/nx-docker
+```
+
+```json
+"docker": {
+  "executor": "@nx-tools/nx-docker:build",
+  "dependsOn": ["deps"],
+  "options": {
+    "context": "packages/blues-stack",
+    "push": false,
+    "cwd": "packages/blues-stack"
+  }
+}
+```
+
+```sh
+nx docker blues-stack
+```
+
+If you get a permissions error regarding the postgres-data folder, you can fix it by running
+
+```sh
+sudo chmod -R 777 packages/blues-stack/postgres-data
+```
+
+## Deploy it all to Fly
+
+Fly.io is a platform for deploying apps to a distributed cloud network. It's a great fit for Remix apps because it allows you to keep your server and database close together, which reduces load times during serverside-rendering.
+
+The Blues Stack comes preconfigured for Fly, so you just need to log in and you'll be able to deploy the app with a single command.
+
+```sh
+fly auth login
+```
+
+After logging in, you should see a confirmation message in your terminal. You're ready to launch the app and connect it to your Fly account. Run the following command, and when it asks you if you want a PostGRES database, say yes
+
+```sh
+fly launch
+```
+
+Fly will create the new app and database, returning your app name and a connection string for the database. Copy the connection string and add it to the fly secrets, which are environment variables for the deployed production environment.
+
+```sh
+fly secrets set DATABASE_URL=postgres://…
+fly secrets set SESSION_SECRET="super-duper-s3cret"
+```
+
+The app name becomes part of your docker image tag. Add a new `deploy` target to the `project.json`. The example below assumes an app name of `blues-stack-1234`
+
+```json
+"deploy": {
+  "executor": "nx:run-commands",
+  "dependsOn": ["deps"],
+  "options": {
+    "commands": [
+      "flyctl deploy --image registry.fly.io/blues-stack-1234:{args.hash}"
+    ],
+    "cwd": "packages/blues-stack"
+  }
+}
+```
+
+Run `nx deploy blues-stack` and in a few minutes, your app should be live on the internet.
+
+## Understanding CI for monorepos
+
+A normal CI process will run validation and build scripts against the code in your repository every time there's new code pushed to it. This is a great way to ensure that your code is always in a good state, and that it's ready to be deployed.
+
+In a monorepo environment, things work differently. If every app in the monorepo is built and tested on every PR, the CI process will slow to a crawl. As your applications grow, and as new ones are added to the monorepo, the build time would increase exponentially.
+
+Nx has a tool called `nx affected` that runs target scripts for only the apps that have been affected by changes (for example, in a PR). By comparing the current code against the codebase at the time of a previous commit, Nx can get detect which apps have changed. `
+
+Commits to branches can be compared directly against the latest commit to `main`, but commits directly to main need to be compared against the second-latest, else Nx will compare it against itself and never detect any changes.
+
+```sh
+npx nx affected --base=$([[ ${{ github.ref == 'refs/heads/main'}} ]] && echo "origin/main~1" || echo "origin/main") --head=HEAD --target=lint --parallel=3
+```
+
+1. `npx nx affected` - run the `affected` command from the Nx CLI
+2. `--base=$([[ ${{ github.ref == 'refs/heads/main'}} ]] && echo "origin/main~1" || echo "origin/main")` - set the base commit to compare against. If the current commit is on the main branch, compare against the second-to-last commit on the main branch. Otherwise, compare against the latest commit on the main branch.
+3. `--head=HEAD` - set the head commit to compare against. This is always the current commit.
+4. `--target=lint` - set the target to run for each affected app. In this case, it's the `lint` target.
+5. `--parallel=3` - run the lint target for each affected app in parallel. This is a performance optimization that can be adjusted based on the size of your monorepo.
+
+As the `nx affected` command requires looking at more than the current commit, and in the case of a push to a branch, also requires looking at the main branch,check out the repository with a `fetch-depth` of 0 to get all branches + commits.
+
+```yml
+lint:
+  name: ⬣ ESLint
+  runs-on: ubuntu-latest
+  steps:
+    - name: 🛑 Cancel Previous Runs
+      uses: styfle/cancel-workflow-action@0.11.0
+
+    - name: ⬇️ Checkout repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: ⎔ Setup node
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+
+    - name: 📥 Download deps
+      uses: bahmutov/npm-install@v1
+      with:
+        useLockFile: false
+        install-command: npm ci --ignore-scripts
+
+    - name: 🔬 Lint
+      run: npx nx affected --base=$([[ ${{ github.ref == 'refs/heads/main'}} ]] && echo "origin/main~1" || echo "origin/main") --head=HEAD --target=lint --parallel=3
+```
+
+## Use GitHub Actions to build and deploy
+
+The build step is similar to the lint step, but since the built image will be pushed to the Fly registry, you'll need to give the action access to your Fly registry.
+
+Create a [new access token in the Fly dashboard](https://fly.io/user/personal_access_tokens) and add it to your GitHub Secrets for this repository as `FLY_API_TOKEN`
+
+The `@nx-tools/nx-docker:build` that is used to build docker images for each app can be configured via dynamic environment variables. Use these to set the image tags for each app.
+
+- `INPUT_BLUES_STACK_TAGS` will set the `tags` for `blues-stack`.
+- `INPUT_INDIE_STACK_TAGS` will do the same for `indie-stack`.
+
+```yml
+build:
+  name: 🐳 Build
+  runs-on: ubuntu-latest
+
+  steps:
+    - name: 🛑 Cancel Previous Runs
+      uses: styfle/cancel-workflow-action@0.11.0
+
+    - name: ⬇️ Checkout repo
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+
+    - name: 📥 Download deps
+      uses: bahmutov/npm-install@v1
+      with:
+        useLockFile: false
+        install-command: npm ci --ignore-scripts
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: 🔑 Fly Registry Auth
+      uses: docker/login-action@v2
+      with:
+        registry: registry.fly.io
+        username: x
+        password: ${{ secrets.FLY_API_TOKEN }}
+
+    - name: 🐳 Docker build
+      run: npx nx affected --base=$([[ ${{ github.ref == 'refs/heads/main'}} ]] && echo "origin/main~1" || echo "origin/main") --head=HEAD --target=docker --parallel=1
+      env:
+        INPUT_PUSH: true
+        INPUT_BLUES_STACK_TAGS: registry.fly.io/blues-stack-1234:${{ github.sha }}
+        INPUT_INDIE_STACK_TAGS: registry.fly.io/indie-stack-1234:${{ github.sha }}
+```
+
+The deploy step is similar to the build step, but calls the deploy target on each app instead.
+
+Where the build step uses environment variables like `INPUT_BLUES_STACK_TAGS` to set the image tags, the `fly deploy` command uses the `--hash` flag, which can be passed in as an argument.
+
+```yml
+- name: 🚀 Deploy Production
+  run: npx nx affected --base=main~1 --head=HEAD --target=deploy --parallel=3 --args="--hash=${{ github.sha }}"
+  env:
+    FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+```
+
+## Conclusion
+
+We've now created a CI pipeline that will run on every commit to our repository. The pipeline will run the `lint`, `typecheck`, `build`, and `deploy` scripts for each app that has changed since the last commit to `main`.
+
+## Resources
+
+- [Example repo on GitHub](https://github.com/jacobparis/remix-nx-fly)
+- [Remix](https://remix.run)
+- [Nx](https://nx.dev)
+- [Fly.io](https://fly.io)
+- [Prisma](https://prisma.io)

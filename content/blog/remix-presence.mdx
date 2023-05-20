@@ -1,0 +1,601 @@
+---
+title: Show active user presence (like Google Docs or Figma) with Remix
+description: Add a sense of presence to your app by showing who is on each page. Create a full stack component to control the presence widget. Use event streams to update the presence widget in real time.
+tags: Remix, UI/UX
+published: true
+guide: true
+timestamp: "2023-04-11"
+---
+
+From the dawn of the internet, we've had hit counters on websites to see how many people visited. Over time, those fell out of fashion, but now they're back in a new form: presence indicators.
+
+- Blogs and news sites tell you how many other users are actively reading the same article.
+- Ecommerce sites show you how many other users are looking at the same product.<SideNote> 3 items left in stock, but 12 people viewing this item right now! Better buy quick! When it comes to online shopping, these numbers are almost always fake. But that doesn't mean they don't work. </SideNote>
+- Web apps like Google Docs and Figma show you who else is viewing or editing the same document. Sometimes you can even see their cursor position.
+
+Try out a [live example of what we're building](/examples/remix-presence)
+
+With Remix, these are easy to set up. In this guide, we will
+
+- Create a form with an emoji picker
+- Use a cookie session storage to save the user's name and emoji.
+- Create a full stack component to control the presence widget.
+- Use event streams to update the presence widget in real time.
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/WY1x91Ld-uw"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+  />
+</div>
+
+## Setting your name and avatar
+
+If you're retrofitting this into a system where you already have user accounts and images, you can skip this section.
+
+Start with a simple form that with a text input for the name, a set of radio buttons for the emoji<SideNote> This could also be a text input but this was more fun</SideNote>, and a submit button.
+
+<div className="mb-4 flex flex-wrap">
+  <label className="flex items-center justify-center">
+    <input
+      type="radio"
+      name="emoji"
+      value=""
+      className="peer h-0 w-0 opacity-0"
+    />
+    <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-transparent bg-white  p-2 text-3xl font-medium text-black focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 peer-checked:border-indigo-600">
+      A
+    </span>
+  </label>
+  {[
+    "😀",
+    "😍",
+    "😎",
+    "🤩",
+    "🥳",
+    "🥰",
+    "😭",
+    "😡",
+    "🥶",
+    "😈",
+  ].map((i) => (
+    <label
+      key={i}
+      className="flex items-center justify-center"
+    >
+      <input
+        type="radio"
+        name="emoji"
+        value={i}
+        className="peer h-0 w-0 opacity-0"
+      />
+      <span className="rounded-full border-4  border-transparent text-5xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 peer-checked:border-indigo-600 ">
+        {i}
+      </span>
+    </label>
+  ))}
+</div>
+
+```tsx
+<Form method="post">
+  <input
+    aria-label="Name"
+    id="name"
+    name="name"
+    type="text"
+    placeholder="Display name"
+    defaultValue={self.name}
+    className="block w-full border-none bg-transparent px-4 py-3 text-lg placeholder:text-gray-400 focus:shadow-none focus:outline-none focus:ring-0"
+    required
+  />
+
+  <div className="flex flex-wrap">
+    {/* Basic avatar with initial of name when there's no emoji selected */}
+    <label className="flex items-center justify-center">
+      <input
+        type="radio"
+        name="emoji"
+        value=""
+        defaultChecked={!self.emoji}
+        className="peer h-0 w-0 opacity-0"
+      />
+      <span className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-transparent bg-white  p-2 text-3xl font-medium text-black focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 peer-checked:border-indigo-600">
+        A
+      </span>
+    </label>
+
+    {["😀", "😆", "😍", "😎", "🥸", "🤩"].map((i) => (
+      <Emoji
+        key={i}
+        emoji={i}
+        defaultChecked={self.emoji === i}
+      />
+    ))}
+  </div>
+
+  <div className="flex justify-end border-t border-gray-100  px-4 py-3">
+    <button
+      type="submit"
+      className="rounded bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+    >
+      Set name/emoji
+    </button>
+  </div>
+</Form>
+```
+
+The `Emoji` component is a simple wrapper around the radio button that renders the emoji.
+
+```tsx
+function Emoji({
+  emoji,
+  defaultChecked,
+}: {
+  emoji: string
+  defaultChecked: boolean
+}) {
+  return (
+    <label className="flex items-center justify-center">
+      <input
+        type="radio"
+        name="emoji"
+        value={emoji}
+        defaultChecked={defaultChecked}
+        className="peer h-0 w-0 opacity-0"
+      />
+      <span className="rounded-full border-4  border-transparent text-5xl focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 peer-checked:border-indigo-600 ">
+        {emoji}
+      </span>
+    </label>
+  )
+}
+```
+
+## Saving the user info in a cookie
+
+When the user submits the form, we want to save their name and emoji in a cookie.
+
+This is a good choice because it's easy to set up and it will work even if the user refreshes the page.
+
+If the user opens multiple tabs, they will continue to be counted as a single user.
+
+Create a `session.server.ts` file as per the [session docs](https://remix.run/docs/en/main/utils/sessions#using-sessions).
+
+As part of your session data, you can store any data you want. We will store the user's name and emoji, which will be used to display their avatar.
+
+```ts
+type SessionData = {
+  userId: string
+  name: string
+  emoji: string
+}
+
+const { getSession, commitSession, destroySession } =
+  createCookieSessionStorage<SessionData>(options)
+
+export { getSession, commitSession, destroySession }
+```
+
+We can now use this in the our page's action to save the user's name and emoji.
+
+```tsx
+export async function action({ request }: ActionArgs) {
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  const form = await request.formData()
+  const name = form.get("name")
+  if (name) {
+    session.set("name", name.toString())
+  } else {
+    session.set("name", "Anonymous")
+  }
+
+  const emoji = form.get("emoji")
+  if (emoji) {
+    session.set("emoji", emoji.toString())
+  } else {
+    session.unset("emoji")
+  }
+
+  return json(null, {
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  })
+}
+```
+
+Check the application tab in your browser's dev tools to see the cookie being set.
+
+## Showing your own avatar
+
+Now that we have the user's name and emoji stored in a cookie, we can use it to display their avatar.
+
+In our loader, we can read the session data from the cookie and return it so we can use it in the page component.
+
+This is also a good place to set some sensible defaults for new users. If the user doesn't have an ID yet, generate a random one and set the name to "Anonymous".
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  let id = session.get("userId")
+  if (!id) {
+    id = crypto.randomUUID()
+    session.set("userId", id)
+    session.set("name", "Anonymous")
+  }
+
+  return json(
+    {
+      self: {
+        id,
+        name: session.get("name") || "Anonymous",
+        emoji: session.get("emoji"),
+      },
+    },
+    {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
+    },
+  )
+}
+```
+
+We'll need a new component to display our avatar. If the user hasn't selected an emoji, we'll display their initial instead. We can also add a tooltip to show the user's name.<SideNote> We're using the `title` attribute here, but you could make it nicer with a proper `Tooltip` component. </SideNote>
+
+```tsx
+export function Avatar({
+  name,
+  emoji,
+}: {
+  name: string
+  emoji?: string
+}) {
+  return emoji ? (
+    <div
+      title={name}
+      className="flex h-12 w-12 items-center justify-center rounded-full border-4  text-5xl "
+    >
+      {emoji}
+    </div>
+  ) : (
+    <div
+      title={name}
+      className="flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-red-700 text-3xl font-medium text-white"
+    >
+      {name[0]}
+    </div>
+  )
+}
+```
+
+We can now use this in our page component. When you update your name or emoji, you should see the avatar update immediately.
+
+```tsx
+export default function Example() {
+  const { self } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      {/* Place this wherever makes sense in your layout */}
+      <Avatar name={self.name} emoji={self.emoji} />
+    </div>
+  )
+}
+```
+
+## Reporting which page you're on
+
+The presence feature works by having each user report what they're doing automatically and on a regular basis. You could extend this to also track whether they're typing, interacting with a particular element, or even have custom statuses like "busy" or "away" that they can set. For now, we'll just report the current page.
+
+Start by creating a `useInterval` hook that will call a function on a regular interval.
+
+```tsx
+function useInterval(callback: () => void, delay: number) {
+  useEffect(() => {
+    const id = setInterval(callback, delay)
+    return () => clearInterval(id)
+  }, [callback, delay])
+}
+```
+
+Then create another hook `usePresenceUsers` that will POST the user's current route to the presence endpoint, which we will create next, every few seconds.
+
+```tsx
+export function usePresenceUsers(
+  route: string,
+  {
+    postInterval = 3000,
+  }: {
+    postInterval?: number
+  },
+) {
+  usePollInterval(() => {
+    const body = new FormData()
+    body.append("route", route)
+
+    void fetch("/examples/remix-presence/presence", {
+      method: "POST",
+      credentials: "include",
+      body,
+    })
+  }, postInterval)
+}
+```
+
+Place this hook at the top of your page component and check the network tab in your browser's dev tools to see the requests being made.
+
+```tsx
+export default function Example() {
+  const { self } = useLoaderData<typeof loader>()
+
+  usePresenceUsers(route)
+
+  // …
+}
+```
+
+## Creating a full stack component
+
+A full stack component is a pattern proposed by [Kent C. Dodds](https://www.epicweb.dev/full-stack-components), where instead of having a folder of components outside your route hierarchy, each component becomes a route.
+
+That allows your compnents to have dedicated actions and loaders that will run on the server, colocated in the same file that exports the component.
+
+These are [resource routes](https://remix.run/docs/en/1.15.0/content/resource-routes#creating-resource-routes), so they do not have a `default` export that would cause Remix to try to render the component.
+
+Create a new route `presence.tsx`<SideNote> This should match the fetch request in the `usePresenceUsers` hook.</SideNote> with an action that will store the user's current route in a map or database.
+
+```tsx
+export async function action({
+  params,
+  request,
+}: ActionArgs) {
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  const form = await request.formData()
+  const route = form.get("route")
+
+  const userId = session.get("userId")
+  const name = session.get("name")
+  const emoji = session.get("emoji")
+
+  db.presences[userId] = {
+    id: userId,
+    name: session.get("name") || "Anonymous",
+    emoji,
+    lastSeenWhere: "/examples/remix-presence",
+    lastSeenWhen: new Date(),
+  }
+
+  return new Response(null, {
+    status: 200,
+  })
+}
+```
+
+We can now update the loader in our main page to return the current list of users.
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  let id = session.get("userId")
+  if (!id) {
+    id = crypto.randomUUID()
+    session.set("userId", id)
+    session.set("name", "Anonymous")
+  }
+
+  return json(
+    {
+      self: {
+        id,
+        name: session.get("name") || "Anonymous",
+        emoji: session.get("emoji"),
+      },
+      initialUsers: Object.values(db.presences).filter(
+        (user) =>
+          user.lastSeenWhere === "/examples/remix-presence",
+      ),
+    },
+    {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
+    },
+  )
+}
+```
+
+and then display them in our page component.
+
+```tsx
+export default function Example() {
+  const { self, initialUsers } =
+    useLoaderData<typeof loader>()
+
+  usePresenceUsers(route)
+
+  return (
+    <div className="flex flex-col space-y-2">
+      {/* Place this wherever makes sense in your layout */}
+      {initialUsers.map((user) => (
+        <Avatar
+          key={user.id}
+          name={user.name}
+          emoji={user.emoji}
+        />
+      ))}
+    </div>
+  )
+}
+```
+
+You should now be able to open the page in a second browser and see the other user's avatar appear after you refresh the page.
+
+## Streaming updates
+
+The current implementation will only show the users that were present when the page was loaded. Everyone will need to refresh to get the up-to-date list of avatars. We can fix this by using [server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events) to stream updates to the client.
+
+Websockets may feel like a natural choice for this, but they require a separate server to handle the connection. For unidirectional communication, server-sent events much faster and easier.<SideNote> This is technically bidirectional communication since we're regularly sending our presence info to the server, but HTTP is more than capable of handling that every few seconds. If you need faster updates, like to show a mouse cursor on-screen, you should use websockets.</SideNote>
+
+In the `presence.tsx` file, add a loader that will return a stream of events.
+
+Take the route and fetch interval from the query string, so we can use the same loader for multiple streams, and each page can decide how often to fetch the data.
+
+```tsx
+import { eventStream } from "remix-utils"
+
+export async function loader({ request }: LoaderArgs) {
+  const url = new URL(request.url)
+  const route = url.searchParams.get("route")
+  const fetchInterval =
+    url.searchParams.get("fetchInterval") || "1000"
+
+  return eventStream(request.signal, function setup(send) {
+    const interval = setInterval(() => {
+      const users = Object.values(db.presences).filter(
+        (user) => {
+          if (route) {
+            return user.lastSeenWhere === route
+          }
+
+          return true
+        },
+      )
+      send({
+        event: "users",
+        data: JSON.stringify(users),
+      })
+    }, Number(fetchInterval))
+
+    return function clear() {
+      clearInterval(interval)
+    }
+  })
+}
+```
+
+You can even navigate directly to it in your browser to see the stream in action at `http://localhost:3000/examples/remix-presence/presence` (or whatever your URL is).
+
+Update the `usePresenceUsers` hook to use this stream.
+
+```tsx
+type PresenceUser = {
+  id: string
+  name: string
+  emoji?: string
+}
+
+export function usePresenceUsers(
+  route: string,
+  {
+    self,
+    initialUsers,
+    postInterval = 3000,
+    fetchInterval = 1000,
+  }: {
+    self: PresenceUser
+    initialUsers: PresenceUser[]
+    postInterval?: number
+    fetchInterval?: number
+  },
+) {
+  usePollInterval(() => {
+    const body = new FormData()
+    body.append("route", route)
+
+    fetch("/examples/remix-presence/presence", {
+      method: "POST",
+      credentials: "include",
+      body,
+    })
+  }, postInterval)
+
+  const streamUrl = new URL(
+    `/examples/remix-presence/presence`,
+    "http://localhost:3000",
+  )
+  streamUrl.searchParams.set(
+    "route",
+    encodeURIComponent(route),
+  )
+  streamUrl.searchParams.set(
+    "fetchInterval",
+    fetchInterval.toString(),
+  )
+  const userStream = useEventSource(streamUrl.pathname, {
+    event: "users",
+  })
+  const users = userStream
+    ? (JSON.parse(userStream) as typeof initialUsers)
+    : initialUsers
+
+  // inject our up-to-date self to the top of the list
+  const usersWithoutSelf = users.filter(
+    (user) => user.id !== self.id,
+  )
+  return [self, ...usersWithoutSelf]
+}
+```
+
+and then update the page component to use the data from the hook
+
+```tsx
+export default function Example() {
+  const { self, initialUsers } =
+    useLoaderData<typeof loader>()
+
+  const users = usePresenceUsers(
+    "/examples/remix-presence",
+    {
+      self,
+      initialUsers,
+    },
+  )
+
+  return (
+    <div>
+      {/* Place this wherever makes sense in your layout */}
+      <div className="inline-flex -space-x-4 rounded-[2rem] bg-white">
+        {presenceUsers.map((user) => (
+          <Avatar
+            key={user.id}
+            name={user.name}
+            emoji={user.emoji}
+          />
+        ))}
+      </div>
+      <div>
+        <p className="text-sm text-gray-500">
+          {presenceUsers.length === 0
+            ? "No one is here"
+            : `${String(presenceUsers.length)} ${
+                presenceUsers.length === 1
+                  ? "person"
+                  : "people"
+              } on this page`}
+        </p>
+      </div>
+    </div>
+  )
+}
+```
+
+## Conclusion
+
+We've now built a simple presence system that can be used to show who is on a page. We've also learned how to use server-sent events to stream data to the client.
+
+Try out a [live example](/examples/remix-presence)

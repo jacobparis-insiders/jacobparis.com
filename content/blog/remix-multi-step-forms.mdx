@@ -1,0 +1,171 @@
+---
+title: Multi-step forms with Remix
+description: Longer forms can be broken up into multiple pages. Store the in-progress form data serverside. When they return to a page, re-fill the inputs with the data they've already entered. Use the in-progress data to automatically send them to the right page.
+tags: Remix, UI/UX
+published: true
+guide: true
+timestamp: "2023-04-03"
+---
+
+Single-page forms are easy – you just need to validate the form and submit it. Every field is on the same page, so it will all be included in the same request.
+
+Multi-page forms are a bit trickier. As the user progresses through the form, they submit small pieces of information at a time. The user might leave the form and come back later. They could hit the back button in their browser and return to a previous page. Maybe they'll even try to finish the form on a different device.
+
+This example video is for both this guide and the [animated route transitions guide](/content/remix-animated-page-transitions)
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/ck1cYiRP9Fw"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+  />
+</div>
+
+## Storing the form session across pages
+
+To link the pages of the form together, we need to store the in-progress form data somewhere.
+
+If the user should be able to complete the form from a different device than they started, store it in a database attached to a user account/identifier
+
+```tsx
+export async function action({ request }: ActionArgs) {
+  const session = await getUser(request)
+  if (!session) throw new Error("Not logged in")
+
+  const form = await request.formData()
+
+  await prisma.formSessions.create({
+    data: {
+      userId: session.id,
+      data: {
+        firstName: form.get("firstName"),
+        lastName: form.get("lastName"),
+      },
+    },
+  })
+
+  return redirect("/step-3")
+}
+```
+
+If the user will be logged in and only use a single device, you can store it in their auth session and include the `Set-Cookie` header in the redirect.
+
+```tsx
+export async function action({ request }: ActionArgs) {
+  const session = await getUser(request)
+  if (!session) throw new Error("Not logged in")
+
+  const form = await request.formData()
+  const formSession = session.get("formSession")
+
+  session.set("formSession", {
+    ...formSession,
+    firstName: form.get("firstName"),
+    lastName: form.get("lastName"),
+  })
+
+  return redirect("/step-3", {
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  })
+}
+```
+
+For a quick demo, you can just use a [global singleton in memory](/content/type-safe-singleton-modules).
+
+```tsx
+declare global {
+  var progress: {
+    hasStarted: boolean
+    firstName?: string
+    lastName?: string
+    email?: string
+    sawNewsletterOffer: boolean
+  }
+}
+
+if (!global.progress) {
+  global.progress = {
+    hasStarted: false,
+    sawNewsletterOffer: false,
+  }
+}
+
+export const progress = global.progress
+```
+
+```tsx
+import { progress } from "../remix-multi-step-forms"
+export async function action({ request }: ActionArgs) {
+  const form = await request.formData()
+  progress.firstName = form.get("firstName")
+  progress.lastName = form.get("lastName")
+
+  return redirect("/step-3")
+}
+```
+
+## Loading the form data
+
+The user can go to any page of the form at any time, so we need to re-fill the inputs with the data they've already entered as the page loads
+
+```tsx
+import { progress } from "../remix-multi-step-forms"
+
+export function loader({ request }: LoaderArgs) {
+  return json({
+    firstName: progress.firstName,
+    lastName: progress.lastName,
+  })
+}
+
+export default function Step2() {
+  const { firstName, lastName } = useLoaderData()
+
+  return (
+    <Form method="POST">
+      <label>
+        First name
+        <input type="text" defaultValue={firstName} />
+      </label>
+
+      <label>
+        Last name
+        <input type="text" defaultValue={lastName} />
+      </label>
+    </Form>
+  )
+}
+```
+
+## Directing them to the right page
+
+Sometimes a user will return to the form but not know exactly which page it was they left off. We can use the data we've stored to figure out where they should go next.
+
+Make a separate page called `/continue` with just a loader that redirects to the right page.
+
+```tsx
+import { progress } from "../remix-multi-step-forms"
+
+export function loader({ request }: LoaderArgs) {
+  if (!progress.hasStarted) {
+    return redirect("/step-1")
+  }
+
+  if (!progress.firstName && !progress.lastName) {
+    return redirect("/step-1")
+  }
+
+  if (!progress.sawNewsletterOffer) {
+    return redirect("/step-3")
+  }
+
+  return redirect("/step-4")
+}
+```

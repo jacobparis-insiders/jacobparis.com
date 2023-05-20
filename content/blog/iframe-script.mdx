@@ -1,0 +1,161 @@
+---
+title: Send messages from an embedded iframe to the parent page
+description: This is a helper script to allow an embedded iframe to communicate with its parent page.
+tags: Basics
+published: true
+cheatsheet: true
+---
+
+This is a helper script to allow an embedded iframe to communicate with its parent page.
+
+Place this on the page that contains the `<iframe`
+
+## The script
+
+- Listens for triggers emitted by application
+- Triggers scrolling on parent page
+- Triggers positions and resize iframe to fit content
+- Triggers opening of new pages
+- Passes UTM codes into iframe via URL query
+
+```js numbered labeled filename[iframe.js]
+;(function (frameId) {
+  let connected = false
+
+  if (document.readyState === "loading") {
+    document.addEventListener(
+      "readystatechange",
+      addEventListenersToDocument,
+    )
+  } else {
+    addEventListenersToDocument()
+  }
+
+  function addEventListenersToDocument() {
+    if (connected) return
+
+    // The iframe with the funnel must have the following ID
+    const portal =
+      document.getElementById(frameId)
+
+    // Set initial height to reduce jarring size changes
+    portal.style["min-height"] = "100vh"
+
+    window.addEventListener(
+      "message",
+      function (e) {
+        // Resize iframe to fit contents
+        if (
+          e.data.type &&
+          e.data.type === "size"
+        ) {
+          portal.style["min-height"] =
+            e.data.height + "px"
+        }
+
+        // Scroll parent page to top
+        if (
+          e.data.type &&
+          e.data.type === "scrolltop"
+        ) {
+          document.body.scrollIntoView(
+            e.data.options,
+          )
+        }
+
+        // Scroll parent page by X (Up, Down, Left or Right)
+        if (
+          e.data.type &&
+          e.data.type === "scrollby"
+        ) {
+          // Make movements better on mobile
+          e.data.options.top =
+            window.innerHeight <
+            e.data.options.top
+              ? window.innerHeight / 3
+              : e.data.options.top / 2
+          // Need to check to see if the browser supports smooth scroll
+          // otherwise use legacy scroll
+          if (
+            "scrollBehavior" in
+            document.documentElement.style
+          ) {
+            window.scrollBy(e.data.options)
+          } else {
+            window.scrollBy(
+              e.data.options.left,
+              e.data.options.top,
+            )
+          }
+        }
+
+        // Click link inside of iframe
+        if (
+          e.data.type &&
+          e.data.type === "link"
+        ) {
+          window.open(
+            "./" +
+              e.data.path.replace(
+                new RegExp("^/"),
+                "",
+              ),
+            "_blank",
+          )
+        }
+      },
+    )
+
+    // Extract utm codes from query string
+    const parentUrl = new URL(
+      window.location.href,
+    )
+    const urlCodes = Object.fromEntries(
+      Array.from(
+        parentUrl.searchParams.entries(),
+      ).filter(([key]) => key.startsWith("utm_")),
+    )
+
+    const utmCodes = {
+      ...urlCodes,
+    }
+
+    // Assign utm codes to iframe query string
+    const portalUrl = new URL(portal.src)
+
+    Object.entries(utmCodes).forEach(
+      ([key, code]) => {
+        portalUrl.searchParams.append(key, code)
+      },
+    )
+
+    portal.src = portalUrl.href
+    connected = true
+
+    document.removeEventListener(
+      "readystatechange",
+      addEventListenersToDocument,
+    )
+  }
+})("FRAME_ID")
+```
+
+## Usage
+
+Replace `'FRAME_ID'` at the bottom of the script with the id of the iframe you want to embed.
+
+Embed the iframe with the same ID and the following script
+
+```html
+<script src="./iframe.js"></script>
+<iframe
+  id="FRAME_ID"
+  src="https://example.com"
+  style="border: 0px; width: 100%; margin: 1rem 0rem 2rem; min-height: 45rem;"
+  allowfullscreen="true"
+  sandbox="allow-same-origin allow-scripts allow-top-navigation-by-user-activation allow-popups allow-popups-to-escape-sandbox allow-forms"
+  scrolling="no"
+  width="100%"
+  height="100%"
+></iframe>
+```

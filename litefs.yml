@@ -1,0 +1,12 @@
+# This directory is where your application will access the database.
+fuse:
+  dir: "${LITEFS_DIR}"
+
+# This directory is where LiteFS will store internal data.
+# You must place this directory on a persistent volume.
+data:
+  dir: "/data/litefs"
+
+lease:
+  type: "static"
+  candidate: true

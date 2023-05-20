@@ -1,0 +1,272 @@
+---
+title: JSDoc to Typescript Cheatsheet
+description: Samples of JSDoc typing different kinds of functions
+tags: Basics, Typescript
+published: true
+cheatsheet: true
+---
+
+## Arguments and return type
+
+```js
+/**
+ * @param {number} a
+ * @param {number} b
+ *
+ * @returns {number}
+ */
+function sum(a, b) {
+  return a + b
+}
+```
+
+```ts
+function sum(a: number, b: number): number
+```
+
+## Async function with return value
+
+```js
+/**
+ * @param {number} a
+ * @param {number} b
+ *
+ * @returns {Promise<number>}
+ */
+async function sum(a, b) {
+  return a + b
+}
+```
+
+```ts
+function sum(
+  a: number,
+  b: number,
+): Promise<number>
+```
+
+## Async function with no return value
+
+```js
+/**
+ * @param {String} environment
+ *
+ * @returns {Promise}
+ */
+async function startLogger(environment) {
+  if (environment === "production") {
+    await startProductionLogger()
+  } else {
+    await startDevelopmentLogger()
+  }
+}
+```
+
+```ts
+function startLogger(
+  environment: string,
+): Promise<any>
+```
+
+## String union argument
+
+```js
+/**
+ * @param {'production' | 'development'} environment
+ *
+ * @returns {Promise}
+ */
+async function startLogger(environment) {
+  if (environment === "production") {
+    await startProductionLogger()
+  } else {
+    await startDevelopmentLogger()
+  }
+}
+```
+
+```ts
+function startLogger(
+  environment: "production" | "development",
+): Promise<any>
+```
+
+## Destructured argument
+
+```js
+/**
+ * @param {Object} obj
+ * @param {number} obj.a
+ * @param {number} obj.b
+ *
+ * @returns {number}
+ */
+function sum({ a, b }) {
+  return a + b
+}
+```
+
+```ts
+function sum({
+  a,
+  b,
+}: {
+  a: number
+  b: number
+}): number
+```
+
+## Declaring a typedef for reusable types
+
+```js
+/**
+ * @typedef Pair
+ * @property {number} a
+ * @property {number} b
+ */
+
+/**
+ * @param {Pair} obj
+ *
+ * @returns {number}
+ */
+function sum({ a, b }) {
+  return a + b
+}
+```
+
+```ts
+type Pair = {
+  a: number
+  b: number
+}
+
+function sum({ a, b }: Pair): number
+```
+
+## Typedefs in argument and return type
+
+```js
+/**
+ * @typedef Auth
+ * @property {string} username
+ * @property {string} password
+ */
+
+/**
+ * @typedef Token
+ * @property {String} access_token
+ */
+
+/**
+ * @param {Auth} auth
+ *
+ * @returns {Promise<Token>}
+ */
+function login(auth) {
+  return authenticateWithThirdPartyService(auth)
+}
+```
+
+```ts
+type Auth = {
+  username: string
+  password: string
+}
+
+type Token = {
+  access_token: string
+}
+
+function login(auth: Auth): Promise<Token>
+```
+
+## Importing type from external TS file
+
+```js labeled[@/app/login.d.ts]
+export type Auth = {
+  username: string
+  password: string
+}
+```
+
+### Aliased for reusability
+
+```js
+/**
+ * @typedef { import('@/app/login').Auth } Auth
+ */
+
+/**
+ * @param {Auth} auth
+ *
+ * @returns {Promise<Token>}
+ */
+function login(auth) {
+  return authenticateWithThirdPartyService(auth)
+}
+```
+
+### Inline for single use
+
+```js
+/**
+ * @param {import('@/app/login').Auth} auth
+ *
+ * @returns {Promise<Token>}
+ */
+function login(auth) {
+  return authenticateWithThirdPartyService(auth)
+}
+```
+
+## Type parameters
+
+```js
+/**
+ * @template T
+ * @template U
+ *
+ * @param {Record<T, U>} input
+ * @returns {Record<U, T>}
+ */
+function reverseRecord(input) {
+  const entries = Object.entries(input).map(
+    ([key, value]) => [value, key],
+  )
+
+  return Object.fromEntries(entries)
+}
+```
+
+```ts
+function reverseRecord<T, U>(
+  input: Record<T, U>,
+): Record<U, T>
+```
+
+## Type parameters with constraints
+
+```js
+/**
+ * @template {PropertyKey} T
+ * @template {PropertyKey} U
+ *
+ * @param {Record<T, U>} input
+ * @returns {Record<U, T>}
+ */
+function reverseRecord(input) {
+  const entries = Object.entries(input).map(
+    ([key, value]) => [value, key],
+  )
+
+  return Object.fromEntries(entries)
+}
+```
+
+```ts
+function reverseRecord<
+  T extends PropertyKey,
+  U extends PropertyKey,
+>(input: Record<T, U>): Record<U, T>
+```

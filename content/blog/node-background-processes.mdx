@@ -1,0 +1,64 @@
+---
+title: Offload work to a background process in Node JS
+description: Improve performance and prevent your application from stalling or crashing by offloading work to a background process.
+tags: Advanced
+published: true
+guide: true
+timestamp: "2023-03-22"
+---
+
+Javascript is a single threaded language, so the moment you start running some intensive task, it will block the event loop and prevent the rest of your application from working.
+
+```js
+while (10 > 5) {
+  console.log(
+    "This will never end and will cause the browser tab to freeze or the Node.js process to stall indefinitely.",
+  )
+}
+```
+
+While most applications won't have any forever-tasks that stall it completely, functions that take a long time to run can degrade the user experience elsewhere in the app.
+
+This can cause dropped network requests, slow page loads, and other issues.
+
+If it's javascript's bottleneck that a single javascript process can only run one thread at a time, then the solution must be to use multiple javascript processes to run different parts of our application.
+
+By offloading the work to a separate process, we can keep our main application running and responsive while the background tasks run.
+
+The simplest setup is to use a [singleton module](/content/type-safe-singleton-modules) to spawn a new Node.js process that runs another javascript file.
+
+```ts
+import { spawn } from "child_process"
+import { join } from "path"
+
+let subprocess: ReturnType<typeof spawn> | null = null
+
+declare global {
+  var subprocess: ReturnType<typeof spawn> | null
+}
+
+if (!global.subprocess) {
+  global.subprocess = spawn(
+    "node",
+    join(__dirname, "subprocess.js"),
+    {
+      stdio: "inherit",
+      shell: true,
+      detached: true,
+    },
+  )
+}
+
+subprocess = global.subprocess
+
+export default subprocess
+```
+
+This will successfully offload the work to a separate process, but to be a practical solution for most developers, there are many more things to consider.
+
+- How do we communicate between the two processes?
+- How do we handle errors?
+- How do we run a typescript file?
+- How do we handle the subprocess crashing?
+
+Rather than solving these one by one, we can use a battle-tested library like [BullMQ](/content/bullmq-integration-guide) that supports background processes natively to handle all of these concerns.

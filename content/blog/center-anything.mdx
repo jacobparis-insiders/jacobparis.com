@@ -1,0 +1,252 @@
+---
+title: Center anything with CSS
+description: A guide explaining different patterns for centering elements in CSS
+tags: Basics
+published: true
+guide: true
+---
+
+CSS is full of nuances that can be pretty confusing for beginners. Over the last 20 years, developers have had to come up with many methods for building out layouts, and as the language evolves we have better and better solutions.
+
+I recently made a tweet that mashed together several of these solutions into one single unusable broken class, so now in a more helpful manner I'm going to explain the real patterns to use
+
+{/* % twitter 1245193222181326848 % */}
+
+## Table of contents
+
+<nav>
+
+- [The Text Align Method](#the-text-align-method)
+- [The Line Height Method](#the-line-height-method)
+- [The Background Position Method](#the-background-position-method)
+- [The Margin Auto Method](#the-margin-auto-method)
+- [The Position Absolute Method](#the-position-absolute-method)
+- [The Absolute Offset Method](#the-absolute-offset-method)
+- [The Flexbox Method](#the-flexbox-method)
+- [The Grid Method](#the-grid-method)
+- [Grid (Place Items)](#grid-place-items)
+
+</nav>
+
+## The Text Align Method
+
+To center all the text within a container, you can use the css rule `text-align: center;`
+
+This will apply to all inline elements — that is, anything that flows like text
+
+```html numbered
+<div style="text-align: center">
+  This will center all inline elements
+
+  <br />
+
+  <span>
+    Spans are inline elements by default
+  </span>
+
+  <br />
+
+  <div style="display: inline-block;">
+    Inline blocks are also affected
+  </div>
+</div>
+```
+
+![A container with center-aligned text and a nested container that is also centered](https://dev-to-uploads.s3.amazonaws.com/i/ls5j2yo508nt0gtdbpgh.png)
+
+Example here: https://codepen.io/jacobparis/pen/BaNEbVQ
+
+## The Line Height Method
+
+To center text vertically, you can use the `vertical-align: middle;` rule. It's important to note that this only aligns characters within their line height. For example, you can use this rule to set text to superscript or subscript positioning, but it still flows the same.
+
+If you want to center text vertically within its container this way, you'll need to make sure the `line-height` property has the same height as the container.
+
+```html numbered
+<div style="height: 200px; text-align: center;">
+  <span
+    style="vertical-align: middle; line-height: 200px;"
+  >
+    This will center all inline elements
+  </span>
+
+  <div style="display: inline-block;">
+    Inline blocks are also affected
+  </div>
+</div>
+```
+
+![A container with text and a nested container both centered horizontally and vertically](https://dev-to-uploads.s3.amazonaws.com/i/teo6t813p0r7txgbb15r.png)
+
+Example here: https://codepen.io/jacobparis/pen/RwPOdza
+
+## The Background Position Method
+
+This only works for images (and SVG!) that you want to set as backgrounds to other elements. For `<img />` tags, you can use any of the methods that work on divs.
+
+The rule here is `background-position: center;`
+
+```html numbered
+<div
+  style="
+  height: 300px;
+  background-image: url('http://placekitten.com/200/200');
+  background-repeat: no-repeat;
+  background-position: center;
+"
+/>
+```
+
+![A cat picture perfectly centered in a container](https://dev-to-uploads.s3.amazonaws.com/i/rythj3jfr4zhiknl094t.png)
+
+Example here: https://codepen.io/jacobparis/pen/rNVbgBO
+
+## The Margin Auto Method
+
+Block elements are max width by default, so horizontally centering doesn't mean anything until you set its width explicitly.
+
+An artificially narrow div defaults to the left, (or right in RTL scenarios), but you can force it center with `margin-left: auto; margin-right: auto;`
+
+A common shorthand for the same margin is `margin: 0 auto;` and since we don't care about vertical margin here nothing stops us from doing `margin: auto;` either
+
+```html numbered
+<div>
+  <div style="max-width: 300px; margin: 0 auto;">
+    This is a centered div
+  </div>
+</div>
+```
+
+![A container with a nested container that is aligned horizontally](https://dev-to-uploads.s3.amazonaws.com/i/6dk43ssk07wrjp8pvwg1.png)
+
+Example here: https://codepen.io/jacobparis/pen/RwPOOwR
+
+## The Position Absolute Method
+
+Of all the methods, this is the most extreme. Instead of letting the browser calculate where the element should be at all, we're setting it explicitly.
+
+Important here is that if you want to center something within a container, the container **must** have `position: relative;`. That's what tells the absolute position what to base its coordinates off of.
+
+```css numbered
+position: absolute;
+left: 0;
+right: 0;
+top: 0;
+bottom: 0;
+```
+
+Essentially, you're anchoring the edges of your element to the edges of its container, which makes it exactly the same size. If you then set the width or height explicitly **AND** use the Margin Auto Method, it ends up suspended between the edges
+
+If you only want horizontal or vertical centering, you can leave out the other axis
+
+```html numbered
+<div style="height: 500px; position: relative;">
+  <div
+    style="
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: 0;
+      width: 100px;
+      height: 200px;
+      margin: auto;"
+  >
+    This is an absolutely positioned centered div
+  </div>
+</div>
+```
+
+![A container with a nested container aligned both horizontally and vertically by the position absolute method](https://dev-to-uploads.s3.amazonaws.com/i/qpqc2731eo6v4m8c4g47.png)
+
+Example here: https://codepen.io/jacobparis/pen/RwPOOwR
+
+## The Absolute Offset Method
+
+The trouble with the previous method is you need to set the width and height explicitly. But what if your content changes dynamically? We have another solution!
+
+Instead of setting all four corners, only set `left: 50%;` and `top: 50%;`. That will position the top left corner of your element in the center of its container.
+
+Then you can use CSS Translate to shift the child by half of its own width and height up and to the left, landing in perfectly in the center
+
+```html numbered
+<div style="height: 200px; position: relative;">
+  <div
+    style="
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);"
+  >
+    This is an absolutely positioned centered div
+    with dynamic position
+  </div>
+</div>
+```
+
+![A container with a nested container, aligned in all axes](https://dev-to-uploads.s3.amazonaws.com/i/dtjple4bo07633xp8nea.png)
+
+Example here: https://codepen.io/jacobparis/pen/bGdJJJm
+
+## The Flexbox Method
+
+Flexbox is the biggest game-changer to ever hit CSS, and it makes centering a snap.
+
+The key to flex is to understand that parent elements are responsible for laying out their children. If you try to make every element position itself, you're gonna have a bad time.
+
+Since a flex parent is responsible for its children's position, it doesn't matter whether they're inline or block elements. That makes no difference anymore. Instead of inline and block, think in terms of flex-parents and flex-children
+
+The element with `display: flex;` is the flex-parent, and it only controls direct children, not further descendants.
+
+```html numbered
+<div
+  style="
+  height: 300px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+"
+>
+  <div>This is a flex-child</div>
+  <span> This is a flex-child </span>
+  <div>This is a flex-child</div>
+</div>
+```
+
+![A container with three nested children, all aligned in both axes](https://dev-to-uploads.s3.amazonaws.com/i/bwagh7bmvzapx3h53xin.png)
+
+Example here: https://codepen.io/jacobparis/pen/poJBBpq
+
+## The Grid Method
+
+CSS Grid is extremely powerful but more advanced than I'd like to get into today. If you just want to center items, the pattern is pretty close to flexbox — just change it to `display: grid;`
+
+If there were one single element here, it'd be perfectly centered (and that goes for flexbox too)
+
+```html numbered
+<div
+  style="
+  height: 300px;
+  display: grid;
+  justify-content: center;
+  align-items: center;
+"
+>
+  <div>This is a flex-child</div>
+  <span> This is a flex-child </span>
+  <div>This is a flex-child</div>
+</div>
+```
+
+![A single column of horizontally centered and vertically distributed elements](https://dev-to-uploads.s3.amazonaws.com/i/o2uxc5eusag0ng7fskhg.png)
+
+Example here: https://codepen.io/jacobparis/pen/poJBBpq
+
+### Grid (Place Items)
+
+One other thing I'd like to note is the `place-items: center;` property, which works on CSS Grid like a combination of `justify-content`, `align-items`, and `text-align` all at once
+
+```css numbered
+display: grid;
+place-items: center;
+```

@@ -1,0 +1,677 @@
+---
+title: Integrate Remix with Cloudflare Pages
+tags: Remix
+wip: true
+img: content/cloudflare-remix/cover.png
+published: true
+guide: true
+---
+
+[Wrangler](https://github.com/cloudflare/wrangler) is the CLI for working with Cloudflare Workers.
+
+`wrangler@pages` is a special alpha version of wrangler co-designed by the CloudFlare and the Remix teams,
+
+The hard part about Cloudflare is that it runs in a service-worker environment — that is, everything is ESM and not Node
+
+## Opening browser
+
+Gitpod workspaces (and presumably some other environments) do not support `xdg-open` to open the browser window. If the dev server tries to open the browser, it will throw an error and fail.
+
+Miniflare does not open the browser by default. You have to opt-in by passing the `--open` flag, so you can just avoid doing that and then there's no issue.
+
+Wrangler **does** open the browser, and you can only opt out by setting an environment variable `BROWSER=none`
+
+## Remix setup
+
+Remix has different packages for each of its deploy targets, but they use a setup function so that you don't have to import the correct version from the correct package every time, which would make the code less portable.
+
+If you get this error
+
+```sh
+node_modules/remix/esm/index.js:11:14: error: Could not resolve "./client"
+    11 │ export * from './client';
+       ╵               ~~
+
+node_modules/remix/esm/index.js:12:14: error: Could not resolve "./server"
+    12 │ export * from './server';
+       ╵               ~~
+
+node_modules/remix/esm/index.js:13:14: error: Could not resolve "./platform"
+    13 │ export * from './platform';
+       ╵               ~~~~
+
+Build failed with 3 errors:
+node_modules/remix/esm/index.js:11:14: error: Could not resolve "./client"
+node_modules/remix/esm/index.js:12:14: error: Could not resolve "./server"
+node_modules/remix/esm/index.js:13:14: error: Could not resolve "./platform"
+```
+
+Make sure you run `remix setup cloudflare-pages` or `remix setup express` or whichever target you're aiming for. Ideally this will be in a `postinstall` script so that it happens every time you update dependencies.
+
+## Pages vs Workers.
+
+Cloudflare workers are serverless functions running ESM, like AWS Lambda but V8 instead of Node.js
+
+Workers Sites is a platform that combines static site hosting with Cloudflare workers as a backend
+
+Cloudflare Pages will be the successor to Cloudflare Workers Sites and aims to be a vercel/netlify competitor. Pages Functions will provide the dynamic parts that you could previously do with Workers Sites, on Pages
+
+Matters with workers, but not with pages:
+
+- wrangler.toml
+- env.\_\_STATIC_CONTENT
+- workers.js
+- ASSET_MANIFEST
+- ASSET_NAMESPACE
+
+Matters with pages, but not with workers:
+
+- functions/[[path]].js
+- \_worker.js
+
+## Workers: New format
+
+The old worker format involved event listeners
+
+```js
+import { createEventHandler } from "@remix-run/cloudflare-workers"
+import * as build from "../build/index.js"
+
+addEventListener("fetch", createEventHandler({ build }))
+```
+
+The new one is an ES module
+
+```js
+export default {
+  async fetch(request, environment, context) {
+    return new Response("I’m a module!")
+  },
+  async scheduled(controller, environment, context) {
+    // await doATask();
+  },
+}
+```
+
+https://blog.cloudflare.com/workers-javascript-modules/
+
+## Workers: Environment variables
+
+Environment variables are globals, not stored under process.env. You can polyfill this by creating a new global for the process environment.
+
+```ts
+global process = {
+  env: global
+}
+```
+
+The current hosted environment is no longer `process.env.NODE_ENV`, as we aren't in a node environment
+
+Instead, use the global `ENVIRONMENT` which is set automatically by CloudFlare and its tooling.
+
+```js
+if (ENVIRONMENT === "production") {
+  // production
+} else if (ENVIRONMENT === "staging") {
+  // staging
+} else if (ENVIRONMENT === "dev") {
+  // dev
+} else {
+  throw new Error(
+    "You are running an ENVIRONMENT that CloudFlare does not support.",
+  )
+}
+```
+
+## Pages: Environment variables
+
+The code does not know what environment it will be run until request time. It could be on this server, or that server, anywhere in the world.
+
+The only way to access environment variables in Pages is through the Context which is fed to Remix's loaders
+
+## The remix route
+
+The functional part of remix is just a request handler.
+
+We create a Cloudflare Worker that operates on a wildcard, so any request to your server hits the worker.
+
+```yml
+app
+build
+functions
+[[path]].ts
+node_modules
+```
+
+The parametric route `[[path]]` is generic enough to capture all requests, the request path is given as a parameter. Magic!
+
+## \_worker.js
+
+If there is a `_worker.js` file in your output directory (`public`) then Cloudflare Pages will use that instead of the `functions` directory
+
+One downside is that you can only have a single one, instead of multiple, but the Remix integration works by only having a single page function anyway
+
+If you want to customize the esbuild config, you must use this workflow. You can write a custom build script and compile the worker code to `public/_worker.js`.
+
+```yml
+app
+build
+public
+_worker.js
+_worker.map.js
+build
+index.js
+node_modules
+```
+
+## KV
+
+https://gist.github.com/cryptoskillz/98b8e7090b7cc8d51531bb9dcfe7654a
+
+## Durable Objects
+
+Currently, the only way to use Durable Objects with Pages functions is by configuring a binding to an existing Worker's Durable Object namespace. Since it just connects to that namespace and doesn't actually reimplement it, they'll share data.
+
+They're looking at ways to automatically deploy Durable Objects exclusively on your Pages project, but don't have worked out yet.
+
+https://developers.cloudflare.com/workers/learning/using-durable-objects#uploading-a-durable-object-worker
+
+To launch a Durable Object with new wrangler, the script requires the --do flag
+
+```sh
+--do COUNTER=Counter@path/to/root
+```
+
+The path should provide the directory where wrangler.toml is declared. If this is the project root, use this instead
+
+```sh
+--do COUNTER=Counter@
+```
+
+## Uploading files
+
+Parsing files with FormData doesn't work the same in Cloudflare as it does in Node. Trying `form.get('file')` will only give you the path to the file, not the actual file contents.
+
+Fortunately there is [a polyfill](https://github.com/ssttevee/js-cfw-formdata-polyfill) to make this work.
+
+```js
+import parseFormData from "@ssttevee/cfw-formdata-polyfill/ponyfill"
+export const action: ActionFunction = async ({ request, context }) => {
+  const form = await parseFormData.call(request)
+
+  const file = form.get("file") as Blob
+  invariant(file, "File is required")
+
+  const body = new FormData()
+  body.append(
+    "file",
+    new Blob([await file.arrayBuffer()], { type: "image/png" }),
+    "file.png"
+  )
+
+  const response = await fetch(url, {
+      method: "POST",
+      body,
+    }
+  )
+```
+
+## Uploading to Cloudflare Images
+
+```js
+const uploadHandler = async (file: Blob) => {
+  const body = new FormData()
+  body.append(
+    "file",
+    new Blob([await file.arrayBuffer()], {
+      type: "image/png",
+    }),
+    "file.png",
+  )
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v1`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body,
+    },
+  )
+
+  const string = await response.text()
+
+  if (string.includes("ERROR")) {
+    // ERROR 9422: Decode error: image failed to be decoded: Uploaded image must have image/jpeg or image/png content type
+    console.error(string)
+
+    return undefined
+  }
+
+  const { result } = JSON.parse(string)
+
+  return result.variants[0]
+}
+```
+
+```js
+import parseFormData from "@ssttevee/cfw-formdata-polyfill/ponyfill"
+export const action: ActionFunction = async ({ request, context }) => {
+  const form = await parseFormData.call(request)
+
+  const authenticator = getAuthenticator(context)
+
+  const user = await authenticator.isAuthenticated(request)
+  invariant(user, "Not authorized")
+
+  const type = form.get("type")
+  invariant(type, "Card type is required")
+
+  const balance = form.get("balance")
+  invariant(balance, "Estimated balance is required")
+
+  const cardFront = form.get("cardFrontUrl") as Blob
+  invariant(cardFront, "Card front url is required")
+  const cardFrontPromise = uploadHandler(cardFront)
+
+  const cardBack = form.get("cardBackUrl") as Blob
+  invariant(cardBack, "Card Back url is required")
+  const cardBackPromise = uploadHandler(cardBack)
+
+  const receipt = form.get("receiptUrl") as Blob
+  invariant(receipt, "Receipt url is required")
+  const receiptPromise = uploadHandler(receipt)
+
+  await createCard({
+    type: type.toString() as CardType,
+    estimatedBalance: balance.toString(),
+    userId: user.id,
+    cardBackUrl: await cardFrontPromise,
+    cardFrontUrl: await cardBackPromise,
+    receiptUrl: await receiptPromise,
+  })
+
+  return {
+    success: true,
+  }
+}
+```
+
+## Error: Cannot read properties of undefined (reading '1')
+
+That error was thrown by `wrangler/pages` which doesn't support publishing yet.
+
+```sh
+npm remove wrangler/pages
+npm install @cloudflare/wrangler
+```
+
+Publish with the standard wrangler v1 package, then switch back if needed.
+
+They both use the same `wrangler` cli tool so they'll fight if both are installed
+
+## Error: Cannot apply new-class migration to class that is already depended on by existing Durable Objects
+
+Removing the [[migrations]] block from the wrangler.toml fixed this, but I don't think that's the right solution
+
+### Patch broken packages
+
+This is optional, but the odds are good that you're eventually going to run into a bug in someone else's code that requires a patch.
+
+I recommend this as part of a postinstall script
+
+```sh
+npx patch-package
+```
+
+### Setup Remix
+
+Remix has a different setup script for each environment it deploys to, but this has to be done after installing or updating remix.
+
+I recommend this as part of a postinstall script
+
+```sh
+remix setup cloudflare-pages
+```
+
+### Setup Prisma
+
+It's time to generate the Prisma client.
+
+The prisma client is created based on your configuration and your schema. The setting plays a huge part in generating the client.
+
+Prisma advertises the Data Proxy as a solution to allow serverless environments to communicate with conventional databases, providing a proxy that optimizes the connection strategy.
+
+You may think that you don't need to worry about the data proxy if you're using Prisma with a serverless database, but that's not the case.
+
+If you don't set the `PRISMA_CLIENT_ENGINE_TYPE` to dataproxy, Prisma will generate a client that is entirely incompatible with Cloudflare Workers.
+
+```sh
+PRISMA_CLIENT_ENGINE_TYPE=dataproxy prisma generate
+```
+
+npm run tailwind:build
+
+remix build
+
+npm run build:server
+
+BROWSER=none npx wrangler pages dev ./public --do SESSION_STORAGE=SessionStorageDurableObject
+
+## internal error on deploy
+
+```sh
+Failed: an internal error occurred
+```
+
+This cryptic error doesn't provide very much information as to why it may occur, but the most common reason is that your public build directory is misconfigured.
+
+Cloudflare has built your project successfully (or you would have gotten an error sooner) but when trying to serve the built files it fails to find them.
+
+## Error: async_hooks, \_http_common
+
+```sh
+Could not resolve "async_hooks" (use "platform: 'node'" when building for node)
+Could not resolve "_http_common" (use "platform: 'node'" when building for node)
+```
+
+These errors occur when importing a Prisma client that was not created with the environment variable `PRISMA_CLIENT_ENGINE_TYPE=dataproxy` set properly
+
+See [#setup-prisma](Setup Prisma) for more information
+
+## Error: https, zlib, fs
+
+```sh
+Could not resolve "https" (use "platform: 'node'" when building for node)
+Could not resolve "zlib" (use "platform: 'node'" when building for node)
+Could not resolve "fs" (use "platform: 'node'" when building for node)
+```
+
+These errors occur because Prisma expects to be running in a node environment with certain low-level packages available.
+
+```js
+import NodeModulesPolyfill from "@esbuild-plugins/node-modules-polyfill"
+const { NodeModulesPolyfillPlugin } = NodeModulesPolyfill
+
+esbuild.build({
+  …
+  plugins: [
+        NodeModulesPolyfillPlugin(),
+        …
+  ],
+})
+```
+
+## Error: Prisma Client cannot run in the browser
+
+The Prisma Client contains code meant to run on the server, but the heuristic it uses to determine if it's running on the server involves reading if it's in a Node environment.
+
+Like many of the issues we face with Cloudflare, this one is also rooted in the fact we're using a non-node javascript server.
+
+The solution is to resolve the path to the prisma client from a Node environment, so that we get the right client (and not the browser honeypot that throws errors at us), and then alias all requests to specifically that path.
+
+Resolving the path with `require.resolve(path)` would work out of the box if we were in an environment that supported Node's module format, CommonJS. But we're not, so we may get any number of errors like this:
+
+```sh
+require is not defined
+cannot read property resolve of undefined
+require.resolve is not a function
+```
+
+We can fix this by manually importing the require function from the builtin node libraries it comes from.
+
+```js
+import alias from "esbuild-plugin-alias"
+
+import NodeModule from "module"
+const { createRequire } = NodeModule
+
+const require = createRequire(import.meta.url)
+
+esbuild.build({
+  …
+  plugins: [
+        …
+        alias({
+          "@prisma/client": require.resolve("@prisma/client"),
+        }),
+        …
+  ],
+})
+```
+
+## Error: process is not defined
+
+The entirety of `process.env.NODE_ENV` is a Node idea, from using a variable named _node environment_ to determine whether you are in production or not, to the `process` object it's contained in.
+
+Cloudflare Workers and Pages run on V8, which does not have this. However, your build script runs in Node, so you can pass them into the build function using esbuild's `define` feature.
+
+```js
+const environment = process.env.NODE_ENV
+  ? process.env.NODE_ENV.toLowerCase()
+  : "development"
+
+
+const version = process.env.VERSION
+  ? process.env.VERSION
+  : new Date().toISOString()
+
+esbuild.build({
+  …
+  define: {
+    process: JSON.stringify({
+      env: {
+        NODE_ENV: mode,
+        VERSION: version,
+        DATABASE_URL: process.env.DATABASE_URL,
+        …
+      },
+    }),
+  },
+})
+```
+
+## Deployments
+
+When `npm i` runs in NODE_ENV production, only the regular dependencies are installed. Any command line tools that are required to build and deploy should not be in devDependencies
+
+## Async I/O error
+
+You must get the Prisma client from inside getLoadContext()
+
+## Error 1101
+
+Requests are limited to 50ms of CPU time and a small amount of RAM usage. Going over these limits has undefined behaviour – sometimes it will let certain requests pass but it does stop them after a threshold.
+
+If you get Worker Error 1101 when trying to do a thing, it's likely that you're going over one of these limits. Look for intensive operations and see if removing them will solve the issue.
+
+## Password hashing
+
+Many hash functions work by using intentionally computationally complex algorithms. It doesn't bother a user to wait 100ms to hash their password, but an attacker trying millions of passwords will be held at bay for extensive lengths of time.
+
+Argon2 and BCrypt are two such algorithms, and both will quickly exhaust Cloudflare's precious allotted milliseconds, throwing Error 1101
+
+The best we can do within a worker is a PBKDF2 implementation with few enough iterations that it doesn't exceed the limit
+
+```ts
+import invariant from "tiny-invariant"
+
+type HashArgs = {
+  password: string
+  pepper?: string
+  iterations?: number
+}
+
+/**
+ * Hashes password using the PBKDF2 algorithm
+ *
+ * @example
+ *  const hash = await hash({
+ *    password: passwordInput.toString(),
+ *    pepper: context.authPepper,
+ *  })
+ */
+export const hash = async ({
+  password,
+  pepper = "",
+  iterations = 1e5,
+}: HashArgs) => {
+  const passwordUtf = new TextEncoder().encode(
+    `${password}${pepper}`,
+  ) // encode pw as UTF-8
+  const passwordKey = await crypto.subtle.importKey(
+    "raw",
+    passwordUtf,
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  )
+
+  const saltIntArray = crypto.getRandomValues(
+    new Uint8Array(16),
+  ) // get random salt
+
+  const keyBuffer = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: saltIntArray.buffer,
+      iterations: iterations,
+    },
+    passwordKey,
+    256,
+  )
+
+  const keyBytes = Array.from(new Uint8Array(keyBuffer))
+
+  const saltBytes = Array.from(new Uint8Array(saltIntArray))
+
+  const iterationsHex = (
+    "000000" + iterations.toString(16)
+  ).slice(-6)
+
+  const iterationsPairs = iterationsHex.match(/.{2}/g)
+  invariant(iterationsPairs)
+
+  const iterationsBytes = iterationsPairs.map((byte) =>
+    parseInt(byte, 16),
+  )
+
+  const compositeBytes = [
+    ...saltBytes,
+    ...iterationsBytes,
+    ...keyBytes,
+  ]
+  const compositeString = compositeBytes
+    .map((byte) => String.fromCharCode(byte))
+    .join("")
+  const compositeBase64 = (
+    btoa as (data: string) => string
+  )("v01" + compositeString)
+
+  return compositeBase64
+}
+
+type VerifyArgs = {
+  hash: string
+  password: string
+  pepper?: string
+}
+/**
+ * Verifies that the supplied password (user input) matches the supplied hash
+ *
+ * @example
+ *   const isValid = await pbkdf2.verify({
+ *     password: passwordInput.toString(),
+ *     pepper: authPepper,
+ *     hash: dbUser.password,
+ *   })
+ */
+export const verify = async ({
+  hash,
+  password,
+  pepper = "",
+}: VerifyArgs) => {
+  let compositeString = null
+  try {
+    compositeString = (atob as (data: string) => string)(
+      hash,
+    )
+  } catch (e) {
+    throw new Error("Invalid hash")
+  }
+
+  const INITIAL_PREFIX_LENGTH = 0
+  const VERSION_LENGTH = 3
+  const SALT_LENGTH = 16
+  const ITERATIONS_LENGTH = 3
+  const KEY_LENGTH = 32
+
+  const versionString = compositeString.slice(
+    INITIAL_PREFIX_LENGTH,
+    VERSION_LENGTH,
+  )
+  const saltString = compositeString.slice(
+    VERSION_LENGTH,
+    VERSION_LENGTH + SALT_LENGTH,
+  )
+  const iterationsString = compositeString.slice(
+    VERSION_LENGTH + SALT_LENGTH,
+    VERSION_LENGTH + SALT_LENGTH + ITERATIONS_LENGTH,
+  )
+  const keyString = compositeString.slice(
+    VERSION_LENGTH + SALT_LENGTH + ITERATIONS_LENGTH,
+    VERSION_LENGTH +
+      SALT_LENGTH +
+      ITERATIONS_LENGTH +
+      KEY_LENGTH,
+  )
+
+  if (versionString != "v01")
+    throw new Error("Invalid hash")
+
+  const saltCharacters = saltString.match(/./g)
+  invariant(saltCharacters)
+
+  const saltIntArray = new Uint8Array(
+    saltCharacters.map((ch) => ch.charCodeAt(0)),
+  )
+
+  const iterationsCharacters = iterationsString.match(/./g)
+  invariant(iterationsCharacters)
+
+  const iterationsHex = iterationsCharacters
+    .map((ch) => ch.charCodeAt(0).toString(16))
+    .join("")
+  const iterations = parseInt(iterationsHex, 16)
+
+  const passwordUtf = new TextEncoder().encode(
+    `${password}${pepper}`,
+  )
+  const passwordKey = await crypto.subtle.importKey(
+    "raw",
+    passwordUtf,
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  )
+
+  const keyBuffer = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: saltIntArray.buffer,
+      iterations: iterations,
+    },
+    passwordKey,
+    256,
+  )
+  const keyBytes = Array.from(new Uint8Array(keyBuffer))
+  const newKeyString = keyBytes
+    .map((byte) => String.fromCharCode(byte))
+    .join("")
+
+  return newKeyString == keyString
+}
+```

@@ -1,0 +1,108 @@
+---
+title: Laying out pages with HTML
+description: An explanation of HTML/CSS positioning concepts followed by a series of example layouts with code
+tags: Basics
+published: true
+blog: true
+---
+
+There are four main display types we're going to look at here.
+
+## Block
+
+Block elements are full width containers that stack vertically. You can give them dimensions, such as a height and width and margin. Two consecutive block elements will stack vertically, even if there is room for them to fit side by side.
+
+The most basic block element is `<div />`
+
+## Inline
+
+Inline elements flow like text horizontally before overflowing to the next line. If you split a large inline element into two consecutive inline elements (for example, a paragraph into individual sentences), its layout will not change.
+
+You cannot set the width or height of inline elements.
+
+The most basic inline element is `<span />`
+
+If you give a `span` the css property `display: block;` it will behave identically to a `div` element, and vice versa. The only difference between these two basic elements that matters is the browser default display type.
+
+## Inline Block
+
+Inline-Block elements flow like text, but you can give them width and height values. Two consecutive inline-block elements will line up horizontally as long as there is room, otherwise they will overflow to the next line.
+
+## Flex
+
+This is one of the newest and most complicated display types, but is very powerful. When you set a container to `display: flex`, its children will be arranged according to the rules you set.
+
+On the container, your most important rules are going to be `flex-direction`, `align-items` and `justify-content`.
+
+`align-items` sets the position of children on the _cross-axis_, so by default it works as a vertical align. If your flex direction is set to column, then it will work as a horizontal align instead. Most of the time you'll want to set this to `center`
+
+`justify-content` sets the position of children on the _main-axis_, so horizontally for rows and vertically for columns. `space-around`, `space-between`, and `space-evenly` will be your highlights here, but you also have `start`, `center`, and `end` to use.
+
+There are many other rules, such as align-content, align-self, justify-self, justify-items —— but you don't need to concern yourself with these. They're poorly implemented by browsers and they don't do anything meaningful that you can't do with the above two selectors.
+
+On the children, the most important rule is `flex` which is a combination of three other properties: flex-grow, flex-shrink, and flex-basis. The first two are flags. Set flex grow to 1 if you would like the element to be able to expand automatically. Flex shrink allows it to reduce its size if needed. Flex basis is amount of space that element will take up.
+
+`flex: 0 1 30%` will give you an element that takes up 30% of its container, but can shrink if needed to fit more elements.
+
+## Single Column Page
+
+The single column layout is the king of webpage design. Not only does it naturally scale for mobile, but it's clean and focused and does everything it needs to do very well.
+
+On mobile devices, we want it to take up the full screen, but on large desktops we want it to be much narrower, so we can use the width and max-width properties to accomplish that.
+
+Since we're going full width, `display: block` is the key here and `<div>` elements are already block by default so we don't need to specify that manually.
+
+```css numbered
+.page {
+  width: 100%;
+  max-width: 50rem;
+}
+```
+
+{/* % codepen https://codepen.io/jacobparis/pen/zVeQEJ % */}
+
+## Horizontal List
+
+We want our list elements side by side, so that means `inline` and `inline-block` are our friends.
+
+```css numbered
+.horizontal-list li {
+  display: inline-block;
+}
+```
+
+{/* % codepen https://codepen.io/jacobparis/pen/ZdwNZq % */}
+
+## Two Column Layout (Sidebar and Content)
+
+```css numbered
+.content {
+  display: flex;
+}
+
+.column {
+  flex: 0 1 50%;
+}
+```
+
+```html
+<div class="content">
+  <div class="column" />
+  <div class="column" />
+</div>
+```
+
+{/* % codepen https://codepen.io/jacobparis/pen/xoBbyp % */}
+
+## Center Content in Window
+
+```css numbered
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+```
+
+{/* % codepen https://codepen.io/jacobparis/pen/qzvEQY % */}

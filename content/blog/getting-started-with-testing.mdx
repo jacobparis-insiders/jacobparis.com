@@ -1,0 +1,53 @@
+---
+title: Getting started with testing
+description: Testing your code is essential but get started can be a tough hurdle to overcome
+tags: Basics
+published: true
+blog: true
+---
+
+If you have an existing app that with too little test coverage, going for full test coverage right away is probably not a realistic plan.
+
+Instead, prioritize the most critical pieces of business functionality. If someone is making money somewhere, start there. That's checkouts, receipts, reporting, and so on.
+
+Try to get decent coverage of the essentials and plan to test the rest over time. Testing is still development work that needs to be prioritized in and around all other development work.
+
+Make sure any new code that's written also comes with tests covering its and adjacent functionality. Try to require that no new code is allowed to reduce your overall test coverage. As long as your test coverage is gainful, then on a long enough timeline you will trend toward full coverage.
+
+Pieces of your code that never get touched will take longer to get around to being tested, but that's ok. If you aren't finding bugs around them, you probably have decent confidence in them anyway.
+
+## Writing a component test plan
+
+Take a look at the component and write down everything that the component is supposed to do. For example, a button component has several basic functionalities that should be expected to work.
+
+- button shows text
+- button shows hover state when hovered
+- button shows focus state when focused
+- button shows active state when clicked
+- button callback triggers when clicked
+- button callback triggers when focused and spacebar pressed
+- button callback triggers when focused and enter pressed
+
+Each of these can become a test. As part of your test plan, turn each one into a todo item
+
+```js
+test.todo("button shows text")
+test.todo("button shows hover state when hovered")
+test.todo("button shows focus state when focused")
+test.todo(
+  "button shows active state when clicked",
+)
+test.todo("button callback triggers when clicked")
+test.todo(
+  "button callback triggers when focused and spacebar pressed",
+)
+test.todo(
+  "button callback triggers when focused and enter pressed",
+)
+```
+
+My approach for covering a component is to first go over the static states – that it shows the right data at the right times.
+
+Then cover the dynamic bits: when you manipulate the component, it should react in the right ways. When you enter data into an input, that data should get submitted/saved in the right place.
+
+Integrations come after. If data is expected to persist across page refreshes, destroy the component and reload it and see if the changes you've made are still there.

@@ -1,0 +1,128 @@
+---
+title: Add a simple query resolver
+description: There are two things you need to know about in order to write queries
+tags: Basics
+published: true
+---
+
+There are two things you need to know about in order to write queries: type definitions, and resolvers
+
+Here is a simple query to get a list of user emails
+
+```js
+  query { # the "query" field
+    users { # the "users" field
+      email # the "email" field
+    }
+  }
+```
+
+There are two top-level fields, and each request should be one or the other. That means every request is a `query` or a `mutation`. To make fields that work for queries, define them under `type Query`
+
+## The type definitions
+
+Type definitions allow us to describe how we want this query to look. The above query expects that under `type Query` is a field named `users` whose resolver returns something with a field `email`
+
+```js
+const typedefs = gql`
+  type Query {
+    users: [User]
+  }
+`
+```
+
+The field needs both a name (in this case `users`) and a return type (in this case an array of User types). We're only trying to query the email, so the User type only needs an email field.
+
+```diff
+const typedefs = gql`
+  type Query {
+    users: [User]
+  }
+
++ type User {
++   email: String
++ }
+`
+```
+
+## The resolvers
+
+Resolvers are functions that trigger when a field is queried.
+
+```js
+const resolvers = {
+  Query: {
+    users() {
+      return [
+        { id: 0, email: "alice@example.com" },
+        { id: 1, email: "bob@example.com" },
+        { id: 2, email: "carol@example.com" },
+        { id: 3, email: "doug@example.com" },
+        { id: 4, email: "eve@example.com" },
+      ]
+    },
+  },
+
+  User: {
+    email(user) {
+      return user.email
+    },
+  },
+}
+```
+
+With the above resolver set up, running a **query** on **users** will load the list of users and pass it down to the **email** resolver that returns each email
+
+```js
+query {
+  users {
+    email
+  }
+}
+```
+
+```json
+{
+  "data": {
+    "users": [
+      { "email": "alice@example.com" },
+      { "email": "bob@example.com" },
+      { "email": "carol@example.com" },
+      { "email": "doug@example.com" },
+      { "email": "eve@example.com" }
+    ]
+  }
+}
+```
+
+### Simple resolvers
+
+Since returning a field of an object with the same name as the resolver is such a common use-case, GraphQL does not require us to specify these manually. Any resolver we don't declare will be assumed to be one of these simple resolvers.
+
+The email resolver just returns the email property, so we are ok to leave that one out.
+
+```js
+const typedefs = gql`
+  type Query {
+    users: [User]
+  }
+
+  type User {
+    email: String
+  }
+`
+
+const resolvers = {
+  Query: {
+    users() {
+      return [
+        { id: 0, email: "alice@example.com" },
+        { id: 1, email: "bob@example.com" },
+        { id: 2, email: "carol@example.com" },
+        { id: 3, email: "doug@example.com" },
+        { id: 4, email: "eve@example.com" },
+      ]
+    },
+  },
+}
+```

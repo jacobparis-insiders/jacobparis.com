@@ -1,0 +1,32 @@
+---
+title: Paste Image - Favourite VS Code Extensions
+description: Paste Image makes adding images to code documents a breeze
+tags: Reviews
+published: true
+blog: true
+---
+
+I discovered this extension through the [Foam](https://foambubble.github.io/foam/) recommended extensions
+
+> You can find [Paste Image on VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=mushan.vscode-paste-image)
+
+This extension allows you to paste images directly into your code in any format you want.
+
+![](/images/vscode-paste-image_2021-06-07-01-17-30.png)
+
+The image in the clipboard is saved as a `.png` into my `/public/images` folder (where Next.js wants it) and inserts a Markdown image tag like this:
+
+```md
+![](/images/vscode-paste-image_2021-06-07-01-17-30.png)
+```
+
+I have configured this locally to the workspace (instead of globally) because each project will have different requirements about where to serve images and how to reference them.
+
+```json numbered labeled filepath[.vscode/settings.json]
+{
+  "pasteImage.path": "${projectRoot}/public/images",
+  "pasteImage.basePath": "/images",
+  "pasteImage.namePrefix": "${currentFileNameWithoutExt}_",
+  "pasteImage.insertPattern": "![](/images/${imageFileName})"
+}
+```

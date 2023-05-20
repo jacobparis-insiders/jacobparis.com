@@ -1,0 +1,186 @@
+---
+title: A tech interview that doesn't suck
+description: No other profession has so many candidates who are good at interviews and bad at the job they are interviewing for
+tags: Basics
+published: true
+timestamp: "2020-02-02"
+---
+
+One of the many major things the tech industry is bad at is job interviews.
+
+No other profession has so little correlation between candidates who are good at interviews and good at the job they are interviewing for. Most tech interviews focus on testing skills that have nothing at all to do with the kind of work the candidate would be doing day-to-day.
+
+Good tech interviews are equally accessible to self-taught, bootcamp, or college graduates, and don't prefer developers who have enough free time to dedicate to drilling code trivia.
+
+Good tech interviews favour candidates who are:
+
+- Comfortable solving problems autonomously
+- Able to recognize gaps in their knowledge
+- Learn things as they need to know them
+- Able to maintain their code as requirements change
+
+Instead of white-boarding, code challenges, or testing knowledge of algorithms, I prefer to test candidates by giving them a small take-home TODO list application, written any way they want, followed by a live-coding segment where they add three small features.
+
+Writing code and then adding features to that code models exactly what developers are expected to do on the job. Developers who have the time to practice LeetCode questions aren't better at writing TODO applications than developers who don't. Stanford has a class teaching [how to pass the google exam](https://web.stanford.edu/class/cs9/), but Stanford students don't get an advantage here.
+
+TODO applications are the most common tutorial, so almost every developer has interacted with one at some point. They don't require complex algorithms which are only taught in universities, and there are so many unique ways to build them depending on the developer's preferences, skills, and choices.
+
+If you're hiring Frontend engineers, Backend engineers, DevOps engineers, or QA engineers, a TODO application can be written to stress the important skills for each role.
+
+This is the spec I've used for dozens of interviews, made generic enough to allow the candidate shape the application to best demonstrate their abilities.
+
+## The Take Home Project
+
+Imagine the business has asked you to build a simple todo list application for the web.
+
+Requirements
+
+- The user should be able to view a list of tasks
+- Each task should contain a title
+- The user should be able to create a task
+- The user should be able to edit a task
+- The user should be able to mark a task completed
+
+Try to spend no more than 3 hours of work on this assignment. If some areas lack polish, it will be reviewed with the understanding that there was a narrow time constraint.
+
+Use whatever tools, frameworks, and languages that you are most comfortable with. There are no extra points for using the same tech stack that we use. The more confident you are with the tools you've chosen, the more impressive your application will be. If you excel in a particular area, choose an architecture that allows you to demonstrate that.
+
+- The application can be server side, client side, or both
+- Data can be persisted to a database, to local storage, or not at all
+- Tests can be end-to-end, integration, unit, or none at all
+
+Create a repository on your preferred source control host (GitHub, Bitbucket, GitLab, etc) and commit your code to it, along with a README.md file that explains how to install and run the app. These instructions could be as simple as "clone the repo, run npm install, run npm start" but some projects take longer to set up.
+
+When you're finished, email the interviewer with a link (and invite if the repository is private).
+
+## The Follow-Up Interview
+
+Most candidates are nervous in interviews regardless of their confidence level on the job. Try to understand that getting or not getting the job will change the course of their career in one direction or the other.
+
+Start the interview with a few minutes of small-talk to establish a bit of rapport and get the candidate more comfortable speaking on camera.
+
+If you haven't already confirmed whether the candidate is legally able to get the job, do that now. Even if the requirements were listed explicitly in the job posting, don't assume it's been read or understood. In general, hiring contractors, even from out-of-country, is far easier than hiring employees and you'll have fewer questions to ask.
+
+For employees, you should determine if they're legally allowed to work in your country. For example, whether or not they're a citizen or a permanent resident or if they're on a work visa. If they're on a work visa, see how long it's eligible for and when it's going to expire. If you're looking to hire someone who will last a year or more at your company but their visa is due to expire in six months, that's something you want to find out sooner rather than later.
+
+Ask where they're currently living. This may not be the city they have listed on their resumé or online profiles or any other documentation you've seen so far. It's important to make sure that the hours they intend to work are compatible with the rest of the team. Even if you're fully asynchronous, it's good to have an idea of when they can be expected to be online.
+
+I'd also recommend you ask what timeframe they would be looking to start once hired. Some candidates will be able to start right away and others might need weeks to transition from their current job, especially if they're relocating.
+
+## The Live-Coding Segment
+
+Being able to see how people maintain code they've written themselves is a great signal for a developer who knows what they're doing
+
+To _maintain code_ is to modify it to handle a changing set of requirements.
+
+Have the candidate share their screen as you move into the live-coding portion of the interview. It's a good idea to remind them to turn on Do not Disturb mode so that no notifications appear while they're sharing. If they have a large screen, encourage them to zoom in or increase font size so their code is legible.
+
+Be prepared to walk them through allowing screen sharing permissions if they haven't already allowed those.
+
+I start by having them walk through the code, pointing out anything notable in their implementation
+
+They may have chosen to use a simple non-scalable architecture because that's all that the requirements of this demo project demanded. They also could have chosen to over-engineer the code as a demonstration of how they would handle a more complex project. Either decision is rational
+
+Be careful about prodding these questions on your own so you don't hint at preferring one decision over the other. If the candidate feels like they've already made a mistake, they're less likely to perform as confidently in the interview as they would on the job.
+
+Time-boxing this portion of the interview is a good idea. 45 minutes for the whole segment gives 15 for each task, and you can warn them if they're spending too long on any particular one.
+
+### Exercise 1: Permanently delete all completed tasks
+
+Add a button that deletes all the tasks that have been marked as complete.
+
+The usual solution here is to replace the list of tasks with a new array that contains only the incomplete tasks.
+
+An easy way to make the new array is using Javascript's native array filter
+
+```js
+const incompleteTasks = tasks.filter(
+  (task) => !task.completed,
+)
+```
+
+The candidate might prefer stepping through the list of tasks in a loop to build the new array manually.
+
+```js
+const incompleteTasks = []
+for (const task of tasks) {
+  if (!task.completed) {
+    incompleteTasks.push(task)
+  }
+}
+```
+
+Another solution would be to remove the completed tasks directly from the list without making a new array. This can be tricky because they're stepping through the list one by one but also removing tasks from it, so it's easy to accidentally skip an item. If the candidate presses the button with two tasks in a row marked complete, and it fails to delete the second one, this is usually the reason why.
+
+```js
+for (let i = 0; i < tasks.length; i++) {
+  if (task.completed) {
+    tasks.splice(i, 1) // Remove task number i
+    i-- // If we deleted task 4, task 5 will slide up into its spot, so we need to check task 4 again next
+  }
+}
+```
+
+### Exercise 2: Sort tasks in descending order
+
+Sort tasks in descending order, so that new items are added to the top of the list instead of the bottom.
+
+If the candidate is not currently storing dates on each task, that's the first step, but it's up to them to determine that. They'll have to add dates to any new tasks they're adding plus any they might have stored to show up by default (if any).
+
+There are a few ways to cheat here that should be discouraged. At the moment, every new task appears at the bottom of the list. That makes it look like it's already sorted in ascending order. The candidate might be tempted to render `tasks.reverse()` or to add new tasks to the beginning of the array instead of the end.
+
+This only works by coincidence, and as soon as it's possible to add tasks with past or future dates, this fake sorting will break.
+
+The usual solution is using javascript's native sort method. After giving this question to dozens of candidates I've concluded that no one remembers how this method works. To me, this question is an exercise on whether the candidate is able to look up documentation to patch their knowledge on anything they're missing, which is an incredibly valuable skill to screen for.
+
+Sort works by comparing two tasks (A and B) in the list and returning `-1`, `1`, or `0`, depending on whether task A should be sorted before, after, or equally with B.
+
+```js
+tasks.sort((a, b) => {
+  if (a.dateCreated < b.dateCreated) return -1
+  if (a.dateCreated > b.dateCreated) return 1
+
+  return 0
+})
+```
+
+Using ternary is common here. It's not a big deal if they don't handle the 0 case for identical dates.
+
+```js
+tasks.sort((a, b) => {
+  return a.dateCreated < b.dateCreated ? -1 : 1
+})
+```
+
+If the dates are stored as a number (for example, a timestamp rather than a date), they might just subtract them. I'm less fond of this but it's incredibly common.
+
+```js
+tasks.sort((a, b) => {
+  return a.dateCreated - b.dateCreated
+})
+```
+
+When candidates implement the sort method incorrectly, common mistakes are to compare `a - b` directly, instead of `a.dateCreated - b.dateCreated`, or to return true or false instead of 1 or -1. Nudge them toward the documentation if they're making these sorts of mistakes. Sometimes candidates try too hard not to look anything up during the interview even if they would be quick to do so on the job, so extra encouragement can help.
+
+When candidates implement the sort method correctly, the most common mistake here is to accidentally sort the wrong way first. If their sort doesn't appear to work the first time, it might be sorting into ascending order (which looks like nothing has changed). Most candidates will test swapping the order on their own, but feel free to suggest that if they seem confused.
+
+The second most common mistake is forgetting that the sort method mutates the original array. If they've built all their code from scratch, this probably won't be an issue, but frameworks like React and Vue will throw errors if they mutate state variables. There are a few ways to clone the list of tasks before running sort, including `Array().concat(tasks).sort`, `tasks.slice().sort`, `[...tasks].sort`, or by chaining sort after a map or filter operation. If they're having trouble with this one, explain the problem, but give them time to find their own solution.
+
+### Exercise 3: Split the tasks into two lists
+
+Split the tasks into two lists, with incomplete tasks on top, completed tasks on the bottom, such that marking a task as complete moves it from one list to the other.
+
+It's up to you as the interviewer whether you require the sorting to still be in effect for this exercise. It's simpler if you don't, but optional.
+
+The ideal implementation is also the simplest: keep one main array of tasks, and render two lists filtered to either complete or incomplete.
+
+That might look something like this
+
+```js
+const completeTasks = tasks.filter((task) => task.complete)
+const incompleteTasks = tasks.filter(
+  (task) => !task.complete,
+)
+```
+
+The more challenging implementation, which I've seen several candidates attempt but never complete within the time allowed, is to maintain two separate lists of tasks and move items from one to the other when marking as complete or incomplete. If they start to run out of time, I would suggest the simpler solution, but give them time to come to that conclusion on their own. The ability to realize when they're going down the wrong path and re-evaluate their chosen solution is a good skill to have, and this is a good place to watch for it.

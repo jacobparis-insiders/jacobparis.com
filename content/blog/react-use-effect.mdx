@@ -1,0 +1,75 @@
+---
+title: Understanding React's useEffect
+description: A guide explaining the use-cases and differences between a few of React's Hooks
+tags: Basics
+published: true
+blog: true
+---
+
+A pure component only interacts with itself and its children. Any time you need to interact with the world outside your component, you are dealing with _side-effects_.
+
+React gives us a handy hook for dealing with these. the `React.useEffect` hook lets us specify a function that deals with external forces, provide a second function to clean up after it, and drop a list of dependencies so we can re-run the effect when one of the dependencies change.
+
+## Updating the page title
+
+This effect will run the first time the component is rendered, and then only ever run again if the title has changed.
+
+```js numbered
+const [title, setTitle] = React.useState('Hooks 101')
+
+React.useEffect(() => {
+  document.title = title
+}, [title])
+```
+
+## Fetching data from an API into local state.
+
+Since our state changing will not affect the list of products that is returned, we can pass an empty array `[]` as our dependency so that the effect will only run when the component is first mounted.
+
+```js numbered
+const [products, setProducts] = React.useState([])
+
+React.useEffect(() => {
+  getProducts().then((products) => {
+    setProducts(products)
+  })
+}, [])
+```
+
+## Fetching data from an API into local state, based on a query.
+
+If we have a query or filter to modify the set of API data we want, then we can pass it as a dependency to make sure that React runs this effect every time the component renders using a new query.
+
+```js numbered
+const [products, setProducts] = React.useState([])
+const [query, setQuery] = React.useState('')
+
+React.useEffect(() => {
+  getProducts({name: query}).then((products) => {
+    setProducts(products)
+  })
+}, [query])
+```
+
+## Dispatching a Redux action.
+
+If your GET action already reduces into your Redux state, then you don't need to maintain any of that locally.
+
+By passing `products.length` as a dependency, you only run this
+
+```js numbered
+const dispatch = Redux.useDispatch()
+const products = Redux.useSelector((state) => state.products)
+
+React.useEffect(() => {
+  dispatch(GetProducts())
+}, [])
+```
+
+# Further Reading
+
+https://overreacted.io/a-complete-guide-to-useeffect/
+
+https://medium.com/@vcarl/everything-you-need-to-know-about-react-hooks-8f680dfd4349
+
+https://www.robinwieruch.de/react-hooks-fetch-data/

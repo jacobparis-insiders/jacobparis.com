@@ -1,0 +1,19 @@
+---
+title: Logging out with remix-auth
+description: The easiest way to log a user out is to destroy their session on the server
+tags: Remix
+published: true
+guide: true
+---
+
+The easiest way to log a user out is to destroy their session on the server
+
+In your logout action
+
+```js
+return redirect("/", {
+  headers: {
+    "Set-Cookie": await destroySession(session),
+  },
+})
+```

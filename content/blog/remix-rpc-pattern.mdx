@@ -1,0 +1,233 @@
+---
+title: Custom Fetcher Hooks are Remix's Typesafe RPCs
+description: Create RPCs by exporting functions from your resource routes. Get full end-to-end type safety and autocompletion. Use custom fetcher hooks to get automatic revalidation, request cancellation, and more.
+tags: Remix
+timestamp: "2023-05-15"
+published: true
+---
+
+An RPC is a Remote Procedure Call, which is a fancy way of saying "a function that runs on a server".
+
+They're experiencing a bit of a heyday right now, with tools like [gRPC](https://grpc.io/), [tRPC](https://trpc.io), and [Next.js Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions) increasing in popularity and revitalizing interest in the pattern.
+
+But I don't recommend using them with Remix.
+
+Remix works a little differently than your typical web framework. It was designed with a focus on progressive enhancement and leveraging the power of the browser.
+
+By using an RPC library, you're stepping away from these benefits.
+
+For example, you can't use a tRPC router to generate endpoints that are compatible with a basic HTML form.<SideNote> You can use tRPC in your Remix action, as long as you're willing to forego most of the benefits of tRPC in the first place.</SideNote>
+
+Up until Next.js Server Actions were announced, the Next framework had never actually acknowledged data mutations were a thing. With no built in support for it, tRPC fit excellently into that niche and the two became an excellent pair for development.<SideNote> Remix works just as well with tRPC as Next does, but Next doesn't have alternatives that you can feel sad about not using.</SideNote>
+
+By adopting a few new habits in the way you write your Remix applications, you can get the benefits of RPCs without sacrificing the benefits of Remix.
+
+## It all starts with resource routes
+
+Remix grew out of React Router, and routes are the language it speaks. Remix apps are built by creating routes to fetch data, handle mutations, serve files, render pages, and more.
+
+In a single file, any page can become a POST endpoint by specifying an action function.
+
+```ts
+export async function action({ request }: ActionArgs) {
+  const body = await request.formData()
+
+  const title = body.get("title")
+  if (!title) {
+    throw new Response("Title is required", { status: 400 })
+  }
+
+  const description = body.get("description")
+
+  const item = db.create({
+    title: title.toString(),
+    description: description?.toString(),
+  })
+
+  return json(item, { status: 201 })
+}
+```
+
+Or it can become a GET endpoint by specifying a loader function.
+
+```ts
+export async function loader({ params }: LoaderArgs) {
+  const item = db.get(params.id)
+
+  if (item) {
+    return json(item, { status: 200 })
+  }
+
+  throw new Response("Not found", { status: 404 })
+}
+```
+
+The endpoint URL for these functions is automatically generated based on the file path. To call these functions, any component needs to know the URL of the resource route it wants to call, and then it can make a request to that URL.
+
+Here's some client side code that programmatically calls the previous POST endpoint.
+
+```tsx
+const body = new FormData()
+body.append("title", title)
+body.append("description", description)
+
+const response = await fetch("/items", {
+  method: "POST",
+  body,
+})
+```
+
+This isn't entirely ideal for a few reasons
+
+- The URL is hardcoded, so if the URL changes, you have to update it everywhere it's used
+- You have no way of knowing which parameters are required for the endpoint
+- You have no way of knowing what the response will look like
+
+That's where the RPC pattern comes in
+
+## RPC is just fetch with the URL built in
+
+Web applications work by sending HTTP requests between the client and the server.
+
+Most, if not all, dedicated RPC libraries operate the same way. They just abstract away the details of the HTTP request and response, and give you a nice API to work with.
+
+We can do that ourselves! Take the previous request example, and wrap it in a function.
+
+We can use typescript to define an Item type that matches the arguments we're passing in, as well as the response we're expecting.
+
+```ts
+type Item = {
+  id: string
+  title: string
+  description?: string
+}
+
+export async function createItem(
+  item: Omit<Item, "id">,
+): Item {
+  const body = new FormData()
+  body.append("title", item.title)
+  body.append("description", item.description)
+
+  const response = await fetch("/items", {
+    method: "POST",
+    body,
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to create item")
+  }
+
+  const createdItem = await response.json()
+
+  if (!createdItem.id || !createdItem.title) {
+    throw new Error("Invalid response")
+  }
+
+  return createdItem
+}
+```
+
+If you export that function from your resource route, you can use it anywhere in your app and get full end-to-end type safety and autocompletion.
+
+```tsx
+import { createItem } from "~/routes/items.server"
+```
+
+## Validating your RPC with Zod
+
+Manual validation can be a pain, especially when types get more complicated. Luckily, there's a library for that!
+
+You can use [Zod](https://zod.dev/) and [zod-form-data](https://www.npmjs.com/package/zod-form-data) to validate your form data in both the RPC and the action function.
+
+```ts
+import { z } from "zod"
+import { zfd } from "zod-form-data"
+
+const itemSchema = zfd.formData({
+  title: z.string().min(1),
+  description: z.string().optional(),
+})
+
+export async function action({ request }: ActionArgs) {
+  const body = itemSchema.parse(await request.formData())
+
+  const item = db.create({
+    title: body.title,
+    description: body.description,
+  })
+
+  return json(item, { status: 201 })
+}
+
+export async function createItem(
+  item: z.infer<itemSchema>,
+) {
+  const body = new FormData()
+  body.append("title", item.title)
+  body.append("description", item.description)
+
+  const response = await fetch("/items", {
+    method: "POST",
+    body,
+  })
+
+  if (!response.ok) {
+    throw new Error("Failed to create item")
+  }
+
+  const createdItem = await response.json()
+
+  return itemSchema.parse(createdItem)
+}
+```
+
+Now you can use the same validation in both the client and the server, and you can be confident that the data you're sending and receiving is valid.
+
+## The next step is custom fetcher hooks
+
+If the endpoint you're trying to call affects data that is used by a loader, you probably don't want to just make a regular fetch call toward it.
+
+Remix's `useFetcher` hooks have a lot of quality of life features that you'll want to take advantage of, such as
+
+- Automatic refetching of loaders
+- Duplicate request cancellation
+- Avoid race conditions with multiple requests
+- Redirect the client if the server returns a redirect response
+
+So for this to be properly useful here, we can adopt some Remixisms into the pattern to create a custom typesafe fetcher hook that we can use anywhere in our app.
+
+```tsx
+export async function useSubmitItem() {
+  const fetcher = useFetcher()
+
+  const submit = useCallback(
+    (item: z.infer<itemSchema>) => {
+      const body = new FormData()
+      body.append("title", item.title)
+      body.append("description", item.description)
+
+      fetcher.submit(body, {
+        method: "POST",
+        action: "/items",
+      })
+    },
+    [fetcher],
+  )
+
+  return submit
+}
+```
+
+This is the missing piece to bring us to feature parity with solutions like tRPC.
+
+It feels less like an RPC and more like a custom hook, but the usage is the same:
+
+- each resource route exports functions that the client can call to interact with the server
+- the primary way the client interacts with the server is through these functions
+- as types are updated on the server, the client will get type errors until it updates its usage of the functions
+
+In addition, you also get benefits that RPC libraries don't provide, such as
+
+- out of the box support for native forms and Form components
+- colocation of the server code with the client code, so you don't need a central router file where all your RPC functions are defined

@@ -1,0 +1,233 @@
+---
+title: Build a sticky hover effect with Tailwind and React
+description: Use Tailwind and React hooks to build a sticky hover effect for buttons and links like the iPad UI
+tags: UI/UX
+published: true
+guide: true
+img: content/ios-hover-tailwind/cover.png
+timestamp: "2022-11-20"
+---
+
+One of the first things I noticed upon buying my first iPad was the way buttons looked when I hovered over them. When connected to a keyboard + trackpad, the iPad gets a little mouse cursor, and buttons have a sticky hover effect that follows the cursor.
+
+<div className="not-prose flex justify-center">
+  <SocialBannerSmall />
+</div>
+
+The first step to building this effect was getting the current mouse coordinates. My suspicions that someone had already built this were confirmed when I found the [useMousePosition hook](https://www.joshwcomeau.com/snippets/react-hooks/use-mouse-position/) on [Josh Comeau](https://twitter.com/joshwcomeau)'s blog.
+
+```ts
+import { useEffect, useState } from "react"
+
+export function useMousePosition() {
+  const [mousePosition, setMousePosition] = useState({
+    x: null,
+    y: null,
+  })
+
+  useEffect(() => {
+    const updateMousePosition = (ev) => {
+      setMousePosition({
+        x: ev.clientX,
+        y: ev.clientY,
+      })
+    }
+
+    window.addEventListener(
+      "mousemove",
+      updateMousePosition,
+    )
+
+    return () => {
+      window.removeEventListener(
+        "mousemove",
+        updateMousePosition,
+      )
+    }
+  }, [])
+
+  return mousePosition
+}
+```
+
+I wasn't sure how many places I would want this effect – for sure on some buttons and some links – so I decided to jump straight to how I would want to use it. After playing with a few different options, I settled on the following pattern.
+
+```tsx
+import { useRef } from "react"
+import { useHoverEffect } from "./useHoverEffect"
+
+export function Button({ children }) {
+  const elementRef = useRef(null)
+  const Effect = useHoverEffect(elementRef)
+
+  return (
+    <button
+      ref={elementRef}
+      className="translate-0 group relative"
+    >
+      <Effect />
+      {children}
+    </button>
+  )
+}
+```
+
+The `useHoverEffect` hook needs to take a `ref` prop that determines which element to compare the relative mouse position against, and then return a component that renders the hover effect.
+
+Any component that wants a hover effect needs the classes `translate-0 group relative`.
+
+- `translate-0` creates a new stacking context, so that the hover effect shows up behind the text content
+- `group` allows us to apply hover effects to the children when the parent is hovered
+- `relative` allows us to position the hover effect relative to the parent
+
+```tsx
+import { useEffect, useState } from "react"
+import { useMousePosition } from "./useMousePosition"
+
+export function useHoverEffect(ref) {
+  const mousePosition = useMousePosition()
+
+  const [offsetX, setOffsetX] = useState(0)
+  const [offsetY, setOffsetY] = useState(0)
+
+  useEffect(() => {
+    const element = ref.current
+
+    if (!element) return
+    if (!mousePosition.x || !mousePosition.y) return
+
+    const rect = element.getBoundingClientRect()
+    setOffsetX(mousePosition.x - rect.left - rect.width / 2)
+    setOffsetY(mousePosition.y - rect.top - rect.height / 2)
+  }, [mousePosition, ref])
+
+  return function Effect() {
+    return (
+      <div
+        className="absolute inset-0 -z-10 translate-x-[var(--x)] translate-y-[var(--y)] rounded-lg opacity-0 transition-opacity duration-200 group-hover:bg-gray-800 group-hover:opacity-10"
+        style={{
+          "--x": `${offsetX / 8}px`,
+          "--y": `${offsetY / 6}px`,
+        }}
+      />
+    )
+  }
+}
+```
+
+The key trick here was `translate-x-[var(--x)] translate-y-[var(--y)]`, combining Tailwind's [arbitrary value support](https://tailwindcss.com/docs/adding-custom-styles#using-arbitrary-values) with CSS variables to set the hover effect's position.
+
+The `--x` and `--y` variables are set to a fraction of the mouse's relative position to the button, giving the effect a nice parallax effect.
+
+import {
+  SandpackProvider,
+  SandpackCodeEditor,
+  SandpackPreview,
+} from "@codesandbox/sandpack-react"
+
+<div style={{ maxWidth: "100vw" }} className="-mx-4">
+  <div className="rounded-xl border-gray-700">
+    <SandpackProvider
+      template="react"
+      files={{
+        "/App.js": {
+          active: true,
+          code: /* tsx */ `
+  import React from "react";
+  import { Button } from './button'
+  \n\
+  export default function App() {
+    return (
+      <div className="flex flex-col text-gray-700 max-w-xs px-4 py-2">
+        <h1 className="font-bold mb-2"> Navigation </h1>
+  \n\
+        <Button>🏡 Home</Button>
+        <Button>📖 Blog</Button>
+        <Button>🐥 Twitter</Button>
+      </div>
+    )
+  }`,
+        },
+        "/button.js": /* jsx */ `
+  import { useRef } from "react"
+  import { useHoverEffect } from "./useHoverEffect"
+\n\
+  export function Button({ children, ...props }) {
+    const elementRef = useRef(null)
+    const Effect = useHoverEffect({ ref: elementRef })
+\n\
+    return (
+      <button
+        ref={elementRef}
+        {...props}
+        className="translate-0 group relative px-4 py-2 text-left font-medium"
+      >
+        <Effect />
+          {children}
+      </button>
+    )
+  } `,
+        "/useHoverEffect.js": /* tsx */ `
+import { useEffect, useState } from "react"
+import { useMousePosition } from "./useMousePosition"
+\n\
+export function useHoverEffect({ ref }) {
+  const mousePosition = useMousePosition()
+\n\
+  const [offsetX, setOffsetX] = useState(0)
+  const [offsetY, setOffsetY] = useState(0)
+\n\
+  useEffect(() => {
+    const element = ref.current
+\n\
+    if (!element) return
+    if (!mousePosition.x || !mousePosition.y) return
+\n\
+    const rect = element.getBoundingClientRect()
+    setOffsetX(mousePosition.x - rect.left - rect.width / 2)
+    setOffsetY(mousePosition.y - rect.top - rect.height / 2)
+  }, [mousePosition, ref])
+\n\
+  return function Effect() {
+    return (
+      <div
+        className="absolute inset-0 -z-10 translate-x-[var(--x)] translate-y-[var(--y)] rounded-lg opacity-0 transition-opacity duration-200 group-hover:bg-gray-800 group-hover:opacity-10"
+        style={{
+          "--x": \`\${offsetX / 8}px\`,
+          "--y": \`\${offsetY / 6}px\`,
+        }}
+      />
+    )
+  }
+}
+`,
+        "/useMousePosition.js": /* tsx */ `
+import { useEffect, useState } from "react"
+\n\
+export function useMousePosition() {
+  const [mousePosition, setMousePosition] = useState({ x: null, y: null })
+\n\
+  useEffect(() => {
+    const updateMousePosition = (ev) => {
+      setMousePosition({ x: ev.clientX, y: ev.clientY })
+    }
+\n\
+    window.addEventListener("mousemove", updateMousePosition)
+\n\
+    return () => {
+      window.removeEventListener("mousemove", updateMousePosition)
+    }
+  }, [])
+\n\
+  return mousePosition
+}`,
+      }}
+      options={{
+        externalResources: ["https://cdn.tailwindcss.com"],
+      }}
+    >
+      <SandpackCodeEditor />
+      <SandpackPreview />
+    </SandpackProvider>
+  </div>
+</div>

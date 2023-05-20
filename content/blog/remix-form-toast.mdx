@@ -1,0 +1,204 @@
+---
+title: Show toast notifications on form submit with Remix
+description: Show the user their form submission was complete. For same-page submissions, try the useActionData hook. For cross-page submissions, use cookie session storage.
+tags: Remix, UI/UX
+published: true
+guide: true
+img: content/remix-form-toast/cover.png
+timestamp: "2023-04-06"
+---
+
+Once nice UI affordance you can give your users is to show a confirmation message after they submit their form successfully. This is a great way to let them know their action was successful and that the page is loading.
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/3IUYtO6QbbU"
+    title="YouTube video player"
+    frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowfullscreen
+  />
+</div>
+
+Most of the time, you'll be submitting forms to their own routes. You have components on a page, and in the same file you have an `action` that is handling their submission.
+
+In these cases, you can simply return the message from the action and use the `useActionData` hook to show a toast notification when the form is submitted.
+
+```tsx
+export async function action() {
+  // handle form submission
+
+  return json({
+    message: "Your form was submitted successfully",
+  })
+}
+
+export default function Example() {
+  const { message } = useActionData()
+
+  return (
+    <div>
+      <Form />
+      {message ? <Toast message={message} /> : null}
+    </div>
+  )
+}
+```
+
+## Submitting forms across pages
+
+If you submit a form
+
+- to an action on a different page,
+- to an action that redirects to a different page,
+- or want to show the notification later;
+
+Then the `useActionData()` hook won't work. You'll need to store the confirmation message somewhere and read it when you want to show it.
+
+This is an excellent use-case for a cookie.
+
+In the response of the action, add a `Set-Cookie` header with the message you want to show.
+
+```tsx
+export async function action() {
+  // handle form submission
+
+  return redirect("/thank-you", {
+    headers: {
+      "Set-Cookie": `message=Your form was submitted successfully; Path=/;`,
+    },
+  })
+}
+```
+
+Then, on the page you want to show the message, read the cookie and show the toast notification.
+
+```tsx
+export async function loader({ request }: LoaderArgs) {
+  const message = request.headers
+    .get("Cookie")
+    ?.match(/message=([^;]+)/)?.[1]
+
+  return json(
+    { message },
+    {
+      headers: {
+        "Set-Cookie": `message=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
+      },
+    },
+  )
+}
+
+export default function Example() {
+  const { message } = useLoaderData()
+
+  return (
+    <div>
+      <Form />
+      {message ? <Toast message={message} /> : null}
+    </div>
+  )
+}
+```
+
+## Using a cookie session storage
+
+For a better developer experience, you can use Remix's built-in cookie session storage instead of manually parsing the cookies. This will also make it easier to use the same code in a production environment.
+
+Create a `session.server.ts` file as per the [session docs](https://remix.run/docs/en/main/utils/sessions#using-sessions).
+
+Rewrite the action to use the `getSession` and `commitSession` functions.
+
+```tsx
+import { commitSession, getSession } from "./session.server"
+
+export async function action({
+  params,
+  request,
+}: ActionArgs) {
+  // handle form submission
+
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  session.flash("message", `Task created!`)
+
+  return new Response(null, {
+    status: 201,
+    headers: {
+      "Set-Cookie": await commitSession(session),
+    },
+  })
+}
+```
+
+And then read it in the loader of the page you want to show the message.
+
+```tsx
+import { getSession } from "./session.server"
+
+export async function loader({ request }: LoaderArgs) {
+  const session = await getSession(
+    request.headers.get("Cookie"),
+  )
+  const message = session.get("message") || null
+
+  return json(
+    { message },
+    {
+      headers: {
+        "Set-Cookie": await commitSession(session),
+      },
+    },
+  )
+}
+```
+
+If you don't want to commit the session every time, there are ways to [set up your Remix codebase to auto-commit sessions](https://sergiodxa.com/tutorials/automatically-commit-session-on-remix)
+
+## Displaying a simple toast message
+
+Here is a sample toast component using Tailwind that you can use to display the message. It will automatically hide itself after a few seconds.
+
+```tsx
+function Toast({
+  message,
+  time = 5000,
+}: {
+  message: string
+  time?: number
+}) {
+  const [show, setShow] = useState(true)
+
+  useEffect(() => {
+    const timeout = setTimeout(() => setShow(false), 2000)
+
+    return () => clearTimeout(timeout)
+  }, [])
+
+  return (
+    <Transition
+      show={show}
+      enter="transition-opacity duration-300"
+      enterFrom="opacity-0"
+      enterTo="opacity-100"
+      leave="transition-opacity duration-300"
+      leaveFrom="opacity-100"
+      leaveTo="opacity-0"
+    >
+      <div className="fixed bottom-4 right-4  rounded-lg border border-gray-100 bg-white px-4 py-2 text-left text-sm font-medium shadow-lg">
+        {message}
+      </div>
+    </Transition>
+  )
+}
+```
+
+```tsx
+{
+  message ? <Toast key={message} message={message} /> : null
+}
+```

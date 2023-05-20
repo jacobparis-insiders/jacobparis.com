@@ -1,0 +1,57 @@
+---
+title: Build Vue Components with ESBuild
+description: Simple projects may be able to compile modules using the command line, but if you're trying do anything complicated enough to need plugins, you need to use the ESBuild node modules instead.
+tags: Basics
+published: true
+guide: true
+---
+
+Simple projects may be able to compile modules using the command line, but if you're trying do anything complicated enough to need plugins, you need to use the ESBuild node modules instead.
+
+Create a file named `build.js` and compile by running the file with `node build.js`
+
+## Single entry point
+
+With multiple entry points, you must specify an output directory
+
+```js numbered {6, 9}
+const ESBuild = require("esbuild")
+const vue = require("esbuild-vue")
+
+ESBuild.build({
+  entryPoints: ["./src/stories/DevToolbar.vue"],
+  bundle: true,
+  outfile: "lib/index.vue",
+  plugins: [vue()],
+  define: {
+    "process.env.NODE_ENV":
+      JSON.stringify("production"),
+  },
+})
+```
+
+## Multiple entry points
+
+With multiple entry points, you must specify an output directory
+
+```js numbered {6-10, 12}
+const ESBuild = require("esbuild")
+const vue = require("esbuild-vue")
+
+ESBuild.build({
+  entryPoints: [
+    "./src/stories/DevToolbar.vue",
+    "./src/stories/Dropdown.vue",
+    "./src/stories/HostItem.vue",
+    "./src/stories/Item.vue",
+    "./src/stories/Button.vue",
+  ],
+  bundle: true,
+  outdir: "lib",
+  plugins: [vue()],
+  define: {
+    "process.env.NODE_ENV":
+      JSON.stringify("production"),
+  },
+})
+```

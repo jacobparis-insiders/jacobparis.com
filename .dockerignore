@@ -1,0 +1,12 @@
+\*.log
+.DS_Store
+.env
+/.cache
+/public/build
+.gitignore
+.eslintrc.js
+.eslintignore
+/build
+fly.toml
+/node_modules
+README.md

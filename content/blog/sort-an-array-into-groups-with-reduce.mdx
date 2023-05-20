@@ -1,0 +1,52 @@
+---
+title: Sort an array into groups with reduce
+description:
+tags: Basics
+published: true
+guide: true
+---
+
+Here I had a user with a list of email addresses to be sorted by domain.
+
+```js numbered
+const emails = [
+  "alice@gmail.com"
+  "bob@gmail.com"
+  "carol@yahoo.ca"
+  "doug@hotmail.com"
+  "ellie@protonmail.com"
+];
+```
+
+While there are many ways to tackle this problem, my preferred is the functional model using Array.prototype.reduce
+
+```js numbered
+const sortedEmails = emails.reduce((groups, email) => {
+  const [account, domain] = email.split('@')
+
+  if (!groups[domain]) {
+    groups[domain] = []
+  }
+
+  groups[domain].push(account)
+
+  return groups
+}, {})
+```
+
+The reduce function iterates each element of the array and passes the return object to the next iteration. The `accumulator` (named `groups` here) is set initially as a `{}` empty object.
+
+For each email, we break it into variables for each the account and the domain. If our current domain isn't already one of our groups, initialize it as an empty array.
+
+Then add the new account name to the group and `return groups` to pass it into the next iteration.
+
+```js numbered
+{
+  "gmail.com": ["alice", "bob"],
+  "yahoo.ca": ["carol"],
+  "hotmail.com": ["doug"],
+  "protonmail.com": ["ellie"]
+}
+```
+
+It should be noted that this code isn't completely suitable for production environments. While almost every email address has only one `@` symbol and this will work for all of those, there are valid email addresses that have multiple. Parsing the entire specification of valid email addresses is outside the scope of this article.

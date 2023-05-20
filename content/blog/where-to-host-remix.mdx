@@ -1,0 +1,213 @@
+---
+title: Where to host your Remix app in 2023
+description: Should you host your Remix app on a serverless provider like Vercel, Fastly, Netlify, Cloudflare, or AWS Lambda? Or a long-lived server like Fly, Render, Railway, or DigitalOcean? This guide will help you choose the right hosting option for your app.
+tags: Remix
+published: true
+guide: true
+timestamp: "2023-04-29"
+---
+
+Remix supports many different hosting options. This guide will help you choose the right one for your app.
+
+> Last updated on May 18 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
+
+- [Serverless functions](#serverless-functions)
+  - [Vercel](#vercel)
+  - [Fastly](#fastly)
+  - [Netlify](#netlify)
+  - [Cloudflare Pages](#cloudflare-pages)
+  - [AWS Lambda](#aws-lambda)
+- [Long-lived servers](#long-lived-servers)
+  - [Fly](#flyio)
+  - [Render](#render)
+  - [Railway](#railway)
+  - [DigitalOcean](#digitalocean-app-platform)
+
+## Serverless Functions
+
+Serverless functions are a form of managed hosting where application code is started and stopped on demand at request-time. Sometimes entire applications fit in a single function, or an app can be distributed across many, with each endpoint being its own function.
+
+Serverless functions are often billed by the number of requests, the amount of time the function is running, and the amount of memory the function uses.
+
+When a website gets a large amount of traffic, an application running on many serverless functions can simply scale up to handle the load, and scale back down when traffic resumes to normal levels.
+
+While most serverless functions run in normal datacenters, others run on an `edge network`, which means they run in datacenters all over the world, close to the end user. This can reduce latency and improve performance.
+
+In general, serverless functions run Node.js and edge functions run the **very** fast, but less supported, V8 runtime. On V8, many node modules are not available without polyfills.
+
+Because of the ephemeral nature of these functions, the first request to a function may cause a `cold-start` and take several seconds to respond.
+
+|                        | Vercel              | Fastly | Netlify | Cloudflare Pages | AWS Lambda |
+| ---------------------- | ------------------- | ------ | ------- | ---------------- | ---------- |
+| **Runtime**            | Node/V8 (per route) | WASM   | Node/V8 | V8               | Node       |
+| **Bundle size**        | 50MB                | 20MB   | 50MB    | 5MB              | 50MB       |
+| **Request body size**  | 4.5MB               | 8KB    | 3MB     | 100MB            | 6MB        |
+| **Streaming**          | Yes                 | Yes    | No      | Yes              | Yes        |
+| **Deferred data**      | Yes                 | Yes    | No      | Yes              | Yes        |
+| **Server-sent events** | No                  | Yes    | No      | No               | Yes        |
+| **Cache-control**      | Yes                 | Yes    | Yes     | Yes              | Yes        |
+| **Git-based deploys**  | Yes                 | No     | Yes     | Yes              | No         |
+| **Deploy previews**    | Yes                 | No     | Yes     | Yes              | No         |
+| **Websockets**         | No                  | Yes    | No      | Yes              | Yes        |
+
+### Vercel
+
+Vercel is a serverless hosting platform for web apps.
+
+They support git-based deployments, and deploy previews for every branch and pull request, as well as some fancy collaboration tools built on top.
+
+Vercel allows you to specify whether to use a Node runtime or a V8 Edge runtime on a per-page basis, so you can use Node functions for some pages and V8 functions for others.<SideNote> I recommend using edge functions by default and using Node functions as needed.</SideNote>
+
+As Vercel splits each endpoint into its own function, the 50MB limit for each function bundle becomes very hard to hit.
+
+Streaming support means that with React 18, Vercel can use `defer()` to stop some data fetching from blocking the initial render.
+
+- Vercel does not support websockets, and while it does support streaming, connections can only be open for 30s so Server-Sent Events aren't practical.
+- Full cache-control support, including `stale-while-revalidate` and `stale-if-error`, as well as the `s-maxage` property.<SideNote> The `s-maxage` property controls the CDN cache, while the `max-age` property controls the client's browser cache. </SideNote>
+- The maximum request body size with Vercel is 4.5MB, which can be problematic for direct file uploads.
+- Only cloud databases are supported
+
+### Fastly
+
+Fastly is a powerful CDN and hosting platform and the hosting provider of choice for the Remix + React Router docs.
+
+Fastly supports Remix with their [Compute@Edge](https://developer.fastly.com/learning/compute/frameworks#remix) platform. This is a serverless platform that runs on the edge, compiling Typescript down to WebAssembly.<SideNote> Rather than V8, like most edge functions, or Node, like everything else. </SideNote>
+
+Fastly has full cache-control header support, including `stale-while-revalidate` and `stale-if-error`. For more control, they also offer the [Surrogate-Control](https://developer.fastly.com/learning/concepts/cache-freshness/) header for making CDN specific settings.
+
+They also offer APIs to programmatically purge the cache, which is not common.
+
+Fastly has support for websockets, which is not common for serverless platforms.
+
+Fastly supports streaming too, so you can use Server-Sent Events and Remix's `defer()`
+
+- Because it doesn't run node, many node modules are not compatible with Remix on Fastly. In exchange, you get the current fastest possible runtime.
+- Fastly supports a 20MB bundle size limit.
+- No git based deployments, but easy to deploy in GitHub Actions
+- Only cloud databases are supported
+
+### Netlify
+
+Netlify is the original JAMStack hosting platform that has grown from a simple static site host to a full-featured serverless platform.
+
+With built-in git-based deployments, every time you push to your git repo, Netlify will build and deploy your app. You can also use deploy previews to test your app before merging a pull request.
+
+Netlify supports both Node (Netlify functions) and V8 (Netlify Edge Functions) runtimes as separate targets, so your entire app will run on one or the other.
+
+- The Remix server bundle is limited to 50MB
+- Netlify honors cache-control headers including `s-maxage` for their CDN, but does not support `stale-while-revalidate` or `stale-if-error`.
+- The maximum request body size with Netlify is 3MB, which can be problematic for direct file uploads.
+- Only cloud databases are supported
+- Does not support streaming, so you can't use Server-Sent Events or `defer()`
+- Does not support websockets
+
+### Cloudflare Workers
+
+Cloudflare Workers is being rolled into Cloudflare Pages, so I'd consider this section officially deprecated and you can find more details in the [Cloudflare Pages](#cloudflare-pages) section.
+
+When you deploy a Remix app to Cloudflare workers, all of your pages will be compiled into a single worker script. Static files are also served from this worker, so you can't use Cloudflare's CDN for static assets.<SideNote> Pages does not have this limitation. </SideNote> and every request for a static asset (potentially dozens of requests for a single page) will count as a billable worker invokation.
+
+That said, requests are very cheap so this may not be a deal-breaker for you.
+
+### Cloudflare Pages
+
+Cloudflare Pages is a hosting service, like Netlify or Vercel, but built on Cloudflare's network. You get a git based deploy workflow and preview deployments for different branches.
+
+Static content is hosted from Cloudflare's CDN and the rest of the Remix app is compiled into a single cloudflare worker on the edge.<SideNote> Vercel's edge functions are built on top of Cloudflare workers. </SideNote> which uses the V8 runtime, so they aren't compatible with many node modules.
+
+Cloudflare does support streaming, so you can use Server-Sent Events and Remix's `defer()`
+
+Streaming support means that with React 18, Cloudflare can use `defer()` to stop some data fetching from blocking the initial render.
+
+Cloudflare supports cache-control headers, including `stale-while-revalidate` and `stale-if-error`, as well as the `s-maxage` property. For better control, they also offer the [CDN-Cache-Control](https://developers.cloudflare.com/cache/about/cdn-cache-control/#cdn-cache-control) header for making CDN specific settings.
+
+Cloudflare supports a request body size of 100MB for most apps, but if you need more, you can request a limit increase. This is higher than any other serverless platform.
+
+Websockets also work on Cloudflare, which is not common for serverless platforms.
+
+- Pages only supports a bundle size of 5MB<SideNote> In comparison to Netlify's 50MB limit. </SideNote>.
+- Deployments have a 200ms startup time limit, which can be problematic as your app grows.<SideNote> If you hit a `No deployment available` error after your build and upload succeeds, this may be the cause.</SideNote>
+- Only cloud databases are supported, and Prisma requires using their Data Platform, which has a generous free tier but is a paid service.
+
+## AWS Lambda
+
+AWS Lambda is a serverless function platform that runs on the edge. It's the most popular serverless platform, and the one that most people think of when they hear "serverless".
+
+Lambda functions run node, so they have full support for node modules, but there is no option to use a different runtime. Lambda@Edge is not a true edge function offering, but instead allows your functions to be invoked from any AWS region and will be proxied internally within AWS's network.
+
+- There is no built in git based deployments, so most devs deploy to Lambda through a tool like Serverless, SST, Architect, or AWS CDK.
+- Lambda has a 50MB bundle size limit.
+- Lambda has a 6MB request body limit
+- Only cloud databases are supported
+
+## Long-lived servers
+
+A more traditonal approach to application hosting is to run your application on a long-lived server. The server (or servers) remain running and handle requests as they come in.
+
+There are no cold start issues with long-running servers, but there is the potential for scaling issues if your app gets a large amount of traffic.
+
+Since the server runs even when there is no traffic, they are often more expensive than serverless functions for the same app.
+
+Servers usually have full access to the file system, to spawning child processes, to streaming responses, deferred data, server-sent events, running websocket servers in parallel with your app, and more.
+
+|                           | Fly | Render | Railway | DigitalOcean |
+| ------------------------- | --- | ------ | ------- | ------------ |
+| **Git based deployments** | No  | Yes    | Yes     | Yes          |
+| **Preview environments**  | No  | Yes    | No      | No           |
+| **Staging environments**  | Yes | No     | Yes     | No           |
+| **Static assets CDN**     | Yes | No     | No      | Yes          |
+| **Multi-region deploys**  | Yes | No     | No      | No           |
+
+### Fly.io
+
+Fly.io is a managed container platform that runs on the edge.<SideNote> Not serverless functions, but serverless virtual machines. </SideNote>
+
+One of Fly's biggest advantages is its multi-region support. You can deploy your app to any of Fly's 20+ regions, and Fly will automatically replicate your app to every region you deploy to. This means that your app will be closer to your users, and will be more resilient to outages.
+
+You can scale the amount of RAM and CPU provisioned for your app with a simple CLI command. By default, Fly will give you 256MB of RAM, but this is pretty slim for Remix apps, and I recommend 512MB as a reasonable minimum for most apps.
+
+The number of available machines to serve your app can also be configured, and you can tell fly to autoscale within a range. This is useful for [autoscaling to zero](/content/fly-autoscale-to-zero) for low traffic applications.
+
+Fly also supports Postgres and Redis databases that can be deployed alongside your app and replicated across every region you deploy to.
+
+Fly offers a CDN for serving static assets, but does not offer APIs to programmatically purge the cache. Cache-control headers are supported, including `stale-while-revalidate` and `stale-if-error`.
+
+- There is no built in git based deployments, but Fly has a CLI that can be used to deploy to Fly from your local machine, or you can use GitHub Actions.
+- No automatic preview environments, but it's easy to set up staging environments
+- Fly has an 8GB uncompressed docker image limit
+- Fly has a 10MB request body buffer, but can handle larger bodies by streaming them
+
+## Render
+
+Render is a managed hosting platform that supports Remix without needing Docker, though you still have the ability to package your app as a Docker image if you have special dependencies you want to install.
+
+Render supports git based deployments, so you just need to push code to your git repo and Render will deploy it. They also support preview environments for their Team plans.
+
+Their built in databases are Postgres and Redis, though nothing stops you from spinning up new containers running anything else.
+
+- There is no multi-region support like Fly
+- No staging environments, but with their preview environments you don't need them
+- Render has no request body size limit
+- They don't seem to have published their bundle/image limits
+
+## Railway
+
+Railway is a managed container hosting platform. If you don't supply your own Dockerfile, Railway will let you deploy without it.
+
+Railway supports git based deployments, so you just need to push code to your git repo and Railway will deploy it. They also support preview environments for their Team plans.
+
+For databases, Railway has built-in support for Postgres, MySQL, Redis, and MongoDB, and they have a web UI for managing them as well.
+
+- There is no multi-region support like Fly
+- No automatic preview environments, but it's easy to set up staging environments
+
+## DigitalOcean App Platform
+
+DigitalOcean App Platform is a managed container hosting platform. If you don't supply your own Dockerfile, DigitalOcean will let you deploy without it.
+
+DigitalOcean supports git-based deployments and also offers a Github action for more advanced deployment workflows.
+
+Postgres, MySQL, Redis, and MongoDB databases can be deployed from the DigitalOcean web console alongside your application.
+
+- There is no multi-region support like Fly
+- No automatic preview environments or built-in staging environments

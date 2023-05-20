@@ -1,0 +1,76 @@
+---
+title: Persist data client-side in React with useLocalStorageState
+description: The useLocalStorageState hook works just like useState, but page navigations and refreshes won't reset it. Use React Suspense to avoid a Flash of Unstyled Content on the first render.
+tags: Reviews
+published: true
+guide: true
+timestamp: "2023-04-23"
+---
+
+[Antonio Stoilkov](https://astoilkov.com/)<SideNote> Follow [Antonio on Twitter](https://twitter.com/intent/follow?screen_name=antoniostoilkov) </SideNote> built an excellent React hook for persisting state in local storage.
+
+It's called [useLocalStorageState](https://github.com/astoilkov/use-local-storage-state) and it works just like useState, but page navigations and refreshes won't reset it.
+
+Let's look at a simple example of a form that needs a title and description.
+
+- These are both uncontrolled inputs, so we're using `defaultValue` to set the initial value.
+- We're also using `onChange` to track any updates in our state.
+
+If the user refreshes the page before they submit the form, they won't lose any of their work.
+
+```jsx
+import { useLocalStorageState } from "use-local-storage-state"
+
+export default function Page() {
+  const [title, setTitle] = useLocalStorageState("title", {
+    defaultValue: "",
+  })
+  const [description, setDescription] =
+    useLocalStorageState("description", {
+      defaultValue: "",
+    })
+
+  return (
+    <form
+      method="POST"
+      onSubmit={(event) => {
+        setTitle()
+        setDescription()
+      }}
+    >
+      <label>
+        Title
+        <input
+          type="text"
+          defaultValue={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </label>
+      <label>
+        Description
+        <input
+          type="text"
+          defaultValue={description}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </label>
+
+      <button type="submit">Submit</button>
+    </form>
+  )
+}
+```
+
+Now, if you're using SSR<SideNote> With server-side rendering, the HTML is first generated on the server, which does not have local storage. </SideNote>, this starts to look a bit janky. The page will render with empty inputs, then update to the values in local storage, causing a Flash of Unstyled Content.
+
+How do we fix that? Hide the form for the first render? Not quite — the server MUST return the form visible in the HTML, or users without javascript won't see it at all.
+
+We need a javascript solution to hide the form on the first render, and then show it on the second render when the local storage values are available. Fortunately for us, suspending premature renders is exactly what React Suspense is designed for.
+
+Simply wrap the form in a Suspense component, and it will only render once the local storage values are available.
+
+```tsx
+<Suspense>
+  <form>...</form>
+</Suspense>
+```

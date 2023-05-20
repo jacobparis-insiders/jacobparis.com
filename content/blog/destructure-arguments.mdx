@@ -1,0 +1,172 @@
+---
+title: Initialize a destructured argument
+description: This is a common question that came up
+tags: Basics
+published: true
+guide: true
+---
+
+Destructuring arguments is a pattern that shows up a lot in modern javascript, and it's common in a lot of React components.
+
+```js numbered labeled {4-7}
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  {
+    serialize = JSON.stringify,
+    deserialize = JSON.parse
+  } = {},
+)
+```
+
+But why do we need to assign to an empty object?
+
+```js numbered labeled {4}
+{
+  serialize = JSON.stringify,
+  deserialize = JSON.parse
+} = {},
+// assignment to an empty object
+```
+
+Why is it not just like this?
+
+```js numbered labeled
+/* prettier-ignore */
+{
+  serialize = JSON.stringify,
+  deserialize = JSON.parse
+} // no assignment
+```
+
+If you try that, you'll end up with an error. Depending on the different ways you try this, you can get one of several errors:
+
+```yml
+TypeError: Cannot read property 'serialize' of undefined
+TypeError: Cannot destructure property 'serialize' of 'undefined' as it is undefined.
+TypeError: Cannot destructure property 'serialize' of (intermediate value) as it is undefined.
+```
+
+To show why that happens, here's an example of two functions.
+
+```js numbered labeled {1}
+function log(input) {
+  console.log(input)
+}
+
+log(5) // outputs 5
+log() // outputs undefined
+```
+
+```js numbered labeled {1}
+function log(input = 10) {
+  console.log(input)
+}
+
+log(5) // outputs 5
+log() // outputs 10
+```
+
+Do you follow this so far?
+
+The second example was able to output `10` without passing an argument into `log()`
+
+Function parameters can have defaults, and those are set with the `=` sign. Default arguments (sometimes called optional arguments or optional parameters) allow you to call the function with nothing for that argument.
+
+```js numbered labeled
+function useLocalStorageState(
+  key,
+  defaultValue = "",
+  handlers = {},
+) {}
+```
+
+With this function, if you don't pass in a default value it'll default to an empty string, and if you don't pass in a handlers object it'll default to an empty object.
+
+Assume handlers contains a serialize and a deserialize property, we can optionally set them to the JSON methods
+
+```js numbered labeled
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  handlers = {}
+) {
+  if (!handlers.serialize) {
+    handlers.serialize = JSON.stringify
+  }
+
+  if (!handlers.deserialize) {
+    handlers.deserialize = JSON.parse
+  }
+```
+
+Or we could destructure them right in the argument
+
+```js numbered labeled
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  { serialize, deserialize } = {}
+) {
+  if (!serialize) {
+    serialize = JSON.stringify
+  }
+
+  if (!deserialize) {
+    deserialize = JSON.parse
+  }
+```
+
+But when we're destructuring, we can assign defaults there too, so no need to do it within the function
+And then you're pretty much at what you were seeing
+
+```js numbered labeled
+function useLocalStorageState(
+  key,
+  defaultValue = '',
+  {
+    serialize = JSON.stringify,
+    deserialize = JSON.parse
+  } = {}
+) {
+```
+
+```js numbered labeled
+// This version uses custom serialize and deserialize functions
+useLocalStorage(key, value, {
+  serialize: myCustomSerializer,
+  deserialize: myCustomDeserializer,
+})
+
+// This version uses the default deserializer... but a custom serializer
+useLocalStorage(key, value, {
+  serialize: myCustomSerializer,
+})
+
+// This version uses the default serializer... but a custom deserializer
+useLocalStorage(key, value, {
+  deserialize: myCustomDeserializer,
+})
+
+// This version uses the default for both!
+useLocalStorage(key, value)
+```
+
+If you leave out the `= {}`, it is no longer an optional argument and you must supply a value
+
+```js
+useLocalStorage(key, value, {})
+```
+
+If you don't supply a value, javascript will interpret it as `undefined`
+
+```js
+useLocalStorage(key, value, undefined)
+```
+
+which means the third argument will try to destructure `undefined` and crash
+
+```js
+// This will throw an error because you can only destructure objects and arrays
+{ serialize, deserialize } = undefined
+```

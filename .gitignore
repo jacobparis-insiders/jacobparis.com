@@ -1,0 +1,12 @@
+node_modules
+
+/build
+/public/build
+.env
+
+**.ignored.js
+
+prisma/data.db
+prisma/data.db-journal
+
+package-lock.json

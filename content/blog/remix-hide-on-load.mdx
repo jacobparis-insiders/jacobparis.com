@@ -1,0 +1,104 @@
+---
+title: Hide elements unless JS is disabled with React SSR
+description: Progressive enhancement requires showing fallback elements to users without javascript. Reveal the fallbacks with a CSS animation to avoid a flash of unstyled content. Use the useHydrated hook from remix-utils to detect when javascript has loaded.
+tags: Remix
+timestamp: "2023-05-17"
+published: true
+---
+
+Progressive enhancement in a world with server-side rendering is not for the faint of heart.
+
+If you want to show a fancy component for users with javascript, but a simpler browser-native version for users without javascript, you run into issues immediately.
+
+For example, if you want your users to get a nice file drop zone that shows image thumbnails and lets them drag and drop files, the only way JS-free users will still be able to use the app is if you show them a native file input.
+
+Making sure the right users see the right input is not easy.
+
+Users without javascript will get whatever version of the page is rendered on the server, so the server MUST render a native file input to screen.
+
+Even if you tell React to hide it immediately, there will still be that flash of a native input before React takes over.
+
+The opposite approach, where you keep the native input hidden with plans to reveal it later, is also not great. How do you reveal it without javascript?
+
+Given those constraints, I choose to use a CSS animation to make the native input start invisible, but reveal itself after a second.
+
+That's long enough for javascript to load and cancel the animation for most users, who will never see the native input.
+
+For users without javascript, the page will load with nothing and then the input will appear out of nowhere a second later. That's a janky user experience, but look at the available options.
+
+- File uploads don't work at all without javascript
+- Every user sees at least a flash of a native input
+- Users without javascript see a janky input appear out of nowhere and then can still use the app
+
+I think the last option is the best of the bunch.
+
+## Let's code it out
+
+The first step is to create a CSS animation that will make the input appear after a second.
+
+I'm a tailwind user<SideNote> which means I'm afraid of CSS </SideNote>, so I added it in my tailwind config instead.
+
+```tsx
+module.exports = {
+  theme: {
+    extend: {
+      animation: {
+        appear: "appear 1s",
+      },
+      keyframes: {
+        appear: {
+          "0%, 99%": {
+            height: "0",
+            width: "0",
+            opacity: "0",
+          },
+          "100%": {
+            height: "auto",
+            width: "auto",
+            opacity: "1",
+          },
+        },
+      },
+    },
+  },
+}
+```
+
+Then we can use the `useHydrated` hook from remix-utils as a heuristic for whether or not javascript has loaded.
+
+If it hasn't loaded, we'll use the animation to make the input appear eventually.
+
+If it has loaded, we remove the animation class and give it something that will visually hide it permanently, like `sr-only`.
+
+```tsx
+import { useHydrated } from "remix-utils"
+
+export function NoScript() {
+  const isHydrated = useHydrated()
+
+  return (
+    <div
+      className={isHydrated ? "sr-only" : "animate-appear"}
+    >
+      {children}
+    </div>
+  )
+}
+```
+
+Now we can use this component to wrap our native input.
+
+```tsx
+import { NoScript } from "./NoScript"
+
+export function Example() {
+  return (
+    <div>
+      <NoScript>
+        <input type="file" />
+      </NoScript>
+      <div>... rest of the component</div>
+    </div>
+  )
+}
+```

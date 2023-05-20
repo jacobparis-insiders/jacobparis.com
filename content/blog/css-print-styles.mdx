@@ -1,0 +1,82 @@
+---
+title: Use CSS print styles with Tailwind
+description: CSS provides a media query that allows us to apply certain styles to the screen and certain styles only while printing.
+tags: UI/UX
+published: true
+guide: true
+---
+
+It's not often that people print out webpages anymore, but it still happens. Corporate software often deals with generating PDF documents, and maybe your personal website needs a printable resume.
+
+CSS provides a media query that allows us to apply certain styles to the screen and certain styles only while printing.
+
+## Print query
+
+You can use a print media query to make links appear as plain text when printing.
+
+```css numbered
+@media print {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+```
+
+## Screen query
+
+Or a screen media query to give the page a colored background in a way that doesn't cost several dollars of ink to print each page.
+
+```css numbered
+@media screen {
+  html {
+    background-color: #333;
+  }
+}
+```
+
+## Emulate rendering
+
+In the browser dev tools, go to **more options -> more tools -> rendering.**
+
+![The chrome dev tools dropdown menu, showing More Tools selected (which opens a submenu) and then Rendering highlighted in the submenu](/images/css-print-styles_2021-07-14-16-07-28.png)
+
+In the panel that opens, you can find an option labeled **"Emulate CSS media type"**. Setting this to `print` will make it easier to design and debug your print styles.
+
+![The Emulate CSS Media Type input set to Print](/images/css-print-styles_2021-07-14-16-10-14.png)
+
+Alternatively, go to **file -> print** to open Print Preview and see exactly how it looks.
+
+## Utility classes
+
+Many of these tweaks for printing are going to be one-off tweaks, and it can be hard to encode that into maintainable CSS stylesheets. Inline styles aren't effective here, because we can't use media queries in inline styles.
+
+Tailwind is an excellent tool for generating utility classes that overcome these gaps in the functionality provided by inline styles, when general rules in stylesheets aren't appropriate.
+
+In the `tailwind.config.js`, add these two items to **theme.extend.screens**.
+
+```js numbered {5,6}
+module.exports = {
+  theme: {
+    extend: {
+      screens: {
+        print: {raw: 'print'},
+        screen: {raw: 'screen'},
+      },
+```
+
+Tailwind will now generate `print:` and `screen:` prefixes for all of its responsive queries (which is most of them).
+
+Here are some new classes you'll be able to use
+
+`.print:hidden`
+: Hide an element in print mode
+
+`.screen:hidden`
+: Hide an element in screen mode
+
+`.screen:bg-gray-50`
+: Set the background color only on the screen
+
+`.screen:text-lg .print:text-sm`
+: Use large text on screen, small text during printing

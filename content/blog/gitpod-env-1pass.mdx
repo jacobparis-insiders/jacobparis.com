@@ -1,0 +1,160 @@
+---
+title: Import ENV file from 1Password shared note into Gitpod environment
+description: In April 2021, 1Password acquired SecretHub, which means there is now a way to securely store and download text files from a 1Password vault. This is perfect for `.env` files, as vaults can be shared between team members and now also to cloudy development environments.
+tags: Advanced
+published: true
+guide: true
+---
+
+During local development, I store secrets in a `.env` file on my local disk. The `.gitignore` file keeps it out of my repository for security reasons.
+
+But when I want to develop in a cloud environment like Gitpod, there is no stateful disk to store the `.env` file. The easy solution would be to commit it into the repository, but that would risk exposing the secrets to anyone who ever has access in the future.
+
+This is especially important for docker-in-docker, docker compose, or other microservice environments where you may have _many_ `.env` files to orchestrate in Gitpod.
+
+In April 2021, 1Password acquired SecretHub, which means there is now a way to securely store and download text files from a 1Password vault. This is perfect for `.env` files, as vaults can be shared between team members and now also to cloudy development environments.
+
+Follow the directions in the [1Password documentation](https://support.1password.com/connect-deploy-docker/#step-1-set-up-a-secrets-automation-workflow) to set up a secret automation workflow.
+
+![1Password Secrets Automation flow, with one Access Token named Gitpod](/images/gitpod-env-1pass_2021-10-01-20-02-52.png)
+
+Open the [Gitpod variables dashboard](https://gitpod.io/variables) and create two environment variables using information from the 1Password secret automation workflow.
+
+Save the access token as an environment variable named `PASSWORD_TOKEN`.
+
+Save the contents of the `1password-credentials.json` file as an environment variable named `PASSWORD_CREDENTIALS`. This allows us to securely pass in the credentials without committing them into the git repository.
+
+![Gitpod environment variables dashboard, contains 2 items. Item 1: name PASSWORD_CREDENTIALS with scope jacobparis. Item 2: name PASSWORD_TOKEN with scope jacobparis](/images/gitpod-env-1pass_2021-10-01-20-00-38.png)
+
+## Loading the 1Password Connect API
+
+The 1Password API docker containers expect the credentials to be mounted as a file, not passed in through an environment variable. To get around this, we can echo the credentials from env into a file.
+
+```sh
+# Pass credentials from env into a file where they can be mounted to docker
+echo $PASSWORD_CREDENTIALS > "1password-credentials.json"
+```
+
+Then we can mount the credentials into each of the two 1Password services.
+
+```sh
+docker run -d \
+  --name op-connect-api \
+  -p 8080:8080 \
+  -v "$(pwd)/1password-credentials.json:/home/opuser/.op/1password-credentials.json" \
+  -v "data:/home/opuser/.op/data" \
+  1password/connect-api:latest
+
+
+docker run -d \
+  --name op-connect-sync \
+  -p 8081:8080 \
+  -v "$(pwd)/1password-credentials.json:/home/opuser/.op/1password-credentials.json" \
+  -v "data:/home/opuser/.op/data" \
+  1password/connect-sync:latest
+```
+
+When Gitpod loads these services, it will ask the user what to do with the newly discovered active port. There is no use exposing that to outside users, so it's best to ignore them. This can be automated in the `ports` section of the `.gitpod.yml` file.
+
+```yml
+ports:
+  # 1Password Connect API
+  - port: 8080
+    onOpen: ignore
+  # 1Password Connect Sync
+  - port: 8081
+    onOpen: ignore
+```
+
+## Downloading the File
+
+The following steps are more exploratory. We need to know the id of the vault we're trying to access, and within that the id of the `.env` file we're trying to load.
+
+If your `.env` file is not already in 1Password, add a new Shared Note to your vault and paste in the contents of your `.env` file. This shared note is what we'll be downloading through the 1Password API.
+
+In the terminal within your Gitpod VS Code instance, run the following command
+
+```sh
+curl http://0.0.0.0:8080/v1/vaults \
+  -H "Authorization: Bearer $PASSWORD_TOKEN" \
+  | jq
+```
+
+Now that you have the vault ID, you can get the list of files in the vault.
+
+```sh
+# replace VAULT_ID with the vault ID
+curl http://0.0.0.0:8080/v1/vaults/VAULT_ID/items \
+  -H "Authorization: Bearer $PASSWORD_TOKEN" \
+  | jq
+```
+
+Scroll through the response until you find the file you want, and copy its ID too.
+
+```sh
+# replace ITEM_ID with the item ID
+curl http://0.0.0.0:8080/v1/vaults/VAULT_ID/items/ITEM_ID \
+  -H "Authorization: Bearer $PASSWORD_TOKEN" \
+  | jq
+```
+
+The response is a JSON object with an array of `fields` containing one object with a value property. The value property contains the contents of the file, so amend the `jq` command to target that value specifically and then dump the value to a `.env` file
+
+```sh
+
+curl http://0.0.0.0:8080/v1/vaults/VAULT_ID/items/ITEM_ID \
+  -H "Authorization: Bearer $PASSWORD_TOKEN" \
+  | jq -r .fields[0].value \
+  > .env
+```
+
+If you run that script, you should see a `.env` file with all the variables from your Shared Note appear.
+
+## The final gitpod task file
+
+```yml
+image: gitpod/workspace-full
+
+ports:
+  # 1Password Connect API
+  - port: 8080
+    onOpen: ignore
+  # 1Password Connect Sync
+  - port: 8081
+    onOpen: ignore
+
+tasks:
+  - name: Download environment variables from 1Password
+    init: |
+      # Pass credentials from process.env into a file
+      echo $PASSWORD_CREDENTIALS > "1password-credentials.json"
+
+      # Run the 1Password Connect API
+      docker run -d \
+        --name op-connect-api \
+        -p 8080:8080 \
+        -v "$(pwd)/1password-credentials.json:/home/opuser/.op/1password-credentials.json" \
+        -v "data:/home/opuser/.op/data" \
+        1password/connect-api:latest
+
+      # Run the 1Password Connect Sync
+      docker run -d \
+        --name op-connect-sync \
+        -p 8081:8080 \
+        -v "$(pwd)/1password-credentials.json:/home/opuser/.op/1password-credentials.json" \
+        -v "data:/home/opuser/.op/data" \
+        1password/connect-sync:latest
+
+      # It seems to take a few seconds to allow connections
+      sleep 3
+
+      # Make sure ports are running
+      gp await-port 8080
+      gp await-port 8081
+
+      # Fetch environment variables from 1Password
+      curl http://0.0.0.0:8080/v1/vaults/VAULT_ID/items/ITEM_ID \
+        -H "Authorization: Bearer $PASSWORD_TOKEN" \
+        | jq -r .fields[0].value \
+        > .env
+```

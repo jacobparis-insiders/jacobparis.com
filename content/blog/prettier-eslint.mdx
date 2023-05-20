@@ -1,0 +1,108 @@
+---
+title: Use Prettier and ESLint in harmony
+description:
+tags: Basics
+published: true
+guide: true
+---
+
+ESLint is for catching bugs.
+
+Prettier is for formatting code.
+
+Manually formatting your code tricks you into thinking you're improving the codebase while providing zero business value.
+
+When properly configured, ESLint will audit your code for potential bugs. Anything that doesn't match the way **Prettier** wants to format your code is also flagged as an error, and then triggers Prettier as part of the autofix step.
+
+## Installation
+
+You'll need to install these four modules.
+
+```sh
+npm i --save-dev /
+  eslint /
+  prettier /
+  eslint-config-prettier /
+  eslint-plugin-prettier /
+  typescript /
+  @typescript-eslint/eslint-plugin
+```
+
+Add these scripts to `package.json`
+
+The `lint:changed` script will only lint the currently modified files, which is a great way to slowly integrate linting into a messy codebase
+
+````json
+{
+  "lint": "eslint",
+  "lint:changed": "eslint $(git diff --name-only --diff-filter=d HEAD ':(exclude)package*.json' | xargs)",
+  "lint:fix": "eslint --fix"
+}
+## Node
+
+Create a `tsconfig.json` and place it in the root of your application
+
+```json
+{
+    "compilerOptions": {
+        "target": "es2016",
+        "lib": ["ESNext"],
+        "allowJs": true,
+        "checkJs": true,
+        "skipLibCheck": true,
+        "strictNullChecks": false,
+        "strict": true,
+        "forceConsistentCasingInFileNames": true,
+        "noEmit": true,
+        "noImplicitAny": false,
+        "esModuleInterop": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "isolatedModules": true,
+        "jsx": "preserve",
+        "baseUrl": "./",
+        "paths": {
+            "@/*": ["./*"],
+            "~/*": ["./*"]
+        }
+    },
+    // When adding new paths, run this command to make sure it matches the right files
+    // npx glob-test "pages/**/**/*.{js,ts,jsx,tsx}"
+    "include": ["**.d.ts", ".eslintrc.js", "./**/**/*.js"],
+    "exclude": ["node_modules"]
+}
+````
+
+Create a `.eslintrc.js` file and place it at the root of your application
+
+```js
+module.exports = {
+  env: {
+    node: true,
+    jest: true,
+  },
+  extends: [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "prettier",
+    /** Automatically replaces "" with `` when ${var} is detected inside */
+    "plugin:no-template-curly-in-string-fix/recommended",
+  ],
+  parser: "@typescript-eslint/parser",
+  parserOptions: {
+    project: "./tsconfig.json",
+  },
+
+  plugins: ["@typescript-eslint", "jest", "prettier"],
+  ignorePatterns: ["package-lock.json"],
+  rules: {
+    // Floating promises are usually a sign of forgetting to await
+    "@typescript-eslint/no-floating-promises": "error",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-var-requires": "off",
+
+    // MongoDB uses _id for its document ID
+    "no-underscore-dangle": ["error", { allow: ["_id"] }],
+  },
+}
+```

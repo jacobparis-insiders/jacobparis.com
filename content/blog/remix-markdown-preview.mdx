@@ -1,0 +1,227 @@
+---
+title: Building a markdown input with a preview tab (like GitHub and Stack Overflow) with Remix
+description: Create a progressively enhanced input field with "edit" and "preview" tabs like GitHub and Stack Overflow. Use Remix's useFetcher hook to render the markdown server-side. Set shouldRevalidate to false to make tab-switching instant.
+tags: Remix, UI/UX
+published: true
+img: content/remix-markdown-preview/cover.png
+guide: true
+timestamp: "2023-04-16"
+---
+
+Markdown is meant to be a simple way to write rich text in plain text. Most of its formatting is common sense: `*` for italics, `**` for bold<SideNote> Or is it underscores? One of any symbol for italic, two of any for bold? Maybe this isn't as easy as I thought.</SideNote>, `#` for headers, and so on. It's a great way to write content that's easy to read and write.
+
+But then you try to add links or images, and the sensibility<SideNote> Common or otherwise</SideNote> starts to break down. Square brackets for the text, parentheses for the URL<SideNote> I remember which order they go like it's a function call, where the URL is the parameter. </SideNote>, and a `!` in front of the brackets for images.
+
+Certainly, being able to preview your markdown to make sure you wrote it correctly is a good idea. GitHub offers this. StackOverflow does as well. Why not join them?
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/uK6cv_lzQwk"
+    title="YouTube video player"
+    frameBorder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowFullscreen
+  />
+</div>
+
+## Rendering markdown into HTML
+
+There are a **lot** of markdown parsers out there, and they are all more or less interchangeable. The one I like is [femark](https://github.com/benwis/femark) on account of it being insanely fast.
+
+Despite its speed, we still don't want to render the same markdown more than once. This is a good use-case for a server-side cache. If we try to render the same markdown twice, we can just return the cached result.
+
+Create a new file `markdown.server.ts`<SideNote> By marking it as `.server`, it will be excluded from the client bundle. </SideNote> and add the following code.
+
+```ts
+import { processMarkdownToHtml as processMarkdownToHtmlImpl } from "@benwis/femark"
+
+import Lrucache from "lru-cache"
+
+const cache = new Lrucache({
+  ttl: 1000 * 60,
+  maxSize: 1024,
+  sizeCalculation: (value) =>
+    Buffer.byteLength(JSON.stringify(value)),
+})
+
+function cachify<TArgs, TReturn>(
+  fn: (args: TArgs) => TReturn,
+) {
+  return function (args: TArgs): TReturn {
+    if (cache.has(args)) {
+      return cache.get(args) as TReturn
+    }
+    const result = fn(args)
+    cache.set(args, result)
+    return result
+  }
+}
+
+export const processMarkdownToHtml = cachify(
+  processMarkdownToHtmlImpl,
+)
+```
+
+This will power the endpoint that we'll use to render markdown into HTML. Create a new action in a route of your choice and add the following code.
+
+```ts
+import { processMarkdownToHtml } from "./examples.remix-markdown-preview.markdown.server"
+
+export async function action({
+  params,
+  request,
+}: ActionArgs) {
+  const formData = await request.formData()
+  const description = formData.get("description") || ""
+
+  const html = processMarkdownToHtml(
+    description.toString().trim(),
+  )
+
+  // Optionally, store this in a database
+  // const id = params.id as string
+  // db[id].description = description.toString()
+  // db[id].preview = html.content
+
+  return new Response(html.content, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html",
+    },
+  })
+}
+```
+
+Sending markdown to this endpoint should successfully return the HTML.
+
+## Thinking in progressive enhancement
+
+Progressive enhancement means our page should be interactive before javascript loads on the client, to make it compatible with devices that have javascript disabled or when javascript fails to load for one of many reasons.<SideNote> As noted by [Jason Godesky, scripts fail to load on between 1% and 3% of all visits.](https://scribe.rip/@jason.godesky/when-javascript-fails-52eef47e90db). </SideNote>
+
+If we were building this without javascript, what would that look like?
+
+- The textarea would need to be a form and have a submit button
+- The tabs would need to be links<SideNote> This could **also** be a form. We can do lots of forms. </SideNote> that set a query parameter to `?tab=edit` or `?tab=preview`
+- The preview would need to be rendered server-side
+
+Those requirements set the general approach, and then we can think about what javascript would add to the experience.
+
+- When the user finishes typing, send the markdown to the server to render the preview automatically
+- Update the preview tab with the up-to-date content
+- We can change tabs client-side without a page reload
+
+## Writing an auto-submitting form
+
+The best way to make a form submit automatically is with Remix's `useFetcher()` hook.<SideNote> More details on this at [my autosaving forms in Remix article](/content/remix-form-autosave). </SideNote>
+
+Use `fetcher.Form` and add a callback to make it submit on change.
+
+Don't forget to include a regular submit button so that the form can be submitted without javascript.<SideNote> If there's only one input in the form, you can use the `Enter` key to submit the form even without a submit button. </SideNote>
+
+```tsx
+export default function Example() {
+  const fetcher = useFetcher()
+
+  return (
+    <div>
+      <fetcher.Form
+        method="POST"
+        onChange={(e) => {
+          fetcher.submit(e.currentTarget, {
+            replace: true,
+          })
+        }}
+      >
+        <label htmlFor="description">Description</label>
+
+        <textarea
+          id="description"
+          name="description"
+          rows={8}
+          defaultValue={description || ""}
+        />
+
+        <div>
+          <button type="submit">Save</button>
+        </div>
+      </fetcher.Form>
+    </div>
+  )
+}
+```
+
+## Displaying the HTML preview
+
+We can use the `fetcher.data` property to get the response from the server.
+
+Some markdown solutions will just return JSON you can pass directly into a React component, but `femark` returns HTML. We can use `dangerouslySetInnerHTML` to render it.
+
+```tsx
+export default function Example() {
+  const fetcher = useFetcher()
+
+  return (
+    <div>
+      {/* Previous code for the fetcher.Form */}
+
+      <div
+        dangerouslySetInnerHTML={{
+          __html: fetcher.data,
+        }}
+      />
+    </div>
+  )
+}
+```
+
+## Tabbing between edit and preview mode
+
+The tabs will be simple links to the same page with the query parameter changed.
+
+```tsx
+export default function Example() {
+  const fetcher = useFetcher()
+  const [searchParams] = useSearchParams({ tab: "edit" })
+
+  return (
+    <div>
+      <div>
+        <Link to="?tab=edit">Edit</Link>
+        <Link to="?tab=preview"> Preview </Link>
+      </div>
+
+      {searchParams.get("tab") === "edit" ? (
+        <fetcher.Form />
+      ) : (
+        <div
+          dangerouslySetInnerHTML={{
+            __html: fetcher.data,
+          }}
+        />
+      )}
+    </div>
+  )
+}
+```
+
+Depending on how you've built out your project, this will probably be quite slow. On every navigation, Remix is running the matching loaders to revalidate the data.
+
+Since we know there's nothing happening on these tab changes that requires revalidating every upstream loader, we can tell Remix not to run the loaders again.
+
+Create a `shouldRevalidate` function in your route, and return false if the only changes have been the query parameters.<SideNote> You may want to add a similar one to your root loader. More info in the [docs on shouldRevalidate](https://remix.run/docs/en/main/route/should-revalidate#never-reloading-the-root). </SideNote>
+
+```tsx
+export const shouldRevalidate: ShouldRevalidateFunction = ({
+  currentUrl,
+  nextUrl,
+}) => {
+  if (currentUrl.pathname === nextUrl.pathname) {
+    return false
+  }
+
+  return true
+}
+```

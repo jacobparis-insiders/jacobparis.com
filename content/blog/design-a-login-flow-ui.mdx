@@ -1,0 +1,78 @@
+---
+title: Design a login flow UI
+description: Guide to designing a login flow for an app
+tags: UI/UX
+published: true
+blog: true
+---
+
+The first thing a user will see is the login screen.
+
+If you're using multiple auth providers or a Single Sign-On Solution, you may choose to keep the username and password on separate pages. I'm not, so I don't.
+
+![](/images/design-a-login-flow-ui_2021-06-18-16-51-03.png)
+
+## Email input
+
+For this application the username is an email address, but that's mostly by coincidence.
+
+The email address input needs a few attributes
+
+- `required`
+- `autocomplete="email"` so that browsers and password managers know to save and repopulate this field as an email
+- `type="email"` so that browser native form validation can prevent submission if it doesn't have at least one `@` followed by a `.`
+
+## Password input
+
+The password needs similar attributes
+
+- `required`
+- `autocomplete="current-password"` so that password managers can distinguish between this and, for example, a password confirmation input during a signup flow.
+- `type="password"` so that browsers know to hide the contents
+
+## Submit button
+
+In order to make submission via Enter key possible, all of the inputs need to be in a `<form>`, with the log in button acting as the form submit button.
+
+That means the submit button is either the only button inside the form with `type="submit"` or it's outside the form but has an attribute `form="formId"`
+
+The submit button should not be labeled "submit" but instead should have descriptive action text, like "Log in", "Sign in", "Go to dashboard", etc
+
+## Reset password button
+
+This button should not be a part of the main form so it doesn't disrupt the normal Enter key logic.
+
+It's a good idea de-emphasize the reset password button relative to the submit button because it's a secondary action.
+
+If the user tries to reset the password without having an email entered, either take them to a page that allows them to enter it or stop them from proceeding. In this case, the reset password button immediately fires off a verification code email, so we need the email address up front.
+
+![](/images/design-a-login-flow-ui_2021-06-18-16-51-51.png)
+
+## Verification code screen
+
+The verification code screen needs to inform the user where the code has been sent (either to email or SMS or maybe their authenticator app)
+
+Since the user will be setting their final password on this screen, it's important to also show their email address so that password managers know to tie the two fields together.
+
+There is only one action button on this screen, so it should be set as the submit button for the form.
+
+![](/images/design-a-login-flow-ui_2021-06-18-16-53-59.png)
+
+## New password input
+
+The only difference between this password input and the one on the previous page is the autocomplete attribute, which should be
+
+- `autocomplete="new-password"`
+
+## Verification code input
+
+- `inputmode="numeric"` to make mobile keyboard show a number pad
+- `type="tel"` will take over in cases where inputmode isn't supported. Almost the same except shows + and # buttons on some keyboards, and falls back to a regular text input where unsupported.
+- `pattern="[0-9]*"` to validate that only capital numbers are being entered
+- `autocomplete="one-time-code"` for password managers and for the mobile phone feature of automatically entering OTP codes from clipboard or messages
+
+## Already logged in
+
+If the user manually navigates back to the login screen after they've been logged in, show them who they're logged in as and allow them to either change users or return to the app
+
+![](/images/design-a-login-flow-ui_2021-06-18-16-55-06.png)

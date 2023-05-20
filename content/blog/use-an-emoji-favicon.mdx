@@ -1,0 +1,28 @@
+---
+title: Use an emoji favicon
+description: Stop using framework-default favicons and use an emoji favicon instead. Supported on almost all browsers.
+tags: Basics
+published: true
+timestamp: "2023-04-17"
+guide: true
+---
+
+Favicons are small icons that are displayed in the browser tab next to the page title. They're also used as a bookmark icon in the browser.
+
+The default favicon for a Remix app is the Remix's "R" logo. For a Next.js app, it's Vercel's triangle. You will often spot these on developers' websites, blogs, and personal projects, because proper favicons are a bit tedious to set up. You need to resize your logo, upload it to a server, and have your app link to it in the `<head>` tag.
+
+There's a faster way to get started with favicons.
+
+Most browsers<SideNote> It should come as no surprise that Safari is the laggard here, but Safari is bad at all sorts of favicons. Consider this [article on favicon implementations](https://dev.to/masakudamatsu/favicon-nightmare-how-to-maintain-sanity-3al7) if you feel like diving down that particular rabbit hoel.</SideNote> support SVG data urls as favicons, which means you can use an SVG string to render text, and then just type in the emoji you want to use.
+
+Here's a one-liner you can copy and paste into the `<head>` section of your website.
+
+Swap out the `🥑` for any emoji or character you want to use.
+
+```html
+<link
+  rel="icon"
+  type="image/svg+xml"
+  href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🥑</text></svg>"
+/>
+```

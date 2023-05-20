@@ -1,0 +1,83 @@
+---
+title: Add a Key to a React Fragment
+description: Here's how to a Key to a React Fragment
+tags: Basics
+published: true
+guide: true
+---
+
+When working with CSS Grid, nesting elements can break the layout.
+
+```js numbered
+const gridData = data.map(
+  ({ id, firstName, lastName, team }) => {
+    return (
+      <>
+        <span>{firstName}</span>
+        <span>{lastName}</span>
+        <span>{team}</span>
+      </>
+    )
+  },
+)
+```
+
+This function uses the `<>` fragment shorthand to return three `<span>` elements. With some CSS magic, it works great! But React will say that every element created in a loop needs a key.
+
+![](/images/add-props-to-react-fragment_2021-06-24-02-04-27.png)
+
+The easy way to add the key is to add it to the parent, but since `<key={id}>` is an obvious syntax error, what can be done? Wrapping it in a `<div key={id}` solves the key issue but breaks the layout.
+
+```js numbered {4, 8}
+const gridData = data.map(
+  ({ id, firstName, lastName, team }) => {
+    return (
+      <div key={id}>
+        <span>{firstName}</span>
+        <span>{lastName}</span>
+        <span>{team}</span>
+      </div>
+    )
+  },
+)
+```
+
+![](/images/add-props-to-react-fragment_2021-06-24-02-04-11.png)
+
+One solution is to add keys directly to each child. Since keys need to be unique, you can tag each one with the field name it corresponds to. This is a perfectly valid solution
+
+```js
+const gridData = data.map(
+  ({ id, firstName, lastName, team }) => {
+    return (
+      <>
+        <span key={`${id}:firstName`}>
+          {player.firstName}
+        </span>
+        <span key={`${id}:lastName`}>
+          {player.lastName}
+        </span>
+        <span key={`${id}:team`}>
+          {player.team}
+        </span>
+      </>
+    )
+  },
+)
+```
+
+But – as it turns out, the long-form `React.Fragment` has no problem accepting props<SideNote>The only props that are valid for a React.Fragment are `key` and `children`, as noted in the [source code here](https://github.com/facebook/react/blob/master/packages/react/src/jsx/ReactJSXElementValidator.js#L281)</SideNote>, and we can just key on that instead.
+
+```js
+const gridData = data.map(
+  ({ id, firstName, lastName, team }) => {
+    return (
+      <React.Fragment key={id}>
+        <span>{firstName}</span>
+        <span>{lastName}</span>
+        <span>{team}</span>
+      </React.Fragment>
+    )
+  },
+)
+```

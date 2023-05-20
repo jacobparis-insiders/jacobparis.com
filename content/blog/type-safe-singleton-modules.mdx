@@ -1,0 +1,59 @@
+---
+title: Write a type-safe singleton module in Typescript
+description: A singleton is a module that returns the same instance every time it is imported. This is useful for database connections, caches, and external processes. This article shows how to write a singleton module in Typescript.
+tags: Typescript
+guide: true
+published: true
+---
+
+A singleton is a module that is only ever instantiated once, no matter how many times you import it. This is useful for things like database connections, where you want to be able to access the database from anywhere in your application, but you don't want to create a new connection every time you import the module.
+
+Good candidates for singleton modules is anything that takes configuration or processing power to create, such that you want to make sure that it is only ever created once.
+
+## Writing a singleton in Typescript
+
+The basic singleton structure is to declare a global variable that will hold the singleton instance, and then check if that variable is already set before creating a new instance.
+
+```ts
+let cache: Cache | undefined
+
+declare global {
+  var cache: Cache | undefined
+}
+
+if (!global.cache) {
+  global.cache = new Cache()
+}
+
+cache = global.cache
+
+export default cache
+```
+
+## Singletons for Hot Module Reloading
+
+Some third party libraries, such as `ioredis`, already handle their own connection pooling and will only create a new connection when the server starts for the first time. In this case, you don't need to use the singleton pattern.
+
+Unfortunately, developer tooling will often restart the server every time you make changes to your code, which will cause `ioredis` to create a new connection every time.
+
+In these scenarios, you may want to return a singleton specifically during development mode and forgo it in production.
+
+```ts
+let cache: Cache | undefined
+
+declare global {
+  var cache: Cache | undefined
+}
+
+if (process.env.NODE_ENV === "production") {
+  cache = new Cache()
+} else {
+  if (!global.cache) {
+    global.cache = new Cache()
+  }
+
+  cache = global.cache
+}
+
+export default cache
+```
