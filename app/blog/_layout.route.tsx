@@ -47,13 +47,15 @@ export default function Index() {
                         with a background in lean manufacturing.
                       </p>
                       <p>
-                        Since then, I've been working remotely around the world
-                        for tech companies and startups, building great products
-                        and helping others do the same.
-                      </p>
-                      <p>
                         About once per month, I send an email with new guides,
                         new blog posts, and sneak peeks of what's coming next.{" "}
+                      </p>
+                      <p>
+                        <strong>
+                          Everyone who subscribes gets access to the source code
+                          for this website and every example project for all my
+                          tutorials.
+                        </strong>
                       </p>
                       <p>
                         Stay up to date with everything I'm working on by{" "}

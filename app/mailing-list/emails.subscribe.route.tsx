@@ -111,6 +111,13 @@ export default function SubscribePage() {
             <p>Once you do that, you'll be on the list!</p>
 
             <p>
+              I will personally invite you to this GitHub repo with the source
+              code to all of my example projects. If you would like that invite
+              to go to a different email than you used to sign up, reply to any
+              of my emails and I'll get you sorted!
+            </p>
+
+            <p>
               By the way, if anything I write helps you build something, I'd
               love to see it.
             </p>
@@ -149,13 +156,15 @@ export default function SubscribePage() {
                     a background in lean manufacturing.
                   </p>
                   <p>
-                    Since then, I've been working remotely around the world for
-                    tech companies and startups, building great products and
-                    helping others do the same.
-                  </p>
-                  <p>
                     About once per month, I send an email with new guides, new
                     blog posts, and sneak peeks of what's coming next.{" "}
+                  </p>
+                  <p>
+                    <strong>
+                      Everyone who subscribes gets access to the source code for
+                      this website and every example project for all my
+                      tutorials.
+                    </strong>
                   </p>
                   <p>
                     Stay up to date with everything I'm working on by{" "}

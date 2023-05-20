@@ -43,6 +43,25 @@ export default function Index() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
 
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
+        <Link to="/emails/subscribe" className="group">
+          <aside className="mb-6 flex items-center gap-x-4 rounded-2xl bg-gray-900 px-3 py-3 text-white opacity-90 transition-opacity  group-hover:opacity-60">
+            <img
+              src="/images/jacob.png"
+              className="w-12 rounded-lg shadow"
+              alt="Professional headshot"
+            />
+            <div>
+              <p className="font-medium">
+                Hey there! I've open sourced my site and examples to all free
+                newsletter subscribers.
+              </p>
+              <p className="opacity-80">
+                Join the mailing list and I will send you an invite to the
+                repository.{" "}
+              </p>
+            </div>
+          </aside>
+        </Link>
         <h2 className="mb-4 text-xl font-medium text-gray-700">
           Write better web applications with these free tutorials and articles.
         </h2>
