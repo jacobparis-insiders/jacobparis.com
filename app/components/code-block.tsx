@@ -80,31 +80,32 @@ export default function CodeBlock(props) {
   )
 }
 
-const Line: React.FunctionComponent<{ highlight?: boolean }> = ({
-  highlight,
-  children,
-}) => (
-  <div
-    style={{
-      backgroundColor: highlight ? "#007acc" : "",
-    }}
-    className={`
-    [&:after]:content-['_']
-    ${
-      highlight
-        ? "-mx-4 whitespace-pre-wrap px-4"
-        : "whitespace-pre-wrap [&>span]:break-all"
-    }`}
-  >
-    {children}
-  </div>
-)
+function Line({ highlight, children }) {
+  return (
+    <div
+      style={{
+        backgroundColor: highlight ? "#007acc" : "",
+      }}
+      className={`
+      [&:after]:content-['_']
+      ${
+        highlight
+          ? "-mx-4 whitespace-pre-wrap px-4"
+          : "whitespace-pre-wrap [&>span]:break-all"
+      }`}
+    >
+      {children}
+    </div>
+  )
+}
 
-const NumberElement: React.FunctionComponent = ({ children }) => (
-  <span className="line-number pointer-events-none inline-block w-7 select-none text-xs text-blue-300 opacity-50">
-    {children}
-  </span>
-)
+function NumberElement({ children }) {
+  return (
+    <span className="line-number pointer-events-none inline-block w-7 select-none text-xs text-blue-300 opacity-50">
+      {children}
+    </span>
+  )
+}
 
 const CopyToClipboard: React.FunctionComponent<{ code: string }> = ({
   code,

@@ -1,4 +1,4 @@
-import type { ActionArgs, LoaderArgs, V2_MetaFunction } from "@remix-run/node"
+import type { LoaderArgs, V2_MetaFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Link,
@@ -9,7 +9,6 @@ import {
 import { ButtonLink } from "~/components/ButtonLink"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
 import { prisma } from "~/db.server"
-import { getRequiredEnvVar } from "~/utils/misc"
 export const meta: V2_MetaFunction = ({ params }) => {
   return [
     {

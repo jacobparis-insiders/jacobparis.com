@@ -28,7 +28,7 @@ export function removeTrailingSlash(s: string) {
   return s.endsWith("/") ? s.slice(0, -1) : s
 }
 
-export function safeEncode(input?: string) {
+export function safeEncode(input?: string | null) {
   if (!input) return ""
 
   return encodeURIComponent(input)

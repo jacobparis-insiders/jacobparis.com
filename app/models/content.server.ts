@@ -60,9 +60,6 @@ export async function getContent(slug: string) {
       title: true,
       requiresUpdate: true,
       description: true,
-      blog: true,
-      guide: true,
-      cheatsheet: true,
     },
   })
 
@@ -127,9 +124,6 @@ async function upsertContentImpl({
   timestamp,
   description,
   img,
-  blog = false,
-  guide = false,
-  cheatsheet = false,
 }: {
   contentDirectory: string
   slug: string
@@ -139,10 +133,7 @@ async function upsertContentImpl({
   frontmatter: Record<string, unknown>
   timestamp: Date
   description: string
-  img: string
-  blog: boolean
-  guide: boolean
-  cheatsheet: boolean
+  img?: string
 }) {
   await db.content.upsert({
     where: { slug },
@@ -154,9 +145,6 @@ async function upsertContentImpl({
       requiresUpdate: false,
       description,
       img,
-      blog,
-      guide,
-      cheatsheet,
     },
     create: {
       contentDirectory,
@@ -168,9 +156,6 @@ async function upsertContentImpl({
       timestamp,
       description,
       img,
-      blog,
-      guide,
-      cheatsheet,
     },
   })
 }

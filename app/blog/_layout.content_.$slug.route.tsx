@@ -1,18 +1,14 @@
 import * as React from "react"
 import type {
-  HeadersFunction,
   LinksFunction,
   LoaderFunction,
-  MetaFunction,
   V2_MetaFunction,
 } from "@remix-run/node"
-import { json } from "@remix-run/node"
-import { Link, useLoaderData, useParams } from "@remix-run/react"
+import { Link, useLoaderData } from "@remix-run/react"
 import { getMDXComponent } from "mdx-bundler/client"
 import invariant from "tiny-invariant"
 import type { MdxComponent } from "~/types"
 
-import { getSeoMeta } from "~/utils/seo"
 import CodeBlock from "~/components/code-block"
 import blogStyles from "app/styles/blog.css"
 
@@ -22,7 +18,7 @@ import { Excerpt } from "~/components/Excerpt"
 import { SideNote } from "~/components/SideNote"
 import { loadMdx } from "~/utils/loadMdx"
 import { ButtonLink } from "~/components/ButtonLink"
-import { getMdxListItems, getMdxPage } from "~/utils/mdx.server"
+import { getMdxListItems } from "~/utils/mdx.server"
 import { safeEncode } from "~/utils/misc"
 import { getServerTiming } from "~/utils/timing.server"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"

@@ -80,11 +80,8 @@ async function upsertContent(
           published: compiledPage.frontmatter.published ?? false,
           slug: compiledPage.slug,
           title: compiledPage.frontmatter.title ?? "",
-          timestamp: new Date(compiledPage.frontmatter.date ?? ""),
+          timestamp: new Date(compiledPage.frontmatter.timestamp ?? ""),
           description: compiledPage.frontmatter.description ?? "",
-          blog: compiledPage.frontmatter.blog ?? false,
-          guide: compiledPage.frontmatter.guide ?? false,
-          cheatsheet: compiledPage.frontmatter.cheatsheet ?? false,
         })
       }
       return null
@@ -187,12 +184,9 @@ export async function getMdxPage({
     frontmatter: compiledPage.frontmatter,
     requiresUpdate: false,
     slug,
-    img: compiledPage.img,
-    timestamp: new Date(compiledPage.frontmatter.date ?? ""),
+    img: compiledPage.frontmatter.img ?? null,
+    timestamp: new Date(compiledPage.frontmatter.timestamp ?? ""),
     title: compiledPage.frontmatter.title ?? "",
     description: compiledPage.frontmatter.description ?? "",
-    blog: compiledPage.frontmatter.blog ?? false,
-    guide: compiledPage.frontmatter.guide ?? false,
-    cheatsheet: compiledPage.frontmatter.cheatsheet ?? false,
   }
 }

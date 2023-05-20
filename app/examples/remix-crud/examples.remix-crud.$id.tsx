@@ -342,8 +342,8 @@ function IssueRow(item: { id: number; title: string; date: string }) {
 
       <fetcher.Form
         onSubmit={(event) => {
-          const submitButton = event.submitter
-          const form = event.currentTarget
+          // const submitButton = event.submitter
+          // const form = event.currentTarget
 
           console.log(fetcher.submission?.action)
           if (fetcher.submission?.action.endsWith("/delete")) {
