@@ -2,8 +2,7 @@ import type { ActionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 
 import { getRequiredEnvVar } from "~/utils/misc"
-import crypto from "crypto"
-
+import crypto from "node:crypto"
 /**
  * Return a signed URL for Cloudflare Images.
  */
@@ -41,7 +40,7 @@ async function getUploadUrl(meta: { name: string }) {
   body.append("meta", JSON.stringify(meta))
 
   const { uploadUrl } = await fetch(
-    `/examples/remix-image-uploads/cloudflare-images`,
+    `/content/remix-image-uploads/example/cloudflare-images`,
     {
       method: "POST",
       body,
@@ -107,7 +106,7 @@ export async function generateSignedUrl(urlString: string) {
 
   const encoder = new TextEncoder()
   const secretKeyData = encoder.encode(KEY)
-  const key = await crypto.subtle.importKey(
+  const key = await crypto.webcrypto.subtle.importKey(
     "raw",
     secretKeyData,
     { name: "HMAC", hash: "SHA-256" },
@@ -126,7 +125,7 @@ export async function generateSignedUrl(urlString: string) {
   // for example, /cheeW4oKsx5ljh8e8BoL2A/bc27a117-9509-446b-8c69-c81bfeac0a01/mobile?exp=1631289275
 
   // Generate the signature
-  const mac = await crypto.subtle.sign(
+  const mac = await crypto.webcrypto.subtle.sign(
     "HMAC",
     key,
     encoder.encode(stringToSign),

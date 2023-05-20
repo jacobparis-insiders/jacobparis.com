@@ -10,6 +10,3 @@ export function randomUuid() {
 
   return uuid.split("-")[0]
 }
-
-export const importKey = crypto.subtle.importKey
-export const sign = crypto.subtle.sign

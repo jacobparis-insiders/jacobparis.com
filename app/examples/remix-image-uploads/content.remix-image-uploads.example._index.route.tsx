@@ -1,25 +1,25 @@
-// http://localhost:3000/examples/remix-image-uploads
+// http://localhost:3000/content/remix-image-uploads/example
 
 import type { ActionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
 import db from "./db.server"
 import { Transition } from "@headlessui/react"
-import crypto from "crypto"
+import { randomUuid } from "./crypto"
 
 export async function action({ params, request }: ActionArgs) {
-  const id = crypto.randomUUID()
+  const id = randomUuid()
 
   db[id] = {
     draft: {
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       body: "",
       files: [],
     },
     messages: [],
   }
 
-  return redirect(`/examples/remix-image-uploads/${id}`)
+  return redirect(`/content/remix-image-uploads/example/${id}`)
 }
 
 export default function Example() {

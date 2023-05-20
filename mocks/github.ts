@@ -42,7 +42,7 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
         )
       }
 
-      const localPath = nodepath.resolve(process.cwd(), "../..", path)
+      const localPath = nodepath.resolve(process.cwd(), path)
       const isLocalDir = await isDirectory(localPath)
       const isLocalFile = await isFile(localPath)
 
@@ -73,11 +73,7 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
         dirList.map(async (name): Promise<GHContentsDescription> => {
           const relativePath = nodepath.join(path, name)
           const sha = relativePath
-          const fullPath = nodepath.resolve(
-            process.cwd(),
-            "../..",
-            relativePath,
-          )
+          const fullPath = nodepath.resolve(process.cwd(), relativePath)
           const isDir = await isDirectory(fullPath)
 
           return {
@@ -112,7 +108,7 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
         throw new Error(`No mockable data found for the given sha: ${sha}`)
       }
 
-      const fullPath = nodepath.resolve(process.cwd(), "../..", sha)
+      const fullPath = nodepath.resolve(process.cwd(), sha)
       const content = fs.readFileSync(fullPath, { encoding: "utf-8" })
       const encoding = "base64"
 

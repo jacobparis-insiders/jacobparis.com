@@ -1,6 +1,6 @@
 {
   "name": "jacobparis.com",
-  "main": "server.js",
+  "main": "server.ts",
   "scripts": {
     "build": "run-s build:*",
     "build:remix": "remix build",
@@ -10,7 +10,7 @@
     "dev": "npm-run-all build --parallel \"dev:*\"",
     "dev:content": "node -r esbuild-register -r dotenv/config others/refresh-on-content-change.ts",
     "dev:remix": "remix watch",
-    "dev:node": "NODE_ENV=development node --require dotenv/config ./server.js --watch ./server.js",
+    "dev:node": "NODE_ENV=development tsx --require dotenv/config --require ./mocks ./server.ts --watch ./server.ts",
     "format": "prettier --write .",
     "lint": "eslint --cache --cache-location ./node_modules/.cache/eslint .",
     "setup": "prisma generate && prisma migrate deploy",
@@ -68,6 +68,7 @@
     "satori": "^0.0.44",
     "svg2img": "^1.0.0-beta.2",
     "tiny-invariant": "1.3.1",
+    "tsx": "^3.12.7",
     "unist-util-visit": "4.1.1",
     "use-local-storage-state": "18.3.2"
   },

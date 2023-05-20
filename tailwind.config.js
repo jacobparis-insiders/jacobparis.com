@@ -22,6 +22,15 @@ module.exports = {
           },
         },
       },
+      animation: {
+        appear: "appear 1s",
+      },
+      keyframes: {
+        appear: {
+          "0%, 99%": { height: "0", width: "0", opacity: "0" },
+          "100%": { height: "auto", width: "auto", opacity: "1" },
+        },
+      },
     },
   },
   plugins: [require("@tailwindcss/typography"), require("@tailwindcss/forms")],

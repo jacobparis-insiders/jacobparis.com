@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-image-uploads
+// http://localhost:3000/content/remix-image-uploads/example
 
 import type { ActionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
@@ -8,13 +8,16 @@ import { useParams } from "@remix-run/react"
 import { useCallback, useRef } from "react"
 import { useDebounceFetcher } from "./useDebounceFetcher"
 
+/**
+ * @tutorial https://www.jacobparis.com/content/remix-form-autosave
+ */
 export async function action({ request, params }: ActionArgs) {
   const formData = await request.formData()
 
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-image-uploads")
+    throw redirect("/content/remix-image-uploads/example")
   }
 
   const draft = db[id].draft
@@ -60,6 +63,7 @@ type DraftSubmitOptions = {
 }
 
 /**
+ * @tutorial https://www.jacobparis.com/content/remix-rpc-pattern
  * @example
  *
  * const formRef = useRef<HTMLFormElement>(null)
@@ -85,7 +89,7 @@ export function useDraftSubmit(formRef: React.RefObject<HTMLFormElement>) {
   const fetcher = useDebounceFetcher()
   const deletedFiles = useRef<string[]>([])
 
-  const action = `/examples/remix-image-uploads/${params.id}/draft`
+  const action = `/content/remix-image-uploads/example/${params.id}/draft`
 
   const submit = useCallback(
     (options: DraftSubmitOptions = {}) => {

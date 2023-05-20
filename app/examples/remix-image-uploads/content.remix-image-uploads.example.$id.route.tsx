@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-image-uploads
+// http://localhost:3000/content/remix-image-uploads/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -8,18 +8,18 @@ import db from "./db.server"
 import { useEffect, useRef, useState } from "react"
 import { Transition } from "@headlessui/react"
 import { useDropzone } from "react-dropzone"
-import crypto from "crypto"
 import { PaperAirplaneIcon, XCircleIcon } from "@heroicons/react/20/solid"
 import { PhotoIcon } from "@heroicons/react/24/outline"
 import { useHydrated } from "remix-utils"
 import {
   generateSignedUrl,
   uploadImages,
-} from "./examples.remix-image-uploads.cloudflare-images.route"
-import { useDraftSubmit } from "./examples.remix-image-uploads.$id.draft.route"
+} from "./content.remix-image-uploads.example.cloudflare-images.route"
+import { useDraftSubmit } from "./content.remix-image-uploads.example.$id.draft.route"
 import { useResetCallback } from "./useResetCallback"
 import { useFileURLs } from "./useFileUrls"
 import invariant from "tiny-invariant"
+import { randomUuid } from "./crypto"
 
 export async function action({ params, request }: ActionArgs) {
   const formData = await request.formData()
@@ -27,7 +27,7 @@ export async function action({ params, request }: ActionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-image-uploads")
+    throw redirect("/content/remix-image-uploads/example")
   }
 
   const body = formData.get("body")
@@ -51,7 +51,7 @@ export async function action({ params, request }: ActionArgs) {
   if (recentMessage?.draftId !== draftId) {
     db[id].messages.push({
       draftId: draftId.toString() || "",
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       body: body ? body.toString() : "",
       files: fileUrls.map((url, index) => ({
         url: url.toString(),
@@ -62,14 +62,14 @@ export async function action({ params, request }: ActionArgs) {
   }
 
   db[id].draft = {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     body: "",
     files: [],
   }
 
   return json({
     success: true,
-    nonce: crypto.randomUUID(),
+    nonce: randomUuid(),
   })
 }
 
@@ -78,7 +78,7 @@ export async function loader({ params }: LoaderArgs) {
 
   if (!(id in db)) {
     console.info(`No session ${id}, redirecting`)
-    throw redirect("/examples/remix-image-uploads")
+    throw redirect("/content/remix-image-uploads/example")
   }
 
   const doc = db[id]
@@ -115,6 +115,9 @@ export async function loader({ params }: LoaderArgs) {
   })
 }
 
+/**
+ * @tutorial https://www.jacobparis.com/content/image-placeholders
+ */
 function ImageWithPlaceholder({
   src,
   placeholderSrc,

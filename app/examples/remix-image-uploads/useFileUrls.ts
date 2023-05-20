@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react"
 
+/**
+ * @tutorial https://www.jacobparis.com/content/file-image-thumbnails#avoiding-memory-leaks-with-useobjecturls
+ */
 export function useFileURLs() {
   const mapRef = useRef<Map<File, string> | null>(null)
 

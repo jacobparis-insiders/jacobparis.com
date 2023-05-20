@@ -45,7 +45,7 @@ RUN npx prisma@4.6.0 generate
 ADD . .
 RUN touch ./app/refresh.ignored.js
 RUN npm run build
-
+RUN npx tsc --allowJs ./server.ts || exit 0
 # Finally, build the production image with minimal footprint
 FROM base as run
 

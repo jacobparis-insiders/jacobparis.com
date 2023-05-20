@@ -1,0 +1,134 @@
+---
+title: Show a loading state while images load
+description: Images don't start loading until they appear in the HTML. You can use link tags to start loading them earlier, or use React to show a placeholder until the image loads.
+tags: Advanced
+timestamp: "2023-05-20"
+published: true
+localPath: http://localhost:3000/content/image-placeholders
+---
+
+Websites load in multiple steps.
+
+First, the server sends the HTML to the browser. Then, the browser reads the HTML to find out what other files it needs to load, and fetches them.
+
+If your website is like most, you probably have some images on your page. Users will see a delay between the time the page loads and when the images actually appear.
+
+The browser won't start to fetch the images until they appear in the HTML. There are a few reasons an image might not be in the initial HTML response.
+
+- It could be hidden until a user interaction, like expanding an accordion.
+- It might be on a different page, users get there with client side navigations that don't pull more HTML from the server.
+
+In those cases, you can tell the browser to start fetching the image immediately with link tags in the head of your HTML.
+
+```html
+<link
+  rel="preload"
+  as="image"
+  href="https://example.com/image.jpg"
+/>
+```
+
+The more common case is that we want to show images at the same time as the rest of the content that surrounds them.
+
+## Showing a placeholder until the image loads
+
+If we have a placeholder image already loaded, we can use React to show it until the real image is ready, then swap them out.
+
+```tsx
+function ImageWithPlaceholder({
+  src,
+  placeholderSrc,
+  onLoadComplete,
+  ...props
+}: {
+  onLoadComplete?: () => void
+  placeholderSrc?: string
+} & DetailedHTMLProps<
+  ImgHTMLAttributes<HTMLImageElement>,
+  HTMLImageElement
+>) {
+  const [imgSrc, setImgSrc] = useState(
+    placeholderSrc || src,
+  )
+
+  useEffect(() => {
+    if (!src) return
+
+    const img = new Image()
+    img.src = src
+    img.onload = function () {
+      setImgSrc(src)
+      if (onLoadComplete) {
+        onLoadComplete()
+      }
+    }
+  }, [src, onLoadComplete])
+
+  return <img src={imgSrc} {...props} />
+}
+```
+
+This component works like a drop in replacement for any image.
+
+```tsx
+return (
+  <div>
+    <p> Some text </p>
+    <ImageWithPlaceholder
+      src="https://example.com/image.jpg"
+      alt="A cool image"
+      placeholderSrc="https://example.com/placeholder.jpg"
+    />
+    <p> Some more text </p>
+  </div>
+)
+```
+
+## Hiding the content until the image loads
+
+Another solution is to wait until the image loads to show the whole section.
+
+Use a custom hook that returns a boolean to indicate whether the image has loaded.
+
+If it hasn't, you can show a loading state instead of the image.
+
+```tsx
+function useImageLoaded(src: string) {
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!src) return
+
+    const img = new Image()
+    img.src = src
+    img.onload = function () {
+      setLoaded(true)
+    }
+  }, [src])
+
+  return loaded
+}
+```
+
+Then, use that hook to conditionally render the section with the image. By the time the section is rendered, the image will have loaded and will appear at the same time as the text.
+
+```tsx
+const shouldShowSection = useImageLoaded(
+  "https://example.com/image.jpg",
+)
+
+if (!shouldShowSection) {
+  return <p> Loading… </p>
+}
+
+return (
+  <div>
+    <p> Some text </p>
+    <img
+      src="https://example.com/image.jpg"
+      alt="A cool image"
+    />
+    <p> Some more text </p>
+  </div>
+)
+```
