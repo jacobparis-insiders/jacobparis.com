@@ -13,10 +13,9 @@ kill_timeout = "5s"
   entrypoint = ["sh"]
   auto_rollback = true
 
-[[mounts]]
+[mounts]
   source = "data_machines"
   destination = "/data"
-  processes = ["app"]
 
 [[services]]
   protocol = "tcp"

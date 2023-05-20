@@ -49,7 +49,7 @@ RUN npm run build
 # Finally, build the production image with minimal footprint
 FROM base as run
 
-ENV LITEFS_DIR="/litefs"
+ENV LITEFS_DIR="/data/litefs"
 ENV DATABASE_URL=file:/$LITEFS_DIR/sqlite.db
 ENV PORT="8080"
 ENV NODE_ENV="production"
