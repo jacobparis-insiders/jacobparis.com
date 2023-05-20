@@ -1,11 +1,10 @@
 # my content architecture started out way too complicated
-
-/guides/_ /content/_
+/guides/* /content/*
 /guides /content
-/blog/_ /content/_
+/blog/* /content/*
 /blog /content
-/cheatsheets/_ /content/_
+/cheatsheets/* /content/*
 /cheatsheets /content
 
-https://search.jacobparis.com https://twitterproductivity.com/search-cheatsheet
+https://search.jacobparis.com   https://twitterproductivity.com/search-cheatsheet
 /content/a-nx-remix /content/remix-nx-monorepo
