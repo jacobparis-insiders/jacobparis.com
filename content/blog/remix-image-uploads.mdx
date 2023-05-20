@@ -8,9 +8,11 @@ published: true
 
 Uploading images is hard
 
-For one thing, they're big. Most of your form submissions are a few hundred bytes of text data, but images are many kilobytes or even megabytes. If you're routing images through your own server, you become the middleman for all that traffic, for every one of of your users.
+For one thing, they're big. Most of your form submissions are a few hundred bytes of text data, but **images are many kilobytes or even megabytes.**
 
-So even if you're handling form submissions yourself, you're going to want to use a third-party service for image uploads.
+If you're routing images through your own server, you become the middleman for all that traffic, for every one of of your users.
+
+So even if you're handling form submissions yourself, you're going to want to **use a third-party service for image uploads.**
 
 Here's what the ideal workflow looks like
 
@@ -18,6 +20,23 @@ Here's what the ideal workflow looks like
 1. Those images are automatically uploaded in the background to a third-party service
 1. When the images finish uploading, they become hidden inputs with the URL of the uploaded image
 1. The user submits the form and your server receives the form data, including the URLs of the uploaded images
+
+Watch this video to see what it looks like in action or [try it yourself](/content/remix-image-uploads/example)
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/Y-k1XXRtplk"
+    title="YouTube video player"
+    frameBorder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowFullScreen
+  />
+</div>
+
+> To access the source code, [subscribe to my mailing list for free](/emails/subscribe) and **I'll invite you to the repository**
 
 ## Selecting images to upload
 
@@ -49,39 +68,41 @@ There are a lot of image upload services out there, and I won't get into a full 
 - It should support generating an upload URL for direct uploads from the browser
 - It should allow you to generate signed download URLs with a secret key
 
-The first feature is important because it means you can upload images directly from the browser to the service, without routing them through your own server. That means you aren't the bottleneck for image uploads, and you don't have to worry about handling the traffic or paying for the bandwidth.
+The first feature is important because it means you can **upload images directly from the browser to the service**, without routing them through your own server. That means you aren't the bottleneck for image uploads, and you don't have to worry about handling the traffic or paying for the bandwidth.
 
-The second feature is important because it means you can keep the images private, and only allow access to them through your server. If you let users get ahold of unsigned URLs for their images, they can easily use you as a free image host.
+The second feature is important because it means you can keep the images private, and **only allow access to them through your server**. If you let users get ahold of unsigned URLs for their images, they can easily use you as a free image host.
 
 I like to use [Cloudflare Images](https://www.cloudflare.com/products/cloudflare-images/) because it's what I have experience with, but there are many other options out there, like AWS S3.
 
 ## Displaying uploaded image thumbnails
 
-Once the images have been uploaded, you'll need to sign the URLs and replace the pending image thumbnails with the uploaded image thumbnails.
+Once the images have been uploaded, you'll need to **sign the URLs and replace the pending image thumbnails with the uploaded image thumbnails.**
 
-At this point, refreshing the page would cause the user to lose their data, so if you're building a fully persistent UI you'll need to save the uploaded image URLs somewhere, like local storage or your database.
+At this point, refreshing the page would cause the user to lose their data, so if you're building a fully persistent UI you'll need to **save the uploaded image URLs somewhere**, like local storage or your database.
 
 The database is a great choice here. By automatically saving the uploaded image URLs to the database, like as [a "draft" version of the form or post or message that the user is working on](/content/remix-form-autosave), you feed two birds with one scone.
 
-- The user gets cross-device persistence, like Slack where they can write half a message and upload a few images on their phone, then finish it on their laptop before submitting.
+- **The user gets cross-device persistence**, like Slack where they can write half a message and upload a few images on their phone, then finish it on their laptop before submitting.
 - You, the developer, can just look up the draft image URLs server-side when the page loads and sign them before returning to the client,<SideNote> Once the user gets the unsigned image URL from the image host, they have to submit that to your server to be signed anyway.</SideNote> instead of coming up with a way to sign the URLs when you pull them from local storage.
 
 When the browser finally gets the signed image URLs, it can replace the pending image thumbnails with the uploaded image thumbnails. You'll be able to [release the pending image thumbnails from memory](/content/file-image-thumbnails#avoiding-memory-leaks-with-useobjecturls) and let the browser garbage collect them.
 
 But you can't just swap the image src and call it a day – the browser still needs time to load the new image, so you'll need to keep the pending image around a little longer and [show it as a placeholder while the new image loads](/content/image-placeholders). If you don't do this, you'll see the pending image disappear for a second before the new image loads.
 
-The uploaded image URLs also need to be represented as hidden form inputs so that they get submitted with the rest of the form data when the user finally gets around to submitting the form.
+The uploaded image URLs also **need to be represented as hidden form inputs** so that they get submitted with the rest of the form data when the user finally gets around to submitting the form.
 
 ## Let the user delete images
 
 The user needs to be able to delete the images they've selected. If there's no persistence at all, that should be as simple as hiding the image thumbnail and removing the corresponding hidden input. The uploaded URL will be forgotten in the cloud until it expires.
 
-If you're persisting the form to a draft in your database, you'll need to send a mutation to update it there as well.
+If you're persisting the form to a draft in your database, you'll need to** send a mutation to delete them from the draft** as well.
 
-Optimistic UI for this feature means hiding the image client side the moment they click the delete button and then letting the server catch up.
+Optimistic UI for this feature means you **hide the image the moment they click the delete button** and let the server catch up when it updates.
 
 Sometimes users will delete multiple images, one after another, before the server processes any of them. If you're storing which images should be optimistically hidden in state, that state won't update fast enough to be a reliable argument to the server when updating the draft.<SideNote> If you're passing a list of images to delete to the server, appending each image to an array or set in a stable ref will work fine.</SideNote>
 
 ## Show me the code!
 
 I've [put together an example](/content/remix-image-uploads/example) that demonstrates all of this. I'm using Cloudflare Images for hosting but, as mentioned above, you can swap that out for whatever you want.
+
+The source code for the example is contained in this repository, which all [subscribers to my mailing list](/emails/subscribe) have access to. If you're a subscriber, you can [view the source code here](https://github.com/jacobparis-insiders/jacobparis.com/tree/main/app/examples/remix-image-uploads)
