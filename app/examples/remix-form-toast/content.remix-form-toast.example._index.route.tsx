@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-form-toast-session
+// http://localhost:3000/examples/remix-form-toast
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
