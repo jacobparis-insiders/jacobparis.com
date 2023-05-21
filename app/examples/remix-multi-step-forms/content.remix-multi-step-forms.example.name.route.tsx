@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-multi-step-forms
+// http://localhost:3000/content/remix-multi-step-forms/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -19,7 +19,7 @@ export async function action({ request }: ActionArgs) {
   db.firstName = firstName.toString()
   db.lastName = lastName.toString()
 
-  return redirect("/examples/remix-multi-step-forms/email")
+  return redirect("/content/remix-multi-step-forms/example/email")
 }
 
 export async function loader({ request }: LoaderArgs) {

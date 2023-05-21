@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-crud
+// http://localhost:3000/content/remix-crud/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -34,7 +34,7 @@ export default function Example() {
         <div className="flex border-b border-gray-100 p-1">
           <Link
             prefetch="intent"
-            to={`/examples/remix-crud/${params.id}`}
+            to={`/content/remix-crud/example/${params.id}`}
             className="inline-block rounded p-1 text-gray-700 hover:bg-gray-100 hover:text-black"
           >
             <span className="sr-only">Back to issues</span>

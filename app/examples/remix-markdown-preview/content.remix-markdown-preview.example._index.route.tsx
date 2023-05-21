@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-markdown-preview
+// http://localhost:3000/content/remix-markdown-preview/example
 
 import type { ActionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -15,7 +15,7 @@ export async function action({ params, request }: ActionArgs) {
     preview: `<h1>hello world</h1>`,
   }
 
-  return redirect(`/examples/remix-markdown-preview/${id}`)
+  return redirect(`/content/remix-markdown-preview/example/${id}`)
 }
 
 export default function Example() {

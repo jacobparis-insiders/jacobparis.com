@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-crud
+// http://localhost:3000/content/remix-crud/example
 
 import type { ActionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -8,7 +8,7 @@ export async function action({ params }: ActionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-crud")
+    throw redirect("/content/remix-crud/example")
   }
 
   const issueId = params.issueId as string
@@ -19,5 +19,5 @@ export async function action({ params }: ActionArgs) {
 
   db[id].issues = db[id].issues.filter((item) => item.id !== Number(issueId))
 
-  return redirect(`/examples/remix-crud/${id}`)
+  return redirect(`/content/remix-crud/example/${id}`)
 }

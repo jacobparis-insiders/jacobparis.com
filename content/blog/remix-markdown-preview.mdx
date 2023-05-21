@@ -68,7 +68,7 @@ export const processMarkdownToHtml = cachify(
 This will power the endpoint that we'll use to render markdown into HTML. Create a new action in a route of your choice and add the following code.
 
 ```ts
-import { processMarkdownToHtml } from "./examples.remix-markdown-preview.markdown.server"
+import { processMarkdownToHtml } from "./markdown.server"
 
 export async function action({
   params,

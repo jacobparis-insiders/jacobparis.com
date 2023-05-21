@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-presence
+// http://localhost:3000/content/remix-presence/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
@@ -54,7 +54,7 @@ export async function loader({ request }: LoaderArgs) {
         emoji: session.get("emoji"),
       },
       initialUsers: Object.values(db.presences).filter(
-        (user) => user.lastSeenWhere === "/examples/remix-presence",
+        (user) => user.lastSeenWhere === "/content/remix-presence/example",
       ),
     },
     {
@@ -69,7 +69,7 @@ export async function loader({ request }: LoaderArgs) {
 export default function Example() {
   const { self, initialUsers } = useLoaderData<typeof loader>()
 
-  const presenceUsers = usePresenceUsers("/examples/remix-presence", {
+  const presenceUsers = usePresenceUsers("/content/remix-presence/example", {
     self,
     initialUsers,
   })

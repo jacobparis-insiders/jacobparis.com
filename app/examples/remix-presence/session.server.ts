@@ -14,7 +14,7 @@ const { getSession, commitSession, destroySession } =
       // all of these are optional
       httpOnly: true,
       maxAge: 3600,
-      path: "/examples/remix-presence",
+      path: "/content/remix-presence/example",
       sameSite: "lax",
       secrets: ["s3cret1"],
       secure: true,

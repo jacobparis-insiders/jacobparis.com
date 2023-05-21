@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-dynamic-form-inputs
+// http://localhost:3000/content/remix-dynamic-form-inputs/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"

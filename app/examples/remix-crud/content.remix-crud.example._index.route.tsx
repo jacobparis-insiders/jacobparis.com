@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-crud
+// http://localhost:3000/content/remix-crud/example
 
 import type { ActionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -16,7 +16,7 @@ export async function action({ params, request }: ActionArgs) {
     nextId: 1,
   }
 
-  return redirect(`/examples/remix-crud/${id}`)
+  return redirect(`/content/remix-crud/example/${id}`)
 }
 
 export default function Example() {

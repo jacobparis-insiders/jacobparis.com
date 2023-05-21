@@ -1,6 +1,6 @@
 export type ValidRoute =
-  | "/examples/remix-presence"
-  | "/examples/remix-other-page"
+  | "/content/remix-presence/example"
+  | "/content/remix-other-page"
 
 export type User = {
   id: string

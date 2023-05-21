@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-markdown-preview
+// http://localhost:3000/content/remix-markdown-preview/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -21,7 +21,7 @@ export async function action({ params, request }: ActionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-markdown-preview")
+    throw redirect("/content/remix-markdown-preview/example")
   }
 
   const html = processMarkdownToHtml(description.toString().trim())
@@ -54,7 +54,7 @@ export async function loader({ params }: LoaderArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-markdown-preview")
+    throw redirect("/content/remix-markdown-preview/example")
   }
 
   return json({

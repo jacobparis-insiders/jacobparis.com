@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-crud
+// http://localhost:3000/content/remix-crud/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -32,7 +32,7 @@ export async function action({ params, request }: ActionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-crud")
+    throw redirect("/content/remix-crud/example")
   }
 
   const issueId = params.issueId as string
@@ -52,7 +52,7 @@ export async function action({ params, request }: ActionArgs) {
 
   const shouldClose = formData.get("close")
   if (shouldClose) {
-    return redirect(`/examples/remix-crud/${id}`)
+    return redirect(`/content/remix-crud/example/${id}`)
   }
 
   return json({ success: true, issueId, updatedAt: issue.updatedAt })
@@ -78,7 +78,7 @@ export async function loader({ params }: LoaderArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-crud")
+    throw redirect("/content/remix-crud/example")
   }
 
   const issueId = params.issueId as string
@@ -189,7 +189,7 @@ export default function Example() {
             </button>
             <button
               type="submit"
-              formAction={`/examples/remix-crud/${sessionId}/issues/${issue.id}/delete`}
+              formAction={`/content/remix-crud/example/${sessionId}/issues/${issue.id}/delete`}
               className={`w-20 rounded border border-gray-100 px-4 py-1 text-sm text-gray-600 shadow-sm focus:ring-2 focus:ring-black focus:ring-offset-2 ${
                 editFetcher.state === "submitting"
                   ? " bg-white text-gray-500"

@@ -13,7 +13,7 @@ From the dawn of the internet, we've had hit counters on websites to see how man
 - Ecommerce sites show you how many other users are looking at the same product.<SideNote> 3 items left in stock, but 12 people viewing this item right now! Better buy quick! When it comes to online shopping, these numbers are almost always fake. But that doesn't mean they don't work. </SideNote>
 - Web apps like Google Docs and Figma show you who else is viewing or editing the same document. Sometimes you can even see their cursor position.
 
-Try out a [live example of what we're building](/examples/remix-presence)
+Try out a [live example of what we're building](/content/remix-presence/example)
 
 With Remix, these are easy to set up. In this guide, we will
 
@@ -324,7 +324,7 @@ export function usePresenceUsers(
     const body = new FormData()
     body.append("route", route)
 
-    void fetch("/examples/remix-presence/presence", {
+    void fetch("/content/remix-presence/example/presence", {
       method: "POST",
       credentials: "include",
       body,
@@ -374,7 +374,7 @@ export async function action({
     id: userId,
     name: session.get("name") || "Anonymous",
     emoji,
-    lastSeenWhere: "/examples/remix-presence",
+    lastSeenWhere: "/content/remix-presence/example",
     lastSeenWhen: new Date(),
   }
 
@@ -407,7 +407,8 @@ export async function loader({ request }: LoaderArgs) {
       },
       initialUsers: Object.values(db.presences).filter(
         (user) =>
-          user.lastSeenWhere === "/examples/remix-presence",
+          user.lastSeenWhere ===
+          "/content/remix-presence/example",
       ),
     },
     {
@@ -488,7 +489,7 @@ export async function loader({ request }: LoaderArgs) {
 }
 ```
 
-You can even navigate directly to it in your browser to see the stream in action at `http://localhost:3000/examples/remix-presence/presence` (or whatever your URL is).
+You can even navigate directly to it in your browser to see the stream in action at `http://localhost:3000/content/remix-presence/example/presence` (or whatever your URL is).
 
 Update the `usePresenceUsers` hook to use this stream.
 
@@ -517,7 +518,7 @@ export function usePresenceUsers(
     const body = new FormData()
     body.append("route", route)
 
-    fetch("/examples/remix-presence/presence", {
+    fetch("/content/remix-presence/example/presence", {
       method: "POST",
       credentials: "include",
       body,
@@ -525,7 +526,7 @@ export function usePresenceUsers(
   }, postInterval)
 
   const streamUrl = new URL(
-    `/examples/remix-presence/presence`,
+    `/content/remix-presence/example/presence`,
     "http://localhost:3000",
   )
   streamUrl.searchParams.set(
@@ -559,7 +560,7 @@ export default function Example() {
     useLoaderData<typeof loader>()
 
   const users = usePresenceUsers(
-    "/examples/remix-presence",
+    "/content/remix-presence/example",
     {
       self,
       initialUsers,
@@ -598,4 +599,4 @@ export default function Example() {
 
 We've now built a simple presence system that can be used to show who is on a page. We've also learned how to use server-sent events to stream data to the client.
 
-Try out a [live example](/examples/remix-presence)
+Try out a [live example](/content/remix-presence/example)

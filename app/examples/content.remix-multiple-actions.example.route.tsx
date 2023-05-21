@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-dates-ssr
+// http://localhost:3000/content/remix-multiple-actions/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
@@ -284,7 +284,7 @@ export function Tweet({
 
             {media?.length ? (
               <div
-                className="mt-2 mb-4 grid gap-1 overflow-hidden rounded-2xl border border-solid border-gray-300 "
+                className="mb-4 mt-2 grid gap-1 overflow-hidden rounded-2xl border border-solid border-gray-300 "
                 style={{ grid: grid }}
               >
                 {media.map((media, i) => {
@@ -299,7 +299,7 @@ export function Tweet({
                           width={media.width}
                           height={media.height}
                         />
-                        <div className="absolute left-0 bottom-0 p-3">
+                        <div className="absolute bottom-0 left-0 p-3">
                           {media.alt_text ? (
                             <div
                               className="rounded bg-black px-1 text-sm font-bold text-white"
@@ -323,7 +323,7 @@ export function Tweet({
                           autoPlay
                           loop
                         />
-                        <div className="absolute left-0 bottom-0 p-3">
+                        <div className="absolute bottom-0 left-0 p-3">
                           <div className="rounded bg-black px-1 text-sm font-bold text-white">
                             GIF
                           </div>

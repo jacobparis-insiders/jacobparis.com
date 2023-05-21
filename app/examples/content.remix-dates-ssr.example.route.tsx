@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-dates-ssr
+// http://localhost:3000/content/remix-dates-ssr/example
 
 import type { LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"

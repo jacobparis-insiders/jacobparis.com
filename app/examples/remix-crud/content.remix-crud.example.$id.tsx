@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-crud
+// http://localhost:3000/content/remix-crud/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -37,7 +37,7 @@ export async function action({ params, request }: ActionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-crud")
+    throw redirect("/content/remix-crud/example")
   }
 
   const title = formData.get("title")
@@ -83,7 +83,7 @@ export async function loader({ params }: LoaderArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/examples/remix-crud")
+    throw redirect("/content/remix-crud/example")
   }
 
   return json({
@@ -360,7 +360,7 @@ function IssueRow(item: { id: number; title: string; date: string }) {
         <button
           type="submit"
           formMethod="POST"
-          formAction={`/examples/remix-crud/${params.id}/issues/${item.id}/delete`}
+          formAction={`/content/remix-crud/example/${params.id}/issues/${item.id}/delete`}
           // onClick={() => {
           //   setIsDeleting(true)
           // }}

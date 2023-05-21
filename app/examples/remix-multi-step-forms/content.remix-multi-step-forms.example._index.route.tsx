@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-multi-step-forms
+// http://localhost:3000/content/remix-multi-step-forms/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
@@ -9,7 +9,7 @@ import { FadeIn } from "./FadeIn"
 export async function action({ request }: ActionArgs) {
   db.hasStarted = true
 
-  return redirect("/examples/remix-multi-step-forms/name")
+  return redirect("/content/remix-multi-step-forms/example/name")
 }
 
 export async function loader({ request }: LoaderArgs) {

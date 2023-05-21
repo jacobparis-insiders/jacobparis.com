@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-autosave-form
+// http://localhost:3000/content/remix-autosave-form/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"

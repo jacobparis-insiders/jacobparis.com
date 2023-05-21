@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-multi-step-forms
+// http://localhost:3000/content/remix-multi-step-forms/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -29,7 +29,7 @@ export async function action(args: ActionArgs) {
   if (_action === "CONTINUE") {
     db.sawNewsletterOffer = true
 
-    return redirect("/examples/remix-multi-step-forms/complete")
+    return redirect("/content/remix-multi-step-forms/example/complete")
   }
 
   throw new Error(`Unknown action ${_action}`)

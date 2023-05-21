@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-multi-step-forms
+// http://localhost:3000/content/remix-multi-step-forms/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -30,7 +30,7 @@ async function continueAction({ request }: ActionArgs) {
   db.email = email.toString()
   db.sawNewsletterOffer = true
 
-  return redirect("/examples/remix-multi-step-forms/name")
+  return redirect("/content/remix-multi-step-forms/example/name")
 }
 
 export async function loader({ request }: LoaderArgs) {
@@ -87,7 +87,7 @@ export default function Example() {
 
           <FadeIn className="delay-300">
             <Link
-              to="/examples/remix-multi-step-forms"
+              to="/content/remix-multi-step-forms/example"
               className="min-w-[20ch] rounded bg-indigo-600 px-12 py-3 font-medium text-white hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
             >
               Back to start

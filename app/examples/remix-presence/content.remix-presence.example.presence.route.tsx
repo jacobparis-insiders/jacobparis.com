@@ -1,4 +1,4 @@
-// http://localhost:3000/examples/remix-presence
+// http://localhost:3000/content/remix-presence/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
 import { getSession } from "./session.server"
@@ -8,7 +8,7 @@ import invariant from "tiny-invariant"
 import { eventStream, useEventSource } from "remix-utils"
 import { useEffect } from "react"
 
-const validRoutes: ValidRoute[] = ["/examples/remix-presence"]
+const validRoutes: ValidRoute[] = ["/content/remix-presence/example"]
 
 export async function action({ params, request }: ActionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
@@ -40,7 +40,7 @@ export async function action({ params, request }: ActionArgs) {
     id: userId,
     name: session.get("name") || "Anonymous",
     emoji,
-    lastSeenWhere: "/examples/remix-presence",
+    lastSeenWhere: "/content/remix-presence/example",
     lastSeenWhen: new Date(),
   }
 
@@ -177,7 +177,7 @@ export function usePresenceUsers(
     const body = new FormData()
     body.append("route", route)
 
-    fetch("/examples/remix-presence/presence", {
+    fetch("/content/remix-presence/example/presence", {
       method: "POST",
       credentials: "include",
       body,
@@ -185,7 +185,7 @@ export function usePresenceUsers(
   }, postInterval)
 
   const streamUrl = new URL(
-    `/examples/remix-presence/presence`,
+    `/content/remix-presence/example/presence`,
     "http://localhost:3000",
   )
   streamUrl.searchParams.set("route", encodeURIComponent(route))
