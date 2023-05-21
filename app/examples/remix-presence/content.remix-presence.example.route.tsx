@@ -9,7 +9,7 @@ import db from "./db.server"
 import {
   Avatar,
   usePresenceUsers,
-} from "./examples.remix-presence.presence.route"
+} from "./content.remix-presence.example.presence.route"
 
 export async function action({ request }: ActionArgs) {
   const session = await getSession(request.headers.get("Cookie"))

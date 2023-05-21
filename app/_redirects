@@ -8,3 +8,24 @@
 
 https://search.jacobparis.com   https://twitterproductivity.com/search-cheatsheet
 /content/a-nx-remix /content/remix-nx-monorepo
+
+/examples/react-form-valudation /content/react-form-validation/example
+/examples/remix-dates-ssr /content/remix-dates-ssr/example
+/examples/remix-dynamic-form-inputs /content/remix-dynamic-form-inputs/example
+/examples/remix-dynamic-form-inputs-no-js /content/remix-dynamic-form-inputs/example-no-js
+/examples/remix-multiple-actions /content/remix-multiple-actions/example
+
+/examples/remix-form-autosave /content/remix-form-autosave/example
+/examples/remix-form-autosave/* /content/remix-form-autosave/example/*
+
+/examples/remix-form-toast /content/remix-form-toast/example
+/examples/remix-form-toast/* /content/remix-form-toast/example/*
+
+/examples/remix-markdown-preview /content/remix-markdown-preview/example
+/examples/remix-markdown-preview/* /content/remix-markdown-preview/example/*
+
+/examples/remix-multi-step-forms /content/remix-multi-step-forms/example
+/examples/remix-multi-step-forms/* /content/remix-multi-step-forms/example/*
+
+/examples/remix-presence /content/remix-presence/example
+/examples/remix-presence/* /content/remix-presence/example/*
