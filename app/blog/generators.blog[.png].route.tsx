@@ -20,8 +20,7 @@ export async function loader({ request }: LoaderArgs) {
   const description = decodeURIComponent(descriptionInput || "")
   const descriptionSize = description.length < 80 ? "text-2xl" : "text-xl"
   const dateInput = params.get("date")
-  invariant(dateInput, "date is required")
-  const date = new Date(decodeURIComponent(dateInput)).toLocaleDateString(
+  const date = new Date(decodeURIComponent(dateInput || "")).toLocaleDateString(
     "en-US",
     {
       year: "numeric",

@@ -45,7 +45,7 @@ export const handle = {
   },
 }
 
-export const meta: V2_MetaFunction = ({ data }: { data: MdxComponent }) => {
+export const meta: V2_MetaFunction = ({ data, location }) => {
   if (!data) return [{ title: "Not found" }]
 
   const { keywords = [] } = data.frontmatter.meta ?? {}
@@ -66,15 +66,15 @@ export const meta: V2_MetaFunction = ({ data }: { data: MdxComponent }) => {
       ]
     : []
 
-  const ogUrl = new URL("/generators/blog.png", "https://www.jacobparis.com")
-  ogUrl.searchParams.set("title", safeEncode(data.title))
-  ogUrl.searchParams.set("description", safeEncode(data.description))
-  ogUrl.searchParams.set("date", safeEncode(data.frontmatter.timestamp))
-  ogUrl.searchParams.set("img", safeEncode(data.img))
-
   const imageElements = [
-    { name: "twitter:image", content: ogUrl.toString() },
-    { property: "og:image", content: ogUrl.toString() },
+    {
+      name: "twitter:image",
+      content: `https://www.jacobparis.com/content/${data.slug}.png`,
+    },
+    {
+      property: "og:image",
+      content: `https://www.jacobparis.com/content/${data.slug}.png`,
+    },
     { name: "twitter:card", content: "summary_large_image" },
   ]
   return [

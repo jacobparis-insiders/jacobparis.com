@@ -43,7 +43,7 @@ export default function Index() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
 
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
-        <Link to="/emails/subscribe" className="group">
+        <Link to="https://github.com/jacobparis-insiders/" className="group">
           <aside className="mb-6 flex items-center gap-x-4 rounded-2xl bg-gray-900 px-3 py-3 text-white opacity-90 transition-opacity  group-hover:opacity-60">
             <img
               src="/images/jacob.png"
