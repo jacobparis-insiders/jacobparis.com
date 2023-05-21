@@ -6,5 +6,6 @@ module.exports = {
     "@remix-run/eslint-config",
     "@remix-run/eslint-config/node",
     "prettier",
+    "plugin:markdown/recommended",
   ],
 }
