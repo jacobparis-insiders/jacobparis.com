@@ -7,6 +7,7 @@ import { getRequiredEnvVar } from "~/utils/misc"
 import jwt from "./jwt.server"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
 import isbot from "isbot"
+import db from "./db.server"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function action({ request, params }: ActionArgs) {
@@ -16,6 +17,12 @@ export async function action({ request, params }: ActionArgs) {
   const name = formData.get("name")
   const email = formData.get("email")
   invariant(email, "Email is required")
+
+  if (db.get(email.toString())) {
+    return json({ success: false, error: "Already subscribed" })
+  } else {
+    db.set(email.toString(), true)
+  }
 
   const url = formData.get("url")
   const iat = Math.floor(Date.now() / 1000)
