@@ -4,12 +4,12 @@ description: Should you host your Remix app on a serverless provider like Vercel
 tags: Remix
 published: true
 guide: true
-timestamp: "2023-04-29"
+timestamp: "2023-05-23"
 ---
 
 Remix supports many different hosting options. This guide will help you choose the right one for your app.
 
-> Last updated on May 18 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
+> Last updated on May 23 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
 
 - [Serverless functions](#serverless-functions)
   - [Vercel](#vercel)
@@ -40,8 +40,8 @@ Because of the ephemeral nature of these functions, the first request to a funct
 |                        | Vercel              | Fastly | Netlify | Cloudflare Pages | AWS Lambda |
 | ---------------------- | ------------------- | ------ | ------- | ---------------- | ---------- |
 | **Runtime**            | Node/V8 (per route) | WASM   | Node/V8 | V8               | Node       |
-| **Bundle size**        | 50MB                | 20MB   | 50MB    | 5MB              | 50MB       |
-| **Request body size**  | 4.5MB               | 8KB    | 3MB     | 100MB            | 6MB        |
+| **Bundle size**        | 50MB                | 100MB  | 50MB    | 5MB              | 50MB       |
+| **Request body size**  | 4.5MB               | None   | 3MB     | 100MB            | 6MB        |
 | **Streaming**          | Yes                 | Yes    | No      | Yes              | Yes        |
 | **Deferred data**      | Yes                 | Yes    | No      | Yes              | Yes        |
 | **Server-sent events** | No                  | Yes    | No      | No               | Yes        |
@@ -82,7 +82,7 @@ Fastly has support for websockets, which is not common for serverless platforms.
 Fastly supports streaming too, so you can use Server-Sent Events and Remix's `defer()`
 
 - Because it doesn't run node, many node modules are not compatible with Remix on Fastly. In exchange, you get the current fastest possible runtime.
-- Fastly supports a 20MB bundle size limit.
+- Fastly supports a 100MB compiled bundle size limit, measured after compilation to WASM and after all compiler optimizations have been applied.
 - No git based deployments, but easy to deploy in GitHub Actions
 - Only cloud databases are supported
 
