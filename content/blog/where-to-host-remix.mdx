@@ -37,18 +37,18 @@ In general, serverless functions run Node.js and edge functions run the **very**
 
 Because of the ephemeral nature of these functions, the first request to a function may cause a `cold-start` and take several seconds to respond.
 
-|                        | Vercel              | Fastly | Netlify | Cloudflare Pages | AWS Lambda |
-| ---------------------- | ------------------- | ------ | ------- | ---------------- | ---------- |
-| **Runtime**            | Node/V8 (per route) | WASM   | Node/V8 | V8               | Node       |
-| **Bundle size**        | 50MB                | 100MB  | 50MB    | 5MB              | 50MB       |
-| **Request body size**  | 4.5MB               | None   | 3MB     | 100MB            | 6MB        |
-| **Streaming**          | Yes                 | Yes    | No      | Yes              | Yes        |
-| **Deferred data**      | Yes                 | Yes    | No      | Yes              | Yes        |
-| **Server-sent events** | No                  | Yes    | No      | No               | Yes        |
-| **Cache-control**      | Yes                 | Yes    | Yes     | Yes              | Yes        |
-| **Git-based deploys**  | Yes                 | No     | Yes     | Yes              | No         |
-| **Deploy previews**    | Yes                 | No     | Yes     | Yes              | No         |
-| **Websockets**         | No                  | Yes    | No      | Yes              | Yes        |
+|                        | Vercel              | Fastly   | Netlify | Cloudflare Pages | AWS Lambda |
+| ---------------------- | ------------------- | -------- | ------- | ---------------- | ---------- |
+| **Runtime**            | Node/V8 (per route) | WASM     | Node/V8 | V8               | Node       |
+| **Bundle size**        | 50MB                | 100MB    | 50MB    | 5MB              | 50MB       |
+| **Request body size**  | 4.5MB               | No limit | 3MB     | 100MB            | 6MB        |
+| **Streaming**          | Yes                 | Yes      | No      | Yes              | Yes        |
+| **Deferred data**      | Yes                 | Yes      | No      | Yes              | Yes        |
+| **Server-sent events** | No                  | Yes      | No      | No               | Yes        |
+| **Cache-control**      | Yes                 | Yes      | Yes     | Yes              | Yes        |
+| **Git-based deploys**  | Yes                 | No       | Yes     | Yes              | No         |
+| **Deploy previews**    | Yes                 | No       | Yes     | Yes              | No         |
+| **Websockets**         | No                  | Yes      | No      | Yes              | Yes        |
 
 ### Vercel
 
