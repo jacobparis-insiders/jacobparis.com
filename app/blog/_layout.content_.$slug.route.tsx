@@ -22,6 +22,11 @@ import { getMdxListItems } from "~/utils/mdx.server"
 import { safeEncode } from "~/utils/misc"
 import { getServerTiming } from "~/utils/timing.server"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
+import {
+  DateExamples,
+  FileExamples,
+  LocalStorageExamples,
+} from "~/examples/remix-progressive-client-only/examples"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export const links: LinksFunction = () => {
@@ -159,6 +164,9 @@ export default function Blog() {
               Excerpt,
               SideNote,
               SocialBannerSmall,
+              LocalStorageExamples,
+              FileExamples,
+              DateExamples,
               em: Highlight,
               pre: CodeBlock,
             }}

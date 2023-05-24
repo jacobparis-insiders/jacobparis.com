@@ -23,12 +23,17 @@ module.exports = {
         },
       },
       animation: {
-        appear: "appear 1s",
+        appear: "appear 800ms",
+        fade: "fade 300ms ease-out",
       },
       keyframes: {
         appear: {
           "0%, 99%": { height: "0", width: "0", opacity: "0" },
           "100%": { height: "auto", width: "auto", opacity: "1" },
+        },
+        fade: {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
       },
     },
