@@ -60,17 +60,3 @@ export default function Page() {
   )
 }
 ```
-
-Now, if you're using SSR<SideNote> With server-side rendering, the HTML is first generated on the server, which does not have local storage. </SideNote>, this starts to look a bit janky. The page will render with empty inputs, then update to the values in local storage, causing a Flash of Unstyled Content.
-
-How do we fix that? Hide the form for the first render? Not quite — the server MUST return the form visible in the HTML, or users without javascript won't see it at all.
-
-We need a javascript solution to hide the form on the first render, and then show it on the second render when the local storage values are available. Fortunately for us, suspending premature renders is exactly what React Suspense is designed for.
-
-Simply wrap the form in a Suspense component, and it will only render once the local storage values are available.
-
-```tsx
-<Suspense>
-  <form>...</form>
-</Suspense>
-```
