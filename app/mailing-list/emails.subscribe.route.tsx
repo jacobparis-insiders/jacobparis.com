@@ -11,7 +11,7 @@ import db from "./db.server"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function action({ request, params }: ActionArgs) {
-  const isBot = await isbot(request.headers.get("user-agent"))
+  const isBot = isbot(request.headers.get("user-agent"))
 
   const formData = await request.formData()
   const name = formData.get("name")

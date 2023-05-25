@@ -16,10 +16,10 @@ import {
   uploadImages,
 } from "./content.remix-image-uploads.example.cloudflare-images.route"
 import { useDraftSubmit } from "./content.remix-image-uploads.example.$id.draft.route"
-import { useResetCallback } from "./useResetCallback"
+import { useResetCallback } from "../useResetCallback"
 import { useFileURLs } from "./useFileUrls"
 import invariant from "tiny-invariant"
-import { randomUuid } from "./crypto"
+import { randomUuid } from "../crypto"
 
 export async function action({ params, request }: ActionArgs) {
   const formData = await request.formData()

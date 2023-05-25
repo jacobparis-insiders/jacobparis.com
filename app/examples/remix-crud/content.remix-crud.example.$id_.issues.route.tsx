@@ -1,35 +1,13 @@
 // http://localhost:3000/content/remix-crud/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
-import {
-  Await,
-  Form,
-  Link,
-  Outlet,
-  useActionData,
-  useFetcher,
-  useLoaderData,
-  useParams,
-  useSearchParams,
-} from "@remix-run/react"
+import { Link, Outlet, useParams } from "@remix-run/react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
 
-export default function Example() {
+export default function Modal() {
   const params = useParams()
 
   return (
     <div className="mx-auto grid min-h-screen place-items-center">
-      <style>
-        {
-          /* css */ `
-        .bg-light {
-          backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
-          background-color: rgba(255, 255, 255, 0.5);
-        }`
-        }
-      </style>
       <div className="bg-light mx-auto mb-8 w-full max-w-xl overflow-hidden border border-gray-100 text-left sm:rounded-lg sm:shadow-xl">
         <div className="flex border-b border-gray-100 p-1">
           <Link

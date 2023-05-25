@@ -25,7 +25,7 @@ type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
 /**
  * @tutorial https://www.jacobparis.com/content/use-debounce-fetcher
  */
-export function useDebounceFetcher<T>() {
+export function useDebounceFetcher<T = any>() {
   const timeoutRef = useRef<NodeJS.Timeout>()
 
   useEffect(() => {

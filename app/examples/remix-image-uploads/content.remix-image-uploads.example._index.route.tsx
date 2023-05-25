@@ -5,7 +5,7 @@ import { redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
 import db from "./db.server"
 import { Transition } from "@headlessui/react"
-import { randomUuid } from "./crypto"
+import { randomUuid } from "../crypto"
 
 export async function action({ params, request }: ActionArgs) {
   const id = randomUuid()

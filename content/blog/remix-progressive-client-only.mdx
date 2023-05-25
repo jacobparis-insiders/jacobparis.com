@@ -137,6 +137,15 @@ Here we're assuming you have a date in your loader data that you want to display
 
 _You can use the `ProgressiveClientOnly` component to display only the client-rendered date but fall back to the server-rendered date if the user has JS disabled._
 
+```jsx
+<ProgressiveClientOnly className="animate-fade">
+  <label className="flex flex-col">
+    Progressive with JS
+    <input type="text" defaultValue={date} />
+  </label>
+</ProgressiveClientOnly>
+```
+
 <DateExamples />
 
 If you refresh the page, you'll see the default JS case is actually the worst here. The server date is shown for a split second before the client date takes over.

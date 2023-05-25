@@ -6,7 +6,7 @@ import { json, redirect } from "@remix-run/node"
 import db from "./db.server"
 import { useParams } from "@remix-run/react"
 import { useCallback, useRef } from "react"
-import { useDebounceFetcher } from "./useDebounceFetcher"
+import { useDebounceFetcher } from "../useDebounceFetcher"
 
 /**
  * @tutorial https://www.jacobparis.com/content/remix-form-autosave

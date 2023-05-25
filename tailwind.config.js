@@ -28,8 +28,16 @@ module.exports = {
       },
       keyframes: {
         appear: {
-          "0%, 99%": { height: "0", width: "0", opacity: "0" },
-          "100%": { height: "auto", width: "auto", opacity: "1" },
+          "0%, 99%": {
+            height: "0",
+            width: "0",
+            opacity: "0",
+          },
+          "100%": {
+            height: "auto",
+            width: "auto",
+            opacity: "1",
+          },
         },
         fade: {
           "0%": { opacity: "0" },
