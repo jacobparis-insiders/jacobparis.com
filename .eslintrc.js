@@ -7,5 +7,6 @@ module.exports = {
     "@remix-run/eslint-config/node",
     "prettier",
     "plugin:markdown/recommended",
+    "plugin:no-template-curly-in-string-fix/recommended",
   ],
 }
