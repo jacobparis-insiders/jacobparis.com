@@ -1,0 +1,136 @@
+---
+title: Solving hydration errors in Remix
+description: Hydration errors can be caused by dates, ad blockers, browser extensions, invalid HTML, 3rd party scripts, CSS in JS libs, character encoding, IDs, and more
+tags: Remix
+timestamp: "2023-05-28"
+published: true
+---
+
+People usually describe hydration errors as mismatches between the HTML that the server generates and what the browser generates, but that's not the whole story.
+
+To explain this, lets look at how React's server-side rendering works. Most implementations follow the same steps.
+
+1. The server renders the page and serves HTML to the client.
+2. The browser loads the page and React starts running.
+3. React re-renders the page and generates its own HTML.
+4. React then compares the HTML it generated with the HTML the browser is displaying.
+5. If the HTML matches, great! Otherwise, React will throw a hydration error.
+
+Since React is comparing the HTML it generated with the HTML the browser is displaying, anything that changed the HTML between the time the server sent it and the time React started running can cause a hydration error.
+
+## What do hydration errors look like?
+
+The main symptom of a hydration error is that React bails on its server-rendered content and does a full client-side render. This can cause the page to flicker and a full refetch of data.<SideNote> Your loaders just finished running and returned HTML, but now they need to run again to return data for the client-side render. </SideNote>
+
+React suppresses errors in production, so these may come up as "Minified React Error #418" or "Minified React Error #425". There are likely more of these but I won't attempt to make a comprehensive list.
+
+In development, you will see a marginally more helpful error message.
+
+- Hydration failed because the initial UI does not match what was rendered on the server.
+- Warning: Expected server HTML to contain a matching `<head>` in `<html>`.
+
+In this article, we'll look at some of the most common causes of hydration errors and how to debug them.
+
+## 🔥 Tip: Diff the HTML to find the exact cause
+
+Before we move on to common reasons for hydration errors, one super handy trick is to diff the HTML that the server sends with the HTML that React generates.
+
+There are three places to look for this.
+
+1. The network tab in your browser's dev tools will show you the HTML that the server sends.
+2. If you remove the `<Scripts />` in your `root.tsx`, Remix will not hydrate and you can use View Source to see the HTML that was present right before hydration.
+3. With the scripts running normally, use View Source to see the HTML that React generated post-hydration.
+
+If you diff these three HTML sources, you can usually find the exact cause of the hydration error.
+
+There are many online HTML diff tools, just google one and paste in the HTML from two of the three sources.
+
+## Browser extensions or adblockers
+
+Browser extensions often have permission to modify the live page content of any website, including your app. This can cause hydration errors if the extension modifies the HTML before React has a chance to compare it.
+
+**Try your app in an incognito/private browsing window with all extensions disabled.** If the error goes away, you know that an extension is causing the problem, and there's probably nothing you can do about it.
+
+There are also desktop level ad-blockers and security software that may cause similar issues. If you're running one of these, **try disabling it or testing on another device.** You may be able to add an exception in the tool for your website.
+
+## Invalid HTML
+
+The browser does a lot of error correction to make sure that pages render reasonably even when the HTML is malformed.
+
+For example, if you illegally nest a `<div>` inside a `<p>`, the browser will move the `<div>` outside of the `<p>` to make the HTML valid.
+
+Nested forms are prohibited in HTML, so if you have a form inside a form, the browser will move the nested form outside of the parent form to become its sibling instead.
+
+When React hydrates, it will compare the HTML it generated with the HTML the browser is displaying. If the browser moved elements around, React will throw a hydration error.
+
+The solution here is to write valid HTML.
+
+## Third party scripts or non-react packages
+
+Third party scripts may also modify the HTML on the page. This is especially common with analytics scripts like HotJar or Google Tag Manager (GTM). If you're using a third party script, **try removing it and see if the error goes away.**
+
+If this is the issue, you may be able to run the script after React has finished hydrating. For example, you can use `useEffect` to run the script after the first render.
+
+## CSS in JS libraries
+
+CSS in JS is a methodology for styling React apps that defines styles as a side effect of rendering. This means that the styles are not available when the server renders the page, and the HTML that the server sends to the client will not match the HTML that React generates.
+
+Chakra, Emotion, and Material UI are popular CSS in JS libraries that have this issue.
+
+A common solution is to double-render the page on the server<SideNote> More in this in in the [Remix docs for CSS in JS](https://remix.run/docs/en/1.16.0/guides/styling#css-in-js-libraries)</SideNote>. The library can extract the styles it needs to generate from the first render and inject them into the second.
+
+## Character encoding
+
+Character encoding issues usually present obvious error messages, so they're easy to diagnose.
+
+```yml
+[Error] Warning: Text content did not match.
+  Server: "â€"
+  Client: "’"
+```
+
+This happens when you have a mismatch between the character encoding of the server and the client. The most common cause is that the server is sending UTF-8 encoded text, but the client is interpreting it as ISO-8859-1.
+
+To fix this, add the following meta tag to the `<head>` of your HTML.
+
+```xml
+<meta
+  http-equiv="Content-Type"
+  content="text/html;charset=utf-8"
+/>
+```
+
+## Timezone mismatches
+
+Likely the most notorious culprit is the `Date` object. Dates are complicated, and the less you have to deal with them the happier your life will be.
+
+When javascript tries to create a date, it will use the timezone of the machine it's running on. This means that if you create a date on the server and send it to the client, the client will create a date in its own timezone, which will be different from the server's timezone.
+
+If you're trying to render a date, you'll get these hydration issues close to midnight every day when the server date becomes different than the client date.
+
+- The easiest solution is to format the date as a string on the server and send it to the client.
+- The client can [send timezone/locale information to the server](/content/remix-ssr-dates) and the server can use that to create a fake date that will match the client's timezone during hydration.
+- More solutions in the [rendering based on client data section](#rendering-based-on-client-data)
+
+## Non-idempotent functions like UUIDs
+
+If you're using a non-idempotent function like `uuid` to generate a unique ID, you may get hydration errors. This is because the server and client will generate different IDs.
+
+You can either generate the ID on the server and send to the client, or pass a seed to the function so that the server and client generate the same ID.
+
+## Rendering based on client data
+
+Some data only exists on the client and will not be available when the server renders the page for the first time.
+
+For example, you may have an input that takes a default value from local storage. If you render the input empty on the server and then populate it on the client, you'll get a hydration error and an unsightly flash of empty input.
+
+There is no way for the server to know what the client wants to render, so your solution is to find a way to hide the element on the server and during the initial hydration render.
+
+The [useHydrated hook from Remix Utils](https://github.com/sergiodxa/remix-utils#usehydrated) will give you an `isHydrated` boolean that you can use to conditionally render the element.
+
+This is the easiest solution but has its own caveats
+
+- It still creates a flash of empty content, though you can use a fade effect to make it less jarring.
+- The elements will not appear at all if javascript fails to load, breaking the progressive enhancement story.
+
+My preferred solution is to use a [ProgressiveClientOnly component](/content/remix-progressive-client-only) that will hide the server rendered content with CSS and swap it for the client content if Javascript is available, else it will show the server content.
