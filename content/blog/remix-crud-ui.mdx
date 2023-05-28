@@ -1,0 +1,141 @@
+---
+title: Guidelines for optimistic UI in modern CRUD apps
+description: Improve user experience and productivity by making your UI faster. Persist data automatically, debounce saves, and show changes optimistically.
+tags: Remix
+timestamp: "2023-05-28"
+published: true
+---
+
+If you're a dev working on software for businesses, there's a very good chance at least one of the applications you've built has been mostly a CRUD tool.
+
+You know the type. The kind of app where you can create, read, update, and delete data.
+
+CRUD apps are everywhere. They're the backbone of most businesses. People at work need to enter data into databases, and it's neither safe nor practical to teach everyone how to interact directly with the database.
+
+So we build CRUD apps that abstract away the technical details, but what we're left with is often just boring corporate software.<SideNote> Traditionally, corporate software is built by developers who will never use it and paid for by executives who won't either. </SideNote>
+
+By improving the functionality and user experience of our apps, we can make them more enjoyable to use and improve the productivity of the people who use them.
+
+In this guide, we'll explore some patterns for best practices<SideNote> [Best practices are just peer pressure for adults.](https://twitter.com/jacobmparis/status/1470157289319399424) </SideNote> implementing optimistic and persistent UI in modern applications.
+
+<div>
+  <iframe
+    className="mx-auto max-w-full"
+    width="560"
+    height="315"
+    src="https://www.youtube.com/embed/_L-cLLMGNsM"
+    title="YouTube video player"
+    frameBorder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    allowFullScreen
+  />
+</div>
+
+## When to create a new document?
+
+Users create new documents by hitting a submit button, but what's the best time for them to do that?
+
+Most apps require you to enter data into a form first and then submit it. This pattern predates computers themselves<SideNote> Paper forms must be filled out before submission. Does that make HTML forms skeuomorphic? </SideNote> and is still in heavy use today.
+
+Notably, this works well for both short and long forms. Short forms are easy to finish in a single quick moment, while long forms often have a lot of data that needs to be reviewed before submitting.
+
+In either case, the data you're entering has a concept of being "finished" at some point, and then you can submit it and move on to the next task.
+
+Other documents don't have such a concept. They're ongoing processes that can be worked on and worked on forever. You don't pre-fill a Google Doc and submit it when it's ready, you just make a new one and edit it until you're happy.
+
+This pattern front-loads the submit button, creating a blank document that puts the user immediately into the edit state. This makes for a very low friction creation process, but it can lead to a messy library of throwaway documents that the user has to clean up later.<SideNote> Improve this by automatically deleting previous empty documents when the user creates a new one. </SideNote>
+
+- If the user is going to be making lots of changes over time, let them create the doc instantly and move straight into the editing process
+- Otherwise, collect the data up front (form-first) and create the doc when they're ready to submit it
+
+## Handling drafts before submission
+
+Between the "form-first" and "create-first" patterns is the "draft" pattern. The user still fills out the form but **the data is saved as a draft before it's submitted.**
+
+Drafts are an excellent way to ensure users don't lose their data if they refresh the page or navigate elsewhere. You can do this by [persisting their in-progress form data in local storage or in a database](/content/remix-form-autosave).
+
+- Slack does this with messages in the chat box
+- Turbo Tax does this with your whole tax return application
+
+If you store drafts in local storage, you'll need to make sure the [form doesn't appear in the initial server render](/content/remix-progressive-client-only) or you'll get a Flash of Unstyled Content.
+
+## Editing data
+
+Save patterns for editing data depend on the impact of the change.
+
+For low impact changes, you can usually [save changes automatically as the user types](/content/remix-form-autosave). This works especially well when each field can be validated independently.
+
+There's no need to maintain a draft changes here because they're persisted and written to the document immediately.
+
+Higher impact changes may require you to **wait until the user is done editing the whole document before saving**. You wouldn't want to submit changes to a tax return before the user has finished filling out all the fields and confirmed the data is correct.
+
+In that case, you can still save as the user types, but save it to a draft (either local or on the database) and only publish it when the user is ready. **Keeping this draft allows the user to come back later and finish editing it.**
+
+## Reduce server load by debouncing saves
+
+A debounce is a function that waits a certain amount of time before running. If the function is called again before the timeout completes, the timeout is canceled and restarted.
+
+When a user is typing, sending a network request on every single keystroke is a bit wasteful. Instead, you can debounce the save function so that it only runs after the user has stopped typing for a certain amount of time.
+
+**One of the main reasons developers have historically implemented debounces is because managing parallel requests is hard.** Responses can return out of order and mess up the frontend UI, or even trigger a feedback loop.
+
+This isn't a problem with Remix, since request cancellation is handled automatically, but you may still want to [use a debounce fetcher to reduce server load](/content/use-debounce-fetcher) as you persist the user's changes.
+
+- Submit onChange with a debounced timeout
+- Submit onBlur immediately and cancel the debounce so there's no stale submission when the last timeout completes.
+- **Give each input its own fetcher so that editing a second input doesn't cancel saving the change to the first input.**
+
+## Impove UI responsiveness by showing changes optimistically
+
+When a user creates a new item, one of two things can happen
+
+- The app redirects them to a page for the new item so they can start using it immediately
+- The new item appears in the list of all items so they can either keep adding more or manage multiple items once.
+
+If the create item form is still visible, **clear the fields so they can create another item immediately.**
+
+To improve the responsiveness of the UI, show the new item optimistically before the server confirms it's been created.
+
+**Keep separate components for the real data and the optimistic data.** Items that are shown optimistically often look different (perhaps with a loading indicator, or a different background color, or faded text) and aren't interactive yet, so they shouldn't have links or buttons.<SideNote> If you show a user an interactive element, like a link or button, they'll expect to be able to interact with it. If it's not possible for them to do that yet, it's better to not show it at all. </SideNote>
+
+A helpful way to de-duplicate optimistic data against real data is to generate a unique client-side ID for each new item. This does not replace the necessary server-side ID which should be used for everything else.<SideNote> A malicious user could send any client ID they want to the server, so you should only use the client ID for things that improve the experience of that user. If they want to send bad data and ruin their own experience, that's their own problem. </SideNote>
+
+When you delete an item, remove it from the list optimistically. Optimistic deletes usually just mean visually hiding the component until the server reloads with the new data.
+
+## Error handling
+
+If creating a new item fails, show an error message and allow the user to retry.
+
+- Some apps show an error in a toast message with a retry button attached.
+- You could send them back to the form with their data pre-filled so they can fix it and try again.
+- When Twitter fails to post a tweet, it moves the failed tweet into your drafts where you can retry at any time.
+
+You can minimize the chance of errors by [validating the data on the client](/content/remix-form-validation) before sending it to the server. **Optimistic UI should only be used for actions that have a high chance of success.**
+
+## Pagination
+
+Pagination is a great way to keep your page loads fast and avoid cluttering your UI with too much data.
+
+When implementing optimistic UI in a paginated list, you have a few options
+
+- show new items at the top of the list so they're always on the first page
+- move the user to the next page when they create a new item
+- or overflow the page and show 11 items on a page that only shows 10
+
+There are valid use-cases for each of these options.
+
+## Status indicators
+
+The worst thing you can do to your users is lose their data because you didn't tell them it wasn't being saved.<SideNote> In the past, users would blame themselves for not saving their work often enough, or forgetting to make backups. Now, expectations have shifted and if you lose their data, they'll blame you.</SideNote> There are many reasons why a save might fail, like network issues or server errors, and a resilient application needs to protect the user by handling them.
+
+- Show a loading indicator when the document is saving
+- Tell the user when the document was last saved
+- If the document fails to save, show an error message and make sure they know it's not safe to leave the page yet
+
+## History and undo
+
+No matter how many times you tell users their changes are permanent and their data will be lost forever if you delete it, they are still going to delete things by mistake and ask to have them restored. It's just a fact of life.
+
+A soft delete policy is a great way to avoid these issues. **Instead of deleting data, just mark it as deleted and hide it from the user.**<SideNote> This does not apply to deleted accounts and GDPR requests and other cases where the user is revoking your right to hold their data.</SideNote> This way, if they change their mind, you can easily restore it.
+
+Better yet, **keep an ongoing history of all changes to the data.** Notion and Google Docs make it easy to see the history of a document and restore it to a previous state.
