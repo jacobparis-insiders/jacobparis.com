@@ -14,7 +14,13 @@ export function SideNote({ children }) {
         }
         style={{ counterIncrement: "footnote-counter" }}
       ></label>
-      <input type="checkbox" id={id} tabIndex={0} className="peer hidden" />
+      <input
+        type="checkbox"
+        id={id}
+        tabIndex={0}
+        className="peer hidden"
+        defaultChecked={true}
+      />
       <span className="relative hidden transform overflow-visible border-l pl-4  align-baseline  text-sm opacity-90 before:relative before:-top-1 before:text-xs before:content-['['_counter(footnote-counter)_']']  peer-checked:left-0 peer-checked:float-left peer-checked:clear-both peer-checked:my-4 peer-checked:block peer-checked:h-auto md:!float-right md:!clear-right md:!my-0 md:mr-[-33%] md:block md:w-[33%] md:translate-x-4">
         {children}
       </span>
