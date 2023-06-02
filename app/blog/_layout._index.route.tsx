@@ -86,7 +86,7 @@ export default function Index() {
           <article className="sm:col-span-2">
             <Link
               prefetch="intent"
-              to={`/content/where-to-host-your-remix-app`}
+              to="/content/where-to-host-remix"
               className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-[#f4f4f4]"
             >
               <div className="p-8">
