@@ -54,8 +54,31 @@ export async function loader({ request }: LoaderArgs) {
             ...blog,
             tags,
           }
-        }),
+        })
+        .map((blog) => ({
+          ...blog,
+          timestamp: blog.frontmatter.timestamp
+            ? new Date(blog.frontmatter.timestamp).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : null,
+        })),
     )
+
+  blogList.sort((a, b) => {
+    if (!a.timestamp) return 1
+    if (!b.timestamp) return -1
+
+    const aDate = new Date(a.timestamp)
+    const bDate = new Date(b.timestamp)
+
+    if (aDate > bDate) return -1
+    if (aDate < bDate) return 1
+
+    return 0
+  })
 
   const tags = blogList.reduce((acc, blog) => {
     if (!blog.frontmatter.tags) return acc
@@ -129,7 +152,7 @@ export default function Blog() {
   )
 }
 
-function BlogItem({ slug, title, tags }) {
+function BlogItem({ slug, title, timestamp }) {
   return (
     <article className="">
       <Link
@@ -138,11 +161,11 @@ function BlogItem({ slug, title, tags }) {
         className={`group -ml-4 flex overflow-hidden rounded-lg hover:bg-gray-100`}
       >
         <div className={`flex flex-col gap-2 px-4 py-4`}>
-          <ul className="flex gap-x-4 text-xs font-bold uppercase tracking-wide text-gray-500">
-            {tags.map((tag) => (
-              <li key={tag}>{tag.trim()}</li>
-            ))}
-          </ul>
+          {timestamp ? (
+            <time className="text-xs font-bold uppercase tracking-wide text-gray-500">
+              {timestamp}
+            </time>
+          ) : null}
           <h2
             className="text-xl font-bold text-gray-800"
             style={{ wordBreak: "break-word" }}
