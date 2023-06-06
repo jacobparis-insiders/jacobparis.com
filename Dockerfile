@@ -45,7 +45,6 @@ RUN npx prisma@4.6.0 generate
 ADD . .
 RUN touch ./app/refresh.ignored.js
 RUN npm run build
-RUN npx tsc --allowJs ./server.ts || exit 0
 # Finally, build the production image with minimal footprint
 FROM base as run
 
@@ -67,7 +66,7 @@ COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
 COPY --from=build /myapp/public /myapp/public
 COPY --from=build /myapp/package.json /myapp/package.json
 COPY --from=build /myapp/start.sh /myapp/start.sh
-COPY --from=build /myapp/server.js /myapp/server.js
+COPY --from=build /myapp/server.ts /myapp/server.ts
 COPY --from=build /myapp/prisma /myapp/prisma
 COPY --from=flyio/litefs:0.4 /usr/local/bin/litefs /usr/local/bin/litefs
 ADD litefs.yml /etc/litefs.yml
