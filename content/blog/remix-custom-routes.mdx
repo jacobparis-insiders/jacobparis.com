@@ -8,29 +8,29 @@ timestamp: "2023-06-06"
 
 There are two main schools of thought when it comes to organizing code in a project.
 
-One method is to organize by type or category. For example, all of your components go in a `components` folder, all of your pages go in a `pages` folder, and so on.
+One method is to organize by type or category. **For example, all of your components go in a `components` folder, all of your pages go in a `pages` folder, and so on.**
 
 This was popularized by many standard patterns, like MVC, MVVC, ECS, and so on. But there are many problems with this approach.
 
-Each feature ends up spread throughout the project. For example, if you have a `User` feature, you might have many `User` components, a `User` page, a `User` store, and so on. This makes it difficult to find all of the code related to a feature.
+**Each feature ends up spread throughout the project.** For example, if you have a `User` feature, you might have many `User` components, a `User` page, a `User` store, and so on. This makes it difficult to find all of the code related to a feature.
 
-A component that is only used in one file still gets put into the components folder. It's easy to end up with dead code when it stops being used but someone forgets to delete it. You're never quite sure if it's safe to delete a file, or even to make changes to one, because it could be used somewhere else.
+A component that is only used in one file still gets put into the components folder. **It's easy to end up with dead code when it stops being used but someone forgets to delete it.** You're never quite sure if it's safe to delete a file, or even to make changes to one, because it could be used somewhere else.
 
-This architecture encourages the reuse of code, even when it's not wholly appropriate to do so. Rather than creating a new component for the new use-case, a developer might grab an existing component and try to modify it to fit their needs. This leads to spaghetti-like dependencies between unrelated sections of the codebase.
+This architecture encourages the reuse of code, even when it's not wholly appropriate to do so. **Rather than creating a new component for the new use-case, a developer might grab an existing component and try to modify it to fit their needs.** This leads to spaghetti-like dependencies between unrelated sections of the codebase.
 
 ## The case for colocation
 
 If a function or component is only ever used once, does it even need to be in a separate file?
 
-When you need a variable or function, write it inline right where you need it. Code readability improves because everything that's relevant is available at a glance.
+**When you need a variable or function, write it inline right where you need it.** Code readability improves because everything that's relevant is available at a glance.
 
 If you need to use it in more than one place, you can lift it out into a common parent.<SideNote> You can also just copy/paste into two places and let them exist separately. You'll more often find they diverge to separate use-cases rather than converge to a common component. </SideNote> That might be in the same file, or it might be in a new file. But you don't need to worry about that until you actually need it.
 
-Code editors usually have built in refactor tools that make it easy to extract a function or component into a new file. It'll move to a parent folder and update all of the references for you automatically.
+**Code editors usually have built in refactor tools that make it easy to extract a function or component into a new file.** It'll move to a parent folder and update all of the references for you automatically.
 
 This colocation-first approach to development solves many of the problems with the categorical structure.
 
-- It's easy to find all of the code related to a feature because it's all nearby in the codebase.
+- **It's easy to find all of the code related to a feature because it's all nearby in the codebase.**
 - Code that is no longer used is usually spotted by the linter immediately with warnings.
 - Imports from sibling files or random other folders can be treated with suspicion during code review, keeping the import graph (and your mental model of the code structure) simple.
 
@@ -38,9 +38,9 @@ Following this process, you'll naturally end up with a structure that looks like
 
 ## Folder based routing
 
-The first version of Remix used a folder-based file structure for routing. Every file in the `routes` folder would be a route in your app, and it would resemble the URL structure of your site.
+**The first version of Remix used a folder-based file structure for routing.** Every file in the `routes` folder would be a route in your app, and it would resemble the URL structure of your site.
 
-This structure is fairly intuitive for early development, but it has some issues at scale. You can end up with deeply nested routes, and sharing code between routes has to be done outside the `routes` folder.<SideNote> Attempting to put a component in the `routes` folder will create a new route. </SideNote>
+This structure is fairly intuitive for early development, but **it has some issues at scale.** You can end up with deeply nested routes, and sharing code between routes has to be done outside the `routes` folder.<SideNote> Attempting to put a component in the `routes` folder will create a new route. </SideNote>
 
 Sometimes related routes need different page layouts, and this convention separates them in the file tree.
 
@@ -101,11 +101,11 @@ This convention is no longer included in Remix by default, but is still availabl
 
 ## Flat file routing
 
-In v2, Remix switched its default convention to a flat file structure. Every route is a top level filename or folder name in the `/routes` directory.
+In v2, Remix switched its default convention to a flat file structure. **Every route is a top level filename or folder name in the `/routes` directory.**
 
 If you have a folder, the `index.ts` inside becomes the route file, and you're free to include other files in the folder as you see fit.
 
-This is a big win for colocation. Any assets or components related to a route can be included in the same folder., but if you need to share a component or resource between more than one route, you still have to move it into some common folder.
+This is a big win for colocation. **Any assets or components related to a route can be included in the same folder**, but if you need to share a component or resource between more than one route, you still have to move it into some common folder.
 
 Routes that require a layout are still separated from routes with similar paths but different layouts.
 
@@ -157,11 +157,11 @@ This was made the default convention in Remix as of v2. Earlier versions of remi
 
 ## Full colocation with the `.route` suffix
 
-The main issue with those conventions is that they rely on the location of a file to determine whether it's a route or not. With that constraint, you will never have full control over the location of your files.
+**The main issue with those conventions is that they rely on the location of a file to determine whether it's a route or not.** With that constraint, you will never have full control over the location of your files.
 
 I built the remix-custom-routes package to provide an alternative solution.
 
-Instead of assuming files are routes because they're in the `/routes` directory, specify they're routes by adding a `.route` suffix to the filename.
+**Instead of assuming files are routes because they're in the `/routes` directory, specify they're routes by adding a `.route` suffix to the filename.**
 
 It's a small change with a huge impact. Now you can put your routes wherever you want, and you can colocate your code with them.
 
@@ -207,7 +207,7 @@ app/
 The problems with the previous approaches have mostly disappeared.
 
 - everything related to the blog, regardless of whether it's a route wrapped in a layout, can be put in the same folder
-- modules like auth can have their logic isolated for more reusability with other apps.
+- **modules like auth can have their logic isolated for more reusability with other apps.**
 - the todo-app folder contains all of its related components, registers its route, and even includes its own blog post which will fit into the blog layout.
 
 ## Working with Remix
