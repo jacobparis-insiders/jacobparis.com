@@ -1,0 +1,294 @@
+---
+title: Colocate your routes into feature folders with Remix Custom Routes
+description: Standard file based routing can lead to spaghetti code. Files should be near where they're used. Use domain driven design to organize your code.
+tags: Remix
+published: true
+timestamp: "2023-06-06"
+---
+
+There are two main schools of thought when it comes to organizing code in a project.
+
+One method is to organize by type or category. For example, all of your components go in a `components` folder, all of your pages go in a `pages` folder, and so on.
+
+This was popularized by many standard patterns, like MVC, MVVC, ECS, and so on. But there are many problems with this approach.
+
+Each feature ends up spread throughout the project. For example, if you have a `User` feature, you might have many `User` components, a `User` page, a `User` store, and so on. This makes it difficult to find all of the code related to a feature.
+
+A component that is only used in one file still gets put into the components folder. It's easy to end up with dead code when it stops being used but someone forgets to delete it. You're never quite sure if it's safe to delete a file, or even to make changes to one, because it could be used somewhere else.
+
+This architecture encourages the reuse of code, even when it's not wholly appropriate to do so. Rather than creating a new component for the new use-case, a developer might grab an existing component and try to modify it to fit their needs. This leads to spaghetti-like dependencies between unrelated sections of the codebase.
+
+## The case for colocation
+
+If a function or component is only ever used once, does it even need to be in a separate file?
+
+When you need a variable or function, write it inline right where you need it. Code readability improves because everything that's relevant is available at a glance.
+
+If you need to use it in more than one place, you can lift it out into a common parent.<SideNote> You can also just copy/paste into two places and let them exist separately. You'll more often find they diverge to separate use-cases rather than converge to a common component. </SideNote> That might be in the same file, or it might be in a new file. But you don't need to worry about that until you actually need it.
+
+Code editors usually have built in refactor tools that make it easy to extract a function or component into a new file. It'll move to a parent folder and update all of the references for you automatically.
+
+This colocation-first approach to development solves many of the problems with the categorical structure.
+
+- It's easy to find all of the code related to a feature because it's all nearby in the codebase.
+- Code that is no longer used is usually spotted by the linter immediately with warnings.
+- Imports from sibling files or random other folders can be treated with suspicion during code review, keeping the import graph (and your mental model of the code structure) simple.
+
+Following this process, you'll naturally end up with a structure that looks like domain-driven design or feature folders, where all of the code related to a feature is in a single folder.
+
+## Folder based routing
+
+The first version of Remix used a folder-based file structure for routing. Every file in the `routes` folder would be a route in your app, and it would resemble the URL structure of your site.
+
+This structure is fairly intuitive for early development, but it has some issues at scale. You can end up with deeply nested routes, and sharing code between routes has to be done outside the `routes` folder.<SideNote> Attempting to put a component in the `routes` folder will create a new route. </SideNote>
+
+Sometimes related routes need different page layouts, and this convention separates them in the file tree.
+
+Components that have been extracted from a route all end up mixed together. It's not clear which components are related to which routes.
+
+```yml
+app/
+├── root.tsx
+├── cache.server.ts
+├── db.server.ts
+│
+├── components/
+│   ├── authorCard.tsx
+│   ├── blogList.tsx
+│   ├── blogPost.tsx
+│   ├── footNote.tsx
+│   ├── otpInput.tsx
+│   ├── paginationButtons.tsx
+│   ├── todoContainer.tsx
+│   ├── todoItem.tsx
+│   └── todoList.tsx
+│
+├── content/
+│   ├── goodnight-moon.md
+│   └── hello-world.md
+│
+├── routes/
+│   ├── _layout.tsx # layout route for most of the app
+│   ├── _layout/
+│   │   ├── about.tsx
+│   │   ├── blog/
+│   │   │   ├── _post/
+│   │   │   │   ├── $slug.tsx
+│   │   │   │   └── todo-app.md # related code has no layout
+│   │   │   ├── _post.tsx
+│   │   │   └── index.tsx
+│   │   └── contact.tsx
+│   │
+│   ├── auth/
+│   │   ├── create-account.tsx # /auth/create-account
+│   │   ├── login.tsx # /auth/login
+│   │   ├── login/
+│   │   │   └── otp.tsx # /auth/login/otp
+│   │   └── reset-password.tsx # /auth/reset-password
+│   │
+│   ├── blog/ # blog routes no layout
+│   │   ├── $slug/
+│   │   │   └── refresh.ts # /blog/hello-world/refresh
+│   │   └── todo-app/
+│   │       └── example.tsx
+│   └── seed.json
+├── session.server.ts
+├── seed.json # not a route, just an asset
+└── sendgrid.server.ts
+```
+
+This convention is no longer included in Remix by default, but is still available as a [separate routing package](https://remix.run/docs/en/main/pages/v2#upgrading-without-changing-files)
+
+## Flat file routing
+
+In v2, Remix switched its default convention to a flat file structure. Every route is a top level filename or folder name in the `/routes` directory.
+
+If you have a folder, the `index.ts` inside becomes the route file, and you're free to include other files in the folder as you see fit.
+
+This is a big win for colocation. Any assets or components related to a route can be included in the same folder., but if you need to share a component or resource between more than one route, you still have to move it into some common folder.
+
+Routes that require a layout are still separated from routes with similar paths but different layouts.
+
+```yml
+app/
+├── components/
+│   ├── authorCard.tsx
+│   ├── blogPost.tsx
+│   └── footNote.tsx
+│
+├── content/
+│   ├── goodnight-moon.md
+│   └── hello-world.md
+│
+├── routes/
+│   ├── _layout.tsx
+│   ├── _layout._index.tsx
+│   ├── _layout.about.tsx
+│   ├── _layout.blog._index/
+│   │   ├── blogList.tsx
+│   │   ├── index.tsx
+│   │   └── paginationButtons.tsx
+│   ├── _layout.blog._post/
+│   │   ├── cache.server.ts
+│   │   └── index.tsx # layout for blog posts
+│   ├── _layout.blog._post.$slug.tsx # /blog/hello-world
+│   ├── _layout.blog._post.todo-app.md # /blog/todo-app
+│   ├── _layout.contact.tsx
+│   ├── auth.create-account.tsx # /auth/create-account
+│   ├── auth.login.tsx # /auth/login
+│   ├── auth.login_.otp/
+│   │   ├── index.tsx # /auth/login/otp
+│   │   └── otpInput.tsx
+│   ├── auth.reset-password.tsx # /auth/reset-password
+│   ├── blog.$slug.refresh.ts # /blog/hello-world/refresh
+│   ├── blog.todo-app.example/
+│   │   ├── db.server.ts
+│   │   ├── index.tsx # /blog/todo-app/example, no layout
+│   │   ├── seed.json # not a route, just an asset
+│   │   ├── todoContainer.tsx
+│   │   ├── todoItem.tsx
+│   │   └── todoList.tsx
+│   └── root.tsx
+├── sendgrid.server.ts
+└── session.server.ts
+```
+
+This was made the default convention in Remix as of v2. Earlier versions of remix can opt into it by enabling the future flag `future.v2_routeConvention: true` in the remix config.
+
+## Full colocation with the `.route` suffix
+
+The main issue with those conventions is that they rely on the location of a file to determine whether it's a route or not. With that constraint, you will never have full control over the location of your files.
+
+I built the remix-custom-routes package to provide an alternative solution.
+
+Instead of assuming files are routes because they're in the `/routes` directory, specify they're routes by adding a `.route` suffix to the filename.
+
+It's a small change with a huge impact. Now you can put your routes wherever you want, and you can colocate your code with them.
+
+```yml
+app/
+├── root.tsx
+├── _layout.route.tsx
+├── _layout._index.route.tsx
+├── _layout.about.route.tsx
+├── _layout.contact.route.tsx
+│
+├── auth/
+│   ├── auth.login.route.tsx # /auth/login
+│   ├── auth.login_.otp.route.tsx # /auth/login/otp
+│   ├── auth.create-account.route.tsx # /auth/create-account
+│   ├── auth.reset-password.route.tsx # /auth/reset-password
+│   ├── session.server.ts
+│   └── sendgrid.server.ts
+│
+├── blog/
+│   ├── _layout.blog._index.route.tsx # /blog
+│   ├── _layout.blog._post.route.tsx # layout for blog posts
+│   ├── _layout.blog._post.$slug.route.tsx # /blog/hello-world
+│   ├── authorCard.tsx
+│   ├── blog.$slug.refresh.route.ts # resource route for /blog/hello-world/refresh
+│   ├── blogPost.tsx
+│   ├── cache.server.ts
+│   ├── content/
+│   │   ├── hello-world.md
+│   │   └── goodnight-moon.md
+│   └── footNote.tsx
+│
+└── todo-app/
+    ├── _layout.blog._post.todo-app.route.md # /blog/todo-app
+    ├── blog.todo-app.example.route.tsx # /blog/todo-app/example without the website layout
+    ├── db.server.ts
+    ├── seed.json # not a route, just an asset
+    ├── todoItem.tsx
+    ├── todoContainer.tsx
+    └── todoList.tsx
+```
+
+The problems with the previous approaches have mostly disappeared.
+
+- everything related to the blog, regardless of whether it's a route wrapped in a layout, can be put in the same folder
+- modules like auth can have their logic isolated for more reusability with other apps.
+- the todo-app folder contains all of its related components, registers its route, and even includes its own blog post which will fit into the blog layout.
+
+## Working with Remix
+
+With Remix, any file structure you choose is a valid convention, but you need to tell Remix where to find your routes.
+
+Manually registering routes is possible but tedious.
+
+```ts
+module.exports = {
+  async routes(defineRoutes) {
+    return defineRoutes((route) => {
+      route("/some/path/*", "catchall.tsx")
+      route("some/:path", "some/route/file.js", () => {
+        route("relative/path", "some/other/file")
+      })
+    })
+  },
+}
+```
+
+I have built the [remix-custom-routes](https://github.com/jacobparis/remix-custom-routes) package to make this easier.
+
+You can register all `.route` files in a few lines of code, by doing a glob search for them, and then telling `getRouteIds` to strip the `.route` suffix from the filename.
+
+This is fully extensible. If you want to ignore certain route patterns, you can modify the glob string or filter its results before passing them to `getRouteIds`.
+
+```ts
+//remix-config.js
+const glob = require("glob")
+const {
+  getRouteIds,
+  getRouteManifest,
+  ensureRootRouteExists,
+} = require("remix-custom-routes")
+
+module.exports = {
+  async routes() {
+    // array of paths to files
+    const files = glob.sync("**/*.route.{js,jsx,ts,tsx}", {
+      cwd: path.join(__dirname, "app"),
+    })
+
+    // array of tuples [routeId, filePath]
+    const routeIds = getRouteIds(files, {
+      suffix: ".route",
+    })
+
+    // Remix manifest object
+    return getRouteManifest(routeIds)
+  },
+}
+```
+
+There are essentially 3 entry points for customization
+
+- the files that should become routes
+- the route ids that should be generated from those files
+- the manifest describing the URLs and parent/child relationships of those routes
+
+If you wanted to give every blog route a particular layout without adding it to the filenames, you can easily map the route ids to the layout you want.
+
+I've also included a preset function to get the Remix Route Extensions convention behaviour by default. This has the exact same behaviour as the previous snippet, but is a little more concise if you don't need to customize anything.
+
+```ts
+const { routeExtensions } = require("remix-custom-routes")
+
+module.exports = {
+  ignoredRouteFiles: ["**/**"], // ignore the default route files
+  async routes() {
+    const appDirectory = path.join(__dirname, "app")
+
+    return routeExtensions(appDirectory)
+  },
+}
+```
+
+To get started, install the package
+
+```sh
+npm install remix-custom-routes
+```
+
+and check out the [Remix Custom Routes](https://github.com/jacobparis/remix-custom-routes) repo for more information.
