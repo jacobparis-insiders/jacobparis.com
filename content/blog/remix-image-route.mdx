@@ -1,0 +1,31 @@
+---
+title: Serve an image from a resource route
+description: Import a file to get its hashed path in the build directory. Fetch the file in a resource route and return it as a response.
+tags: Remix
+timestamp: "2023-06-12"
+published: true
+---
+
+Remix uses esbuild to bundle your app. When you import a file, esbuild will use its file-loader to copy the file to the public build directory and return the path to the file. This is useful for images, fonts, and other static assets.
+
+A resource route can fetch the image from this path and return it as a response to serve it to the client.
+
+```ts
+import { LoaderArgs } from "@remix-run/node"
+import image from "./image.jpg"
+
+export async function loader({ request }: LoaderArgs) {
+  const url = new URL(request.url)
+  url.pathname = image
+
+  const imageBuffer = await fetch(url).then(
+    (res) => res.body,
+  )
+
+  return new Response(imageBuffer, {
+    headers: {
+      "Content-Type": "image/jpeg",
+    },
+  })
+}
+```
