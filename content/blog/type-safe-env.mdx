@@ -1,0 +1,132 @@
+---
+title: Typesafe environment variables with Zod
+description: Write a Zod schema to typecheck your environment variables. Crash the app if any are missing. Add type definitions to process.env.
+tags: Typescript
+guide: true
+timestamp: "2023-06-13"
+---
+
+Environment variables are a way of configuring your application at runtime. Rather than hardcoding values into your code, you can tell your app to read values from the environment.
+
+This is useful for things like API keys, database credentials, and other sensitive information that you don't want to be stored in your codebase.
+
+Since these are provided at runtime and not at build time, we can't statically guarantee that certain variables will be set or that they will be of the correct type.
+
+That means if you try to access `process.env` in your IDE, it won't autocomplete the variables for you, and you won't get any type checking. When you try to access a variable, you'll have check to make sure it's defined before you use it.
+
+Create a [side-effect only module](https://www.typescriptlang.org/docs/handbook/modules.html#import-a-module-for-side-effects-only) named `env.server.ts`
+
+We will use this to
+
+- crash the application on startup if any required environment variables are missing
+- and to add type definitions for the environment variables so we can get autocomplete and type checking in the IDE
+
+## Create a Zod schema for your environment variables
+
+Define a Zod schema for your environment variables. The easiest option is to set them all to `z.string()`, but you can get fancier with format checking and other validation if you want.
+
+```ts
+import { z } from "zod"
+
+const zodEnv = z.object({
+  // Database
+  DATABASE_URL: z.string(),
+
+  // Cloudflare
+  CLOUDFLARE_IMAGES_ACCOUNT_ID: z.string(),
+  CLOUDFLARE_IMAGES_API_TOKEN: z.string(),
+
+  // Sentry
+  SENTRY_DSN: z.string(),
+  SENTRY_RELEASE: z.string().optional(),
+})
+```
+
+## Fix process.env to use these types
+
+By default, `process.env` is just a plain object with unknown values. Since we're enforcing that the environment variables match our Zod schema, we can tell TypeScript to treat `process.env` as if it has these types.
+
+Zod's `TypeOf` utility will turn our Zod schema into the Typescript types we need.
+
+```ts
+import { TypeOf } from "zod"
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv extends TypeOf<typeof zodEnv> {}
+  }
+}
+```
+
+## Crash if any envs are missing
+
+Environment variables can't be modified while the app is running. They're strictly set at startup, so if any aren't present, we'll want to shut down the app immediately.
+
+```ts
+try {
+  zodEnv.parse(process.env)
+} catch (err) {
+  if (err instanceof z.ZodError) {
+    const { fieldErrors } = err.flatten()
+    const errorMessage = Object.entries(fieldErrors)
+      .map(([field, errors]) =>
+        errors ? `${field}: ${errors.join(", ")}` : field,
+      )
+      .join("\n  ")
+
+    throw new Error(
+      `Missing environment variables:\n  ${errorMessage}`,
+    )
+
+    process.exit(1)
+  }
+}
+```
+
+As early as possible in your application, import this module.
+
+This code is defined outside of any functions or classes, so it will run immediately on import.
+
+The best place would be in the `server.ts` file if you're doing a Node/Express app, or in `entry.server.ts` with the Remix App Server.
+
+```ts
+import "~/env.server"
+```
+
+## Complete code
+
+```ts
+// app/env.server.ts
+import { z, TypeOf } from "zod"
+
+const zodEnv = z.object({
+  DATABASE_PATH: z.string(),
+  CLOUDFLARE_IMAGES_ACCOUNT_ID: z.string(),
+  CLOUDFLARE_IMAGES_API_TOKEN: z.string(),
+})
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv extends TypeOf<typeof zodEnv> {}
+  }
+}
+
+try {
+  zodEnv.parse(process.env)
+} catch (err) {
+  if (err instanceof z.ZodError) {
+    const { fieldErrors } = err.flatten()
+    const errorMessage = Object.entries(fieldErrors)
+      .map(([field, errors]) =>
+        errors ? `${field}: ${errors.join(", ")}` : field,
+      )
+      .join("\n  ")
+
+    throw new Error(
+      `Missing environment variables:\n  ${errorMessage}`,
+    )
+
+    process.exit(1)
+  }
+}
+```
