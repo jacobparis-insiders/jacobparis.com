@@ -1,0 +1,199 @@
+---
+title: Add Prisma to a Remix app
+description: Prisma is a typescript ORM for type-safe database access and automatic migrations. Add it to your Remix app to get started with SQLite.
+tags: Remix
+timestamp: "2023-06-15"
+published: true
+---
+
+[Prisma] is a popular ORM for handling database interactions. Instead of querying your database directly, you generate a Prisma client that gives you a type-safe API for reading and writing data.
+
+Prisma will also handle migrations for you, so you can make changes to your schema and Prisma will automatically generate the SQL to update your database.
+
+In the Remix ecosystem, all of the official starter stacks use Prisma by default, but if you're starting with a blank slate you'll need to add it yourself.
+
+In this guide we'll add Prisma to a Remix app and set it up to use SQLite. There are two packages to install.
+
+```bash
+npm i @prisma/client
+npm i --save-dev prisma
+```
+
+## Add Prisma to your project
+
+It doesn't take long to get Prisma integrated into your project. The first step is to initialize a new Prisma project.
+
+Create a new file `app/db.server.ts` and add the following:
+
+```ts
+import { PrismaClient } from "@prisma/client"
+
+declare global {
+  var __prisma: PrismaClient
+}
+
+if (!global.__prisma) {
+  global.__prisma = new PrismaClient()
+}
+
+global.__prisma.$connect()
+
+export const prisma = global.__prisma
+```
+
+This looks a little complicated, but it's just a wrapper around the Prisma client that makes sure it's only instantiated once, like a singleton.
+
+## Environment variables
+
+You'll want to set the `DATABASE_URL=file:./data.db?connection_limit=1` environment variable to the path where you want your SQLite database to live. Setting the connection limit to 1 prevents bugs during dev server reloading when a new connection attempt is made. A .env file is a good place to keep it during development.
+
+This is a good time to set the same environment variable on your host too. If you're using fly, either use `fly secrets set` or, since it's not sensitive, just add it your fly.toml
+
+```toml
+[env]
+  DATABASE_URL="file:./data/sqlite.db"
+```
+
+## Write your schema
+
+The schema is where you define your tables and columns.
+
+Create a new file `prisma/schema.prisma` and write a basic schema to get started.<SideNote> You can read more about the schema syntax in the [Drizzle docs](https://www.prisma.io/docs/concepts/components/prisma-schema)</SideNote>
+
+```sh
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Issue {
+  id        Int    @id @default(autoincrement())
+  draftId   String @unique
+  title     String
+  description      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  files File[]
+}
+
+model File {
+  url       String @id @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issue Issue @relation(fields: [issueId], references: [id])
+  issueId Int
+}
+```
+
+Prisma uses code generation to create typescript types for your schema. You'll need to run `npx prisma generate` to generate the types and then `npx prisma migrate deploy` to apply any migrations we've written.
+
+You will need to do this before the first startup and after every change to the schema.
+
+Go to your `package.json`, add a `setup` script to run the migrations:
+
+```json
+{
+  "scripts": {
+    "setup": "prisma generate && prisma migrate deploy"
+  }
+}
+```
+
+Next, you'll need to create the migrations that will take a blank database through the steps it needs to get to your current schema. This is another command you'll need to run every time you change the schema.
+
+```sh
+npx prisma migrate dev
+npm run setup
+```
+
+Run those commands and you should see a migrations directory in your `prisma` folder. This will be committed to your repo.
+
+## Read and write documents
+
+Prisma should be fully set up now. Let's try it out!
+
+In one of your routes
+
+- add an action that inserts a new item into the database
+- add a loader that reads all the items from the database and returns them as JSON
+- add a form that submits to the action
+
+```tsx
+import { prisma } from "~/db.server"
+
+export async function action({ request }: ActionArgs) {
+  await prisma.items.insert({
+    data: {
+      title: "Item title",
+    },
+  })
+
+  return {
+    success: true,
+  }
+}
+
+export async function loader({ request }: LoaderArgs) {
+  const data = await db.items.findMany()
+
+  return json({
+    data,
+  })
+}
+
+export default function Index() {
+  const { items } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      <h1> Items </h1>
+      <ul>
+        {items.map((item) => (
+          <li key={item.id}>{item.title}</li>
+        ))}
+      </ul>
+
+      <Form method="POST">
+        <input type="submit" value="Submit" />
+      </Form>
+    </div>
+  )
+}
+```
+
+Every time you hit the submit button, you should see a new item pop up on the list! You can shut down the server and restart it, and the items will still be there, safe in your database.
+
+## Include the migrations in your build
+
+Docker uses the `ADD` command to copy files into the image. If you have a single staged build (i.e. you're not using a multi-stage build), then you can just add the migrations to your build:
+
+```sh
+FROM base
+
+ADD prisma .
+RUN npx prisma generate
+```
+
+If you're doing a multi-staged build, you probably have a build layer where you copy all of your source code into the image (using `ADD . .`). The migrations will be copied too when that happens, but you'll need to copy them again into the final image.
+
+With that structure, the final COPY line is the one you'll want to bring into your own Dockerfile.
+
+```sh
+FROM base as build
+
+ADD prisma .
+RUN npx prisma generate
+
+FROM base as run
+
+COPY --from=build /myapp/node_modules/.prisma /myapp/node_modules/.prisma
+COPY --from=build /myapp/prisma /myapp/prisma
+```
+
+Try deploying again and you should be good to go!
