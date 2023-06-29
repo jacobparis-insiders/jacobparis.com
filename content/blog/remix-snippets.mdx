@@ -1,0 +1,107 @@
+---
+title: Insert Remix loaders and actions with VS Code snippets
+description: Add VS Code snippets to insert common Remix functions. Use import/no-duplicates to merge imports. Customize it to fit your project.
+tags: Remix
+published: true
+timestamp: "2023-06-29"
+---
+
+Remix doesn't have a lot of boilerplate, but there are some functions, like the loader, action, and default export, that are used often enough to warrant a snippet.
+
+VS Code's snippets feature<SideNote> Read more about this in the [VS Code Snippets Docs](https://code.visualstudio.com/docs/editor/userdefinedsnippets) </SideNote> lets you define a block of text that you can insert by typing a keyword or with a keyboard shortcut.
+
+**You can make snippets for a specific project** by adding them to the `.vscode` folder as a JSON file named `something.code-snippets`
+
+Otherwise, you can add them to your user snippets by opening the command palette and typing `Preferences: Configure User Snippets` and selecting `New Global Snippets File...`. This way it will only apply for you.
+
+Here are some tips for making snippets:
+
+- Let each snippet import the dependencies it needs, rather than assuming they'll be available.
+- Use the `'import/no-duplicates': 'warn',` rule in your `.eslintrc` file to prevent duplicate imports. If you have autofix on save, it will automatically merge your imports.
+- Don't be afraid to customize these. Maybe most of your loaders have the same auth guards in the first few lines. Add those to the snippet and save yourself some time.
+
+## Example snippet file
+
+Add this to your `.vscode` folder as `remix.code-snippets` or keep it to yourself in your personal preferences.
+
+> Last updated on Jun 29 2023
+
+```json
+/** @tutorial https://www.jacobparis.com/content/remix-snippets */
+{
+  "loader": {
+    "prefix": "/loader",
+    "body": [
+      "import type { LoaderArgs } from \"@remix-run/node\"",
+      "",
+      "export async function loader({ request }: LoaderArgs) {",
+      "  return null",
+      "}"
+    ]
+  },
+  "action": {
+    "prefix": "/action",
+    "body": [
+      "import type { ActionArgs } from \"@remix-run/node\"",
+      "",
+      "export async function action({ request }: ActionArgs) {",
+      "  return null",
+      "}"
+    ]
+  },
+  "default": {
+    "prefix": "/default",
+    "body": [
+      "export default function ${TM_FILENAME_BASE/[^a-zA-Z0-9]*([a-zA-Z0-9])([a-zA-Z0-9]*)/${1:/capitalize}${2}/g}() {",
+      " return (",
+      "  <div>",
+      "    <h1>Unknown Route</h1>",
+      "  </div>",
+      " )",
+      "}"
+    ]
+  },
+  "headers": {
+    "prefix": "/headers",
+    "body": [
+      "import type { HeadersFunction } from '@remix-run/node'",
+      "",
+      "export const headers: HeadersFunction = ({ loaderHeaders }) => ({",
+      "  'Cache-Control': loaderHeaders.get('Cache-Control') ?? '',",
+      "})"
+    ]
+  },
+  "links": {
+    "prefix": "/links",
+    "body": [
+      "import type { LinksFunction } from '@remix-run/node'",
+      "",
+      "export const links: LinksFunction = () => {",
+      "  return []",
+      "}"
+    ]
+  },
+  "meta": {
+    "prefix": "/meta",
+    "body": [
+      "import type { V2_MetaFunction } from '@remix-run/node'",
+      "",
+      "export const meta: V2_MetaFunction<typeof loader> = ({ data }) => [{",
+      "  title: 'Title',",
+      "}]"
+    ]
+  },
+  "shouldRevalidate": {
+    "prefix": "/shouldRevalidate",
+    "body": [
+      "import type { ShouldRevalidateFunction } from '@remix-run/react'",
+      "",
+      "export const shouldRevalidate: ShouldRevalidateFunction = ({",
+      "  defaultShouldRevalidate",
+      "}) => {",
+      "  return defaultShouldRevalidate",
+      "}"
+    ]
+  }
+}
+```
