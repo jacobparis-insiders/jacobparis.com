@@ -1,0 +1,135 @@
+---
+title: Form validation with Conform, Zod, and Remix
+description: Use Conform to validate your forms serverside. Show errors on the client. Use Zod to generate your form schema.
+tags: Remix
+published: true
+timestamp: "2023-06-30"
+---
+
+Conform<SideNote> Check out the [Conform docs](https://conform.guide/) </SideNote> is a form validation library that helps you build forms with serverside validation and client-side error handling. It works really well with Remix and Zod.
+
+With Conform, you can represent your form schema with Zod.
+
+```ts
+import { z } from "zod"
+
+const schema = z.object({
+  title: z.string(),
+  description: z.string().optional(),
+  status: z.enum(["todo", "doing", "done"]),
+})
+```
+
+In your form component, use Conform's `useForm` hook to get the props you need to make your form work.
+
+- The `onValidate` method is where we'll make it use the zod schema.
+- The `lastSubmission` prop takes the response from the action so it can handle errors for us.
+
+```tsx
+import { conform, useForm } from "@conform-to/react"
+import {
+  getFieldsetConstraint,
+  parse,
+} from "@conform-to/zod"
+
+export default function Example() {
+  const actionData = useActionData<typeof action>()
+
+  const [form, fields] = useForm({
+    id: "example",
+    onValidate({ formData }) {
+      return parse(formData, { schema })
+    },
+    lastSubmission: actionData?.submission,
+    shouldRevalidate: "onBlur",
+  })
+
+  return ( … )
+}
+```
+
+Next, we'll use the `fields` object to get the props we need for each field in our form.
+
+- Pass `form.props` to the `<Form>` component.
+- Each input gets an HTML id generated automatically. Pass `fields.title.id` to the `htmlFor` prop on the `<label>` to attach it.
+- Pass `conform.input(fields.title)` to the `<input>`
+
+Each input gets its own list of errors in `fields.title.errors`.
+
+```tsx
+export default function Example() {
+  const [form, fields] = useForm({ … })
+
+  return (
+    <Form method="POST" {...form.props}>
+      <div>
+        <label htmlFor={fields.title.id}>
+          Title
+        </label>
+
+        <input {...conform.input(fields.title)} />
+      </div>
+
+      <div>
+        <label htmlFor={fields.description.id}>
+          Description
+        </label>
+
+        <input {...conform.input(fields.description)} />
+
+        {fields.description.errors ? (
+          <div role="alert">
+            {fields.description.errors[0]}
+          </div>
+        ) : null}
+      </div>
+
+      <div>
+        <label htmlFor={fields.status.id}>
+          Status
+        </label>
+
+        <select {...conform.select(fields.status)}>
+          <option value="todo">Todo</option>
+          <option value="doing">Doing</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+
+      <button type="submit"> Submit </button>
+    </Form>
+  )
+}
+```
+
+The last step is to create an action that will handle the form submission.
+
+- Use the parse method from `@conform-to/zod` with your schema
+- A failed submission will have an empty `value` property, so you can use that to handle errors. Return the submission object in the response so the form can display the errors.
+- If the submission is valid, you can use the `value` property to get the data you need to enter into your database.
+
+```ts
+import { parse } from "@conform-to/zod"
+
+export async function action({ request }: ActionArgs) {
+  const formData = await request.formData()
+  const submission = await parse(formData, { schema })
+
+  if (!submission.value) {
+    return json(
+      { status: "error", submission },
+      { status: 400 },
+    )
+  }
+
+  const { title, description, status } = submission.value
+
+  await db.todos.create({
+    title,
+    description,
+    status,
+  })
+
+  return redirect("/todos")
+}
+```
