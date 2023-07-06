@@ -4,12 +4,12 @@ description: Should you host your Remix app on a serverless provider like Vercel
 tags: Remix
 published: true
 guide: true
-timestamp: "2023-05-23"
+timestamp: "2023-07-06"
 ---
 
 Remix supports many different hosting options. This guide will help you choose the right one for your app.
 
-> Last updated on May 23 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
+> Last updated on July 06 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
 
 - [Serverless functions](#serverless-functions)
   - [Vercel](#vercel)
@@ -37,18 +37,18 @@ In general, serverless functions run Node.js and edge functions run the **very**
 
 Because of the ephemeral nature of these functions, the first request to a function may cause a `cold-start` and take several seconds to respond.
 
-|                        | Vercel              | Fastly   | Netlify | Cloudflare Pages | AWS Lambda |
-| ---------------------- | ------------------- | -------- | ------- | ---------------- | ---------- |
-| **Runtime**            | Node/V8 (per route) | WASM     | Node/V8 | V8               | Node       |
-| **Bundle size**        | 50MB                | 100MB    | 50MB    | 5MB              | 50MB       |
-| **Request body size**  | 4.5MB               | No limit | 3MB     | 100MB            | 6MB        |
-| **Streaming**          | Yes                 | Yes      | No      | Yes              | Yes        |
-| **Deferred data**      | Yes                 | Yes      | No      | Yes              | Yes        |
-| **Server-sent events** | No                  | Yes      | No      | No               | Yes        |
-| **Cache-control**      | Yes                 | Yes      | Yes     | Yes              | Yes        |
-| **Git-based deploys**  | Yes                 | No       | Yes     | Yes              | No         |
-| **Deploy previews**    | Yes                 | No       | Yes     | Yes              | No         |
-| **Websockets**         | No                  | Yes      | No      | Yes              | Yes        |
+|                        | Vercel              | Fastly   | Netlify | Cloudflare | AWS Lambda |
+| ---------------------- | ------------------- | -------- | ------- | ---------- | ---------- |
+| **Runtime**            | Node/V8 (per route) | WASM     | Node/V8 | V8         | Node       |
+| **Bundle size**        | 50MB                | 100MB    | 50MB    | 25MB       | 50MB       |
+| **Request body size**  | 4.5MB               | No limit | 3MB     | 100MB      | 6MB        |
+| **Streaming**          | Yes                 | Yes      | No      | Yes        | Yes        |
+| **Deferred data**      | Yes                 | Yes      | No      | Yes        | Yes        |
+| **Server-sent events** | No                  | Yes      | No      | Yes        | Yes        |
+| **Cache-control**      | Yes                 | Yes      | Yes     | Yes        | Yes        |
+| **Git-based deploys**  | Yes                 | No       | Yes     | Yes        | No         |
+| **Deploy previews**    | Yes                 | No       | Yes     | Yes        | No         |
+| **Websockets**         | No                  | Yes      | No      | Yes        | Yes        |
 
 ### Vercel
 
@@ -101,15 +101,7 @@ Netlify supports both Node (Netlify functions) and V8 (Netlify Edge Functions) r
 - Does not support streaming, so you can't use Server-Sent Events or `defer()`
 - Does not support websockets
 
-### Cloudflare Workers
-
-Cloudflare Workers is being rolled into Cloudflare Pages, so I'd consider this section officially deprecated and you can find more details in the [Cloudflare Pages](#cloudflare-pages) section.
-
-When you deploy a Remix app to Cloudflare workers, all of your pages will be compiled into a single worker script. Static files are also served from this worker, so you can't use Cloudflare's CDN for static assets.<SideNote> Pages does not have this limitation. </SideNote> and every request for a static asset (potentially dozens of requests for a single page) will count as a billable worker invokation.
-
-That said, requests are very cheap so this may not be a deal-breaker for you.
-
-### Cloudflare Pages
+### Cloudflare
 
 Cloudflare Pages is a hosting service, like Netlify or Vercel, but built on Cloudflare's network. You get a git based deploy workflow and preview deployments for different branches.
 
@@ -125,7 +117,7 @@ Cloudflare supports a request body size of 100MB for most apps, but if you need 
 
 Websockets also work on Cloudflare, which is not common for serverless platforms.
 
-- Pages only supports a bundle size of 5MB<SideNote> In comparison to Netlify's 50MB limit. </SideNote>.
+- Pages supports a bundle size of 25MB
 - Deployments have a 200ms startup time limit, which can be problematic as your app grows.<SideNote> If you hit a `No deployment available` error after your build and upload succeeds, this may be the cause.</SideNote>
 - Only cloud databases are supported, and Prisma requires using their Data Platform, which has a generous free tier but is a paid service.
 
