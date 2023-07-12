@@ -1,109 +1,69 @@
-// http://localhost:3000/content/remix-autosave-form/example
+// http://localhost:3000/content/remix-image-uploads/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { json } from "@remix-run/node"
-import { useFetcher, useLoaderData } from "@remix-run/react"
+import type { ActionArgs } from "@remix-run/node"
+import { redirect } from "@remix-run/node"
+import { Form } from "@remix-run/react"
 import db from "./db.server"
+import { Transition } from "@headlessui/react"
+import { randomUuid } from "../crypto"
+
 export async function action({ params, request }: ActionArgs) {
-  const formData = await request.formData()
-  const email = formData.get("email")
-  if (email) {
-    db.email = email.toString()
+  const id = randomUuid()
+
+  db[id] = {
+    email: null,
+    name: null,
   }
 
-  const name = formData.get("name")
-  if (name) {
-    db.name = name.toString()
-  }
-
-  return new Response(null, {
-    status: 200,
-  })
-}
-
-export async function loader({ request }: LoaderArgs) {
-  return json({
-    email: db.email,
-    name: db.name,
-  })
+  return redirect(`/content/remix-form-autosave/example/${id}`)
 }
 
 export default function Example() {
-  const { email, name } = useLoaderData<typeof loader>() || {}
-  const fetcher = useFetcher()
-
   return (
     <div className="mx-auto grid min-h-screen place-items-center">
-      <style>
-        {
-          /* css */ `
-        .bg-light {
-          backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
-          background-color: rgba(255, 255, 255, 0.5);
-        }`
-        }
-      </style>
-      <div className="text-center">
-        <h1 className="mb-6 text-3xl text-gray-800">Profile information</h1>
+      <Form method="post" action="?index" className="text-center">
+        <FadeIn className="delay-0">
+          <h1 className="mb-6 px-4 text-6xl font-bold text-gray-800">
+            Remix Form Autosave
+          </h1>
+        </FadeIn>
 
-        <p className="mb-8 max-w-prose text-lg text-gray-500">
-          Add your personal details. This form will save automatically.
-        </p>
+        <FadeIn className="delay-200">
+          <p className="mb-6 px-4 text-lg text-gray-600">
+            An autosaving form powered by conform
+          </p>
+        </FadeIn>
 
-        <fetcher.Form
-          method="post"
-          onBlur={(e) => fetcher.submit(e.currentTarget, { replace: true })}
-        >
-          <div className="bg-light  mx-auto mb-8 inline-flex w-full max-w-lg flex-col  gap-8 overflow-hidden rounded-lg border border-gray-100 text-left shadow-xl">
-            <div className="flex flex-col gap-4 px-8 py-6">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-2 block font-medium text-gray-600"
-                >
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  defaultValue={email || ""}
-                  className="block w-96 rounded border border-gray-300 px-4 py-3 focus:ring-1 focus:ring-indigo-600"
-                />
-              </div>
-
-              <div>
-                <label
-                  htmlFor="name"
-                  className="mb-2 block font-medium text-gray-600"
-                >
-                  Name
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  defaultValue={name || ""}
-                  className="block w-96 rounded border border-gray-300 px-4 py-3 focus:ring-1 focus:ring-indigo-600"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end border-t border-gray-100  px-4 py-3">
-              <button
-                type="submit"
-                className={`rounded px-4 py-2 text-sm text-white hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2 ${
-                  fetcher.state === "submitting"
-                    ? "bg-indigo-400"
-                    : "bg-indigo-600 hover:bg-indigo-500"
-                }`}
-              >
-                {fetcher.state === "submitting" ? "Saving…" : "Save"}
-              </button>
-            </div>
-          </div>
-        </fetcher.Form>
-      </div>
+        <FadeIn className="delay-300">
+          <button
+            type="submit"
+            className="min-w-[20ch] rounded bg-indigo-600 px-12 py-3 font-medium text-white hover:bg-indigo-500 focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2"
+          >
+            Get started
+          </button>
+        </FadeIn>
+      </Form>
     </div>
+  )
+}
+
+export function FadeIn({
+  className = "",
+  children,
+}: {
+  className?: string
+  children: React.ReactNode
+}) {
+  // className="transition-[opacity,transform] duration-[300ms,500ms]"
+  return (
+    <Transition
+      show={true}
+      appear
+      enter={`${className} transition-[opacity,transform] ease-out duration-[300ms,500ms]`}
+      enterFrom="opacity-0 -translate-y-1"
+      enterTo="opacity-100 translate-y-0"
+    >
+      {children}
+    </Transition>
   )
 }

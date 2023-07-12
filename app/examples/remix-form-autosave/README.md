@@ -1,11 +1,8 @@
-# Autosave form inputs on change or blur
+# Autosaving forms with Conform
 
-This is an example demonstrating forms that persist automatically
+This is an example demonstrating forms that persist automatically while using Conform
 
-- They useFetcher instead of submit so changes aren't lost on navigation
-
-TODO: update to use the [useDebounceFetcher](https://github.com/jacobparis-insiders/jacobparis.com/blob/main/app/examples/remix-image-uploads/useDebounceFetcher.ts) hook
-TODO: Add landing page + Get started button to create a custom ID so users changes don't conflict
+- They useDebounceFetcher to autosave on change or blur
 
 - Main blog post: https://www.jacobparis.com/content/remix-form-autosave
 - Live example: https://www.jacobparis.com/content/remix-form-autosave/example

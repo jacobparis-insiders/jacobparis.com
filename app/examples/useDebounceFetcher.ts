@@ -24,6 +24,22 @@ type WithRequiredProperty<Type, Key extends keyof Type> = Type & {
 
 /**
  * @tutorial https://www.jacobparis.com/content/use-debounce-fetcher
+ * 
+ * @example
+ * return {
+ *  onChange(e: React.ChangeEvent<HTMLInputElement>) {
+ *    fetcher.debounceSubmit(e.currentTarget.form, {
+ *      replace: true,
+ *      debounceTimeout: 500,
+ *    })
+ *  },
+ *  onBlur(e: React.FocusEvent<HTMLInputElement>) {
+ *    fetcher.debounceSubmit(e.currentTarget.form, {
+ *      replace: true,
+ *      debounceTimeout: 0,
+ *    })
+ *  }
+ *}
  */
 export function useDebounceFetcher<T = any>() {
   const timeoutRef = useRef<NodeJS.Timeout>()
