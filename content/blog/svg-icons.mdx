@@ -10,7 +10,7 @@ There are many ways to use svg icons in a React app. The most intuitive, and als
 
 I won't go into all the reasons why, as [other folks](https://twitter.com/_developit/status/1382838799420514317) have already done a great job of explaining it, but in general it's inefficient and increases the size of your bundle dramaticallly.
 
-The best way is to use an svg spritesheet.
+**The best way to use icons is an svg spritesheet.**
 
 A spritesheet is a single image that contains many sprites (icons in our case). This is one of the oldest tactics to optimize image loading. Instead of loading many small images, we load a single image and use code to display only the part we need.
 
@@ -37,7 +37,7 @@ Websites can use the same tactic to store many icons in a single svg file. This 
 </svg>
 ```
 
-In this article, we will build a script that compiles a folder of svg icons into a single svg spritesheet. We will also build a React component that displays a specific icon by referencing its id, with full type safe autocomplete for the available icons.
+In this article, we will build a script that compiles a folder of svg icons into a single svg spritesheet. **We will also build a React component that displays a specific icon by name with full type safe autocomplete for the available icons.**
 
 ## Create a folder for icons
 
