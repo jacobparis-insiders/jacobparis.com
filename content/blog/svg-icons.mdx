@@ -1,0 +1,301 @@
+---
+title: Use svg sprite icons in React
+description: How to use svg sprite icons in a React app. Create a single svg file that contains all the icons and use a React component to display a specific icon by referencing its id. Use Sly CLI to download icons from the command line.
+tags: Remix
+published: true
+timestamp: "2023-07-22"
+---
+
+There are many ways to use svg icons in a React app. The most intuitive, and also the worst, is to write the svg code directly in a component as JSX.
+
+I won't go into all the reasons why, as [other folks](https://twitter.com/_developit/status/1382838799420514317) have already done a great job of explaining it, but in general it's inefficient and increases the size of your bundle dramaticallly.
+
+The best way is to use an svg spritesheet.
+
+A spritesheet is a single image that contains many sprites (icons in our case). This is one of the oldest tactics to optimize image loading. Instead of loading many small images, we load a single image and use code to display only the part we need.
+
+Video games have used spritesheets for decades to cram each frame of an animation into a single memory efficient resource.
+
+![Mario walking animation](https://i.stack.imgur.com/ll5wa.png)
+
+Websites can use the same tactic to store many icons in a single svg file. This is called an svg spritesheet. Each icon sprite is stored as a `<symbol>` element inside the svg file. We can display a specific icon by using the `<use>` element and referencing the icon's id.
+
+```html
+<svg>
+  <defs>
+    <symbol id="icon1" viewBox="0 0 24 24">
+      <path d="..." />
+    </symbol>
+    <symbol id="icon2" viewBox="0 0 24 24">
+      <path d="..." />
+    </symbol>
+  </defs>
+</svg>
+
+<svg>
+  <use href="#icon1" />
+</svg>
+```
+
+In this article, we will build a script that compiles a folder of svg icons into a single svg spritesheet. We will also build a React component that displays a specific icon by referencing its id, with full type safe autocomplete for the available icons.
+
+## Create a folder for icons
+
+Create a folder called `svg-icons` in the root of your project and add some SVGs.
+
+You can use my [Sly CLI tool to download icons](https://sly-cli.fly.dev/) from the command line. This command will add the camera and card-stack icons from Radix UI to the `svg-icons` folder.
+
+```bash
+npx @sly-cli/sly add @radix-ui/icons camera card-stack
+```
+
+To browse all the available icons, run `npx @sly-cli/sly add` and follow the interactive menu. If you install Sly as a dev dependency, you can use the shorter `npx sly add` command.
+
+## Create a list of icons in your app
+
+The first step is to read the icons folder and get a list of all the svg files. There are a few ways to do this, such as by recursively walking through the directory and reading the filenames, but I prefer to use the `glob` package.
+
+Create a file called `build-icons.ts`
+
+```ts
+import { promises as fs } from "node:fs"
+import * as path from "node:path"
+import { glob } from "glob"
+import { parse } from "node-html-parser"
+
+const cwd = process.cwd()
+const inputDir = path.join(cwd, "svg-icons")
+const inputDirRelative = path.relative(cwd, inputDir)
+const outputDir = path.join(cwd, "app", "components")
+const outputDirRelative = path.relative(cwd, outputDir)
+
+const files = glob.sync("**/*.svg", {
+  cwd: inputDir,
+})
+
+if (files.length === 0) {
+  console.log(`No SVG files found in ${inputDirRelative}`)
+  process.exit(0)
+}
+
+// The relative paths are just for cleaner logs
+console.log(`Generating sprite for ${inputDirRelative}`)
+```
+
+## Compile icons into a single spritesheet
+
+Instead of many distinct SVGs, each icon will become a `<symbol>` element inside a single SVG file.
+
+SVGs often have some extra attributes that we don't need on our symbol, such as `xmlns` and `version`. We can remove them with the `node-html-parser` package.
+
+We'll also remove the width and height attributes from the root `<svg>` element so that we can control the size of the icon with CSS.
+
+```ts
+await generateSvgSprite({
+  files,
+  inputDir,
+  outputPath: path.join(outputDir, "icon.svg"),
+})
+
+/**
+ * Creates a single SVG file that contains all the icons
+ */
+async function generateSvgSprite({
+  files,
+  inputDir,
+  outputPath,
+}: {
+  files: string[]
+  inputDir: string
+  outputPath: string
+}) {
+  // Each SVG becomes a symbol and we wrap them all in a single SVG
+  const symbols = await Promise.all(
+    files.map(async (file) => {
+      const input = await fs.readFile(
+        path.join(inputDir, file),
+        "utf8",
+      )
+      const root = parse(input)
+
+      const svg = root.querySelector("svg")
+      if (!svg) throw new Error("No SVG element found")
+
+      svg.tagName = "symbol"
+      svg.setAttribute("id", file.replace(/\.svg$/, ""))
+      svg.removeAttribute("xmlns")
+      svg.removeAttribute("xmlns:xlink")
+      svg.removeAttribute("version")
+      svg.removeAttribute("width")
+      svg.removeAttribute("height")
+
+      return root.toString().trim()
+    }),
+  )
+
+  const output = [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="0" height="0">`,
+    `<defs>`, // for semantics: https://developer.mozilla.org/en-US/docs/Web/SVG/Element/defs
+    ...symbols,
+    `</defs>`,
+    `</svg>`,
+  ].join("\n")
+
+  return fs.writeFile(outputPath, output, "utf8")
+}
+```
+
+If you run this script now, it will create a single `icon.svg` file in the `app/components` folder.
+
+## Create a React component that displays an icon
+
+There are two ways to host an asset in a Remix app
+
+- Place it in the `/public` folder and it will be served as a static asset by the server
+- Or import it as a module and it will be hashed and fingerprinted and served from the `/public/build` folder
+
+I prefer the second option because we can cache it indefinitely. Every time we add new icons or change the existing ones, Remix will serve it with a different hash and the users browsers will download the new version.
+
+So now we can create a React component called `Icon.tsx` and import the svg file to use it as the `href` of the `<use>` element.
+
+To choose a specific icon, we add `#id` to the end of the `href` attribute. The `id` is the name of the file without the `.svg` extension, which was set in the `generateSvgSprite` function.
+
+```tsx
+import { type SVGProps } from "react"
+import spriteHref from "~/app/components/icon.svg"
+
+export function Icon({
+  name,
+  ...props
+}: SVGProps<SVGSVGElement> & {
+  name: string
+}) {
+  return (
+    <svg {...props}>
+      <use href={`${spriteHref}#${name}`} />
+    </svg>
+  )
+}
+```
+
+You can use the component like this
+
+```xml
+<Icon name="camera" className="w-5 h-5" />
+```
+
+## Create a JSON file with the list of icons
+
+We can improve the developer experience of the Icon by providing a list of all available icons to the type of the `name` attribute. That will allow your editor to autocomplete the icon names, and throw errors if you try to use an icon that doesn't exist.
+
+The JSON file will look like this. I would prefer to use an array here, but typescript will read the array as an array of strings and then we don't get the useful type names.
+
+```json
+{
+  "iconNames": {
+    "camera": true,
+    "card-stack": true
+  }
+}
+```
+
+Import the JSON file and use the type of the `iconNames` property to type the `name` attribute of the `Icon` component.
+
+```tsx
+import type { iconNames } from "./icons.json"
+type IconName = keyof typeof iconNames
+//    ^ "camera" | "card-stack"
+
+// and update the Icon component type to use it
+SVGProps<SVGSVGElement> & {
+  name: IconName
+}
+```
+
+## Generate the JSON file automatically
+
+We can generate the JSON file automatically by reading the list of files in the `svg-icons` folder and using the filename as the key.
+
+Go back to the `build-icons.ts` file and continue the script from right after the `generateSvgSprite` function.
+
+We already have the list of files, so we can just map them into the format we want and use JSON.stringify() to convert it to JSON.
+
+```ts
+await generateJson({
+  files,
+  outputPath: path.join(outputDir, "icons.json"),
+})
+
+async function generateJson({
+  files,
+  outputPath,
+}: {
+  files: string[]
+  outputPath: string
+}) {
+  const output = {
+    iconNames: Object.fromEntries(
+      files.map((file) => {
+        // We can only get type inference on the keys of a json file
+        return [path.basename(file, ".svg"), true]
+      }),
+    ),
+  }
+
+  const json = JSON.stringify(output, null, 2)
+
+  return fs.writeFile(outputPath, json, "utf8")
+}
+```
+
+## Run the script automatically
+
+Add a `build:icons` script to your package.json file so you can run it with `npm run build:icons`.
+
+```json
+{
+  "scripts": {
+    "build:icons": "tsx ./build-icons.ts"
+  }
+}
+```
+
+If you're using [Sly CLI](https://sly-cli.fly.dev/), set the postinstall script in your `sly.json` file so that it runs automatically when you add new icons.
+
+```json
+{
+  "$schema": "https://sly-cli.fly.dev/registry/config.json",
+  "libraries": [
+    {
+      "name": "@radix-ui/icons",
+      "directory": "./svg-icons",
+      "postinstall": ["npm", "run", "build:icons"],
+      "transformers": ["transform-icon.ts"]
+    }
+  ]
+}
+```
+
+Try using the Icon component with an icon you don't have yet, like `arrow-left`. You should get an error in your editor.
+
+```xml
+<Icon name="arrow-left" className="w-5 h-5" />
+```
+
+Then run `npx sly add @radix-ui/icons arrow-left` and the error should go away instantly as the script runs and adds the new icon to the spritesheet.
+
+## Preload svg sprite
+
+The last step is optional, but if you preload the svg sprite as a resource, it will start downloading immediately and the browser will have it ready by the time you need to display an icon.
+
+```jsx
+import iconHref from "~/icon.svg"
+
+export const links: LinksFunction = () => {
+  return [
+    // Preload svg sprite as a resource to avoid render blocking
+    { rel: "preload", href: iconHref, as: "image", as="image/svg+xml"},
+  ]
+}
+```
