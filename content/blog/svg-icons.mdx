@@ -289,13 +289,15 @@ Then run `npx sly add @radix-ui/icons arrow-left` and the error should go away i
 
 The last step is optional, but if you preload the svg sprite as a resource, it will start downloading immediately and the browser will have it ready by the time you need to display an icon.
 
+In Remix, you can do this by adding a `links` function to your route file.
+
 ```jsx
 import iconHref from "~/icon.svg"
 
 export const links: LinksFunction = () => {
   return [
     // Preload svg sprite as a resource to avoid render blocking
-    { rel: "preload", href: iconHref, as: "image", as="image/svg+xml"},
+    { rel: "preload", href: iconHref, as: "image", type="image/svg+xml"},
   ]
 }
 ```
