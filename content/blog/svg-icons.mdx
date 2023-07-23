@@ -297,7 +297,12 @@ import iconHref from "~/icon.svg"
 export const links: LinksFunction = () => {
   return [
     // Preload svg sprite as a resource to avoid render blocking
-    { rel: "preload", href: iconHref, as: "image", type="image/svg+xml"},
+    {
+      rel: "preload",
+      href: iconHref,
+      as: "image",
+      type: "image/svg+xml",
+    },
   ]
 }
 ```
