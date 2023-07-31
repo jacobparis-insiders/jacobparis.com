@@ -1,0 +1,96 @@
+---
+title: Set up a server-side cache for your backend
+description: Set up a simple in-memory cache to reduce load on your API. Use lru-cache and cachified to make it easy.
+tags: Advanced
+published: true
+timestamp: "2023-07-24"
+---
+
+Caching data server-side is a great way to improve performance and reduce load on your API.
+
+There are many kinds of caches you can use, and as long as they implement the web-standard Cache interface they will be interchangeable.
+
+I'm fond of [lru-cache](https://www.npmjs.com/package/lru-cache) which is a simple in-memory cache that is bound by space, so when it fills up, it will drop the least recently used items.
+
+Install a cache of your choice along with [cachified](https://www.npmjs.com/package/cachified), which will make it easier to use in your application code.
+
+```sh
+npm install lru-cache cachified
+```
+
+Then create a new file `cache.server.ts`
+
+Configure your cache and export an augmented cachified function that uses your cache by default.
+
+```ts
+import { LRUCache } from "lru-cache"
+import type {
+  CacheEntry,
+  CachifiedOptions,
+} from "cachified"
+import {
+  lruCacheAdapter,
+  cachified as baseCachified,
+} from "cachified"
+
+const lru = new LRUCache<string, CacheEntry>({ max: 1000 })
+
+export function cachified<Value>(
+  options: Omit<CachifiedOptions<Value>, "cache">,
+) {
+  return baseCachified({
+    cache: lruCacheAdapter(lru),
+    ...options,
+  })
+}
+```
+
+## Using the cache
+
+You can cache any promise. We'll use a simple fetch function as an example, but if you have an expensive database operation, you can cache that too in the same way.
+
+With this simple loader, every request to it will trigger a new request to the API.
+
+```ts
+export async function loader() {
+  const data = await fetch(process.env.API_URL).then(
+    (response) => response.json(),
+  )
+
+  return json(data)
+}
+```
+
+Almost all data is read more often than it is written, so if we know it's unlikely to have updated (or if we don't care about up to the second accuracy), we can cache the result of the fetch.
+
+Using cachified, the promise you're trying to cache becomes the `getFreshValue` method, and then you just need to tell it to use your cache and give it a key<SideNote>The key doesn't have to be a URL, just something unique to the request. If you cachify two things with the same key, they'll share the same cache entry.</SideNote> to use.
+
+```ts
+import { cachified } from "./cache.server.js"
+
+export async function loader() {
+  const data = await cachified({
+    key: process.env.API_URL,
+    ttl: 1000 * 60 * 60 * 24,
+    async getFreshValue() {
+      console.info(`  - MISS ${process.env.API_URL}`)
+
+      return fetch(process.env.API_URL).then((response) =>
+        response.json(),
+      )
+    },
+  })
+
+  return json(data)
+}
+```
+
+Now, the first request to the page will trigger a request to the API, but subsequent requests will use the cached value.
+
+```sh
+GET /registry.json 200 - - 1790.886 ms
+  - MISS registry.json
+GET /registry.json 200 - - 1.727 ms
+GET /registry.json 200 - - 0.821 ms
+GET /registry.json 200 - - 1.068 ms
+```
