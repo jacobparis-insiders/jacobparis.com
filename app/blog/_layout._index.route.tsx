@@ -6,6 +6,7 @@ import { json } from "@remix-run/node"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
 import FeaturedBlogItem from "~/components/FeaturedBlogItem"
 import BlogCard from "~/components/BlogCard"
+import { MoultonMatrix } from "./MoultonMatrix"
 
 export { mergeHeaders as headers } from "~/utils/misc"
 
@@ -45,25 +46,46 @@ export default function Index() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
 
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
-        <Link to="https://github.com/jacobparis-insiders/" className="group">
-          <aside className="mb-6 flex items-center gap-x-4 rounded-2xl bg-gray-900 px-3 py-3 text-white opacity-90 transition-opacity  group-hover:opacity-60">
-            <img
-              src="/images/jacob.png"
-              className="w-12 rounded-lg shadow"
-              alt="Professional headshot"
+        <div className=" relative block w-full overflow-hidden rounded-lg bg-gray-900 text-neutral-100">
+          <Link
+            prefetch="intent"
+            to="https://www.readmoulton.com/"
+            className="group block p-8"
+          >
+            <h3
+              className="mb-4 text-2xl font-medium tracking-tight"
+              style={{ wordBreak: "break-word" }}
+            >
+              <span className="border-blue-300 font-bold text-blue-400 group-hover:border-b-2 group-hover:text-blue-300">
+                <img
+                  src="/images/moulton.svg"
+                  alt="Moulton logo"
+                  className="mr-1 inline h-8 w-8 align-sub"
+                />{" "}
+                Moulton
+              </span>
+              , a Remix newsletter
+            </h3>
+
+            <p className="opacity-80">
+              For the latest Remix news, tips, tutorials, libraries, and
+              everything else happening in the Remix community, subscribe to the
+              Moulton newsletter.
+            </p>
+          </Link>
+
+          <div className="relative" aria-hidden>
+            <div
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle at center, transparent 0, rgb(16,24,39) 120%)",
+              }}
+              className="pointer-events-none absolute inset-0 z-10"
             />
-            <div>
-              <p className="font-medium">
-                Hey there! I've open sourced my site and examples to all free
-                newsletter subscribers.
-              </p>
-              <p className="opacity-80">
-                Join the mailing list and I will send you an invite to the
-                repository.{" "}
-              </p>
-            </div>
-          </aside>
-        </Link>
+
+            <MoultonMatrix />
+          </div>
+        </div>
 
         <div className="mb-8 text-center">
           <div className="relative">
