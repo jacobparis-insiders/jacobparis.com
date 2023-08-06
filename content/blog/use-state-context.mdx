@@ -1,0 +1,76 @@
+---
+title: Use createStateContext to share a useState hook
+description:.
+tags: Basics
+published: true
+timestamp: "2023-08-06"
+---
+
+Despite so many folks touting React's useContext as a state management solution, it really doesn't have anything to do with state management at all.
+
+React Context is about dependency injection. You provide a value to a wrapper component, and then any downstream component can use that value via a useContext hook.
+
+Most of the time I use Context I also want to provide a way to update the value from the child components. I like the useState API, but it needs to be shareable
+
+I've built a helper function called `createStateContext` that takes the same types as useState and returns a tuple of the Context and a hook to use it.
+
+Consider a CheckboxGroup component, which needs to keep track of which checkboxes are checked.
+
+```tsx
+const [CheckboxContext, useCheckboxContext] =
+  createStateContext<string[]>()
+
+// optional for better error messages
+CheckboxContext.displayName = "CheckboxContext"
+
+function CheckboxGroup({ children }) {
+  const state = useState<string[]>([])
+
+  return (
+    <CheckboxContext.Provider value={state}>
+      {children}
+    </CheckboxContext.Provider>
+  )
+}
+```
+
+Any child component can use the `useCheckboxContext` hook to get a state and setState function that is shared with all its siblings.
+
+```tsx
+const [checkboxes, setCheckboxes] = useCheckboxContext()
+```
+
+```tsx
+<CheckboxGroup>
+  <Checkbox value="foo" />
+  <Checkbox value="bar" />
+  <Checkbox value="baz" />
+</CheckboxGroup>
+```
+
+## The hook
+
+```tsx
+import React, { useContext } from "react"
+
+export function createStateContext<T>() {
+  const StateContext = React.createContext<
+    | undefined
+    | Readonly<[T, React.Dispatch<React.SetStateAction<T>>]>
+  >(undefined)
+
+  function useStateContext() {
+    const tuple = useContext(StateContext)
+
+    if (tuple === undefined) {
+      throw new Error(
+        `use${StateContext.displayName} must be used within a ${StateContext.displayName}Provider`,
+      )
+    }
+
+    return tuple
+  }
+
+  return [StateContext, useStateContext] as const
+}
+```
