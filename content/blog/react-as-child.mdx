@@ -1,0 +1,231 @@
+---
+title: Implement Radix's asChild pattern in React
+description: Use the asChild pattern for composition. Get the right types on each component. Merge props together. Use tailwind-merge for classnames.
+tags: Advanced
+published: true
+timestamp: "2023-08-19"
+---
+
+It's really hard to support all the possible options and components that a developer might want to use in a library.
+
+One way to solve this is to use the `as` prop pattern. This pattern allows the developer to pass in the name of a custom component to be rendered in place of the default component.<SideNote> This is a common pattern in libraries like [Chakra UI](https://chakra-ui.com/docs/styled-system/style-props#the-as-prop) and [Reakit](https://reakit.io/docs/composition/#as-prop).</SideNote>
+
+```xml
+<Button as={Link} />
+```
+
+But as soon as you want to allow more customization, for example, to pass in props to that custom component, the `as` prop falls apart. With enough advanced typescript, you can make your component also accept the props of the custom component, but it's hard to set that up and it's slow at runtime.<SideNote> In VS Code, the intellisense showing the list of available props as you type can be exceptionally slow, as shown in this [tweet from @jjenzz](https://twitter.com/jjenzz/status/1499301750158893057)</SideNote>
+
+## The asChild pattern
+
+The asChild pattern was popularized (invented?) by Radix. Rather than setting an `as` prop to the component name, you set `asChild` to true and pass the custom component as a child.
+
+```xml
+<Button asChild>
+  <a href="https://www.jacobparis.com/" />
+</Button>
+```
+
+This is immediately more powerful, and the basic implementation is fairly easy to understand.
+
+- when `asChild` is false, render a default component
+- when `asChild` is true, render the child
+
+Most of the logic here is in figuring out how to render the first child, so we will make a `Slot` component to handle that.
+
+```tsx
+function Button({ asChild, ...props }: any) {
+  const Comp = asChild ? Slot : "button"
+  return <Comp {...props} />
+}
+
+function Slot({
+  children,
+}: {
+  children?: React.ReactNode
+}) {
+  if (React.Children.count(children) > 1) {
+    throw new Error("Only one child allowed")
+  }
+
+  if (React.isValidElement(children)) {
+    return React.cloneElement(children)
+  }
+
+  return null
+}
+```
+
+## Well typed props
+
+Since the default component is rendered as a button, we should accept all the props that a button would accept as long as `asChild` is false. If `asChild` is true, we can expect that the user will pass the props to the child themselves.
+
+The type of this component starts to branch based on the value of `asChild`, and whenever that happens it's usually a good sign to encapsulate that logic in its own type.
+
+So we'll make an `AsChildProps` type that will either be the default props or the props for a child component, and then use that to make one specific to this Button.
+
+```tsx
+type AsChildProps<DefaultElementProps> =
+  | ({ asChild?: false } & DefaultElementProps)
+  | { asChild: true; children: React.ReactNode }
+
+type ButtonProps = AsChildProps<
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+>
+
+function Button({ asChild, ...props }: ButtonProps) {
+  const Comp = asChild ? Slot : "button"
+  return <Comp {...props} />
+}
+```
+
+## Merging props together
+
+Whether we're rendering as the child or the default component, we're almost always still going to have some props that are common to both. Components are supposed to do things, after all.
+
+Start by allowing the Slot to accept all HTML Element props. If your project demands something different, feel free to change this.
+
+The React.cloneElement function allows us to pass in a second argument for props, and we can spread the props together.
+
+```tsx
+function Slot({
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLElement> & {
+  children?: React.ReactNode
+}) {
+  if (React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      ...props,
+      ...children.props,
+    })
+  }
+
+  if (React.Children.count(children) > 1) {
+    React.Children.only(null)
+  }
+
+  return null
+}
+```
+
+As a general rule, props specified on the child should override the parent, but you might not want to follow that rule for every prop. Style and className props in particular are often merged together.
+
+With style, it's as simple as spreading the style objects together.
+
+```tsx
+return React.cloneElement(children, {
+  ...props,
+  ...children.props,
+  style: {
+    ...props.style,
+    ...children.props.style,
+  },
+})
+```
+
+Classname **could** be handled by simple concatenating the strings together, but you might end up with duplicate classes. If you're using Tailwind, even distinct classes can affect the same property, so merging needs to be done carefully.
+
+The [tailwind-merge](https://github.com/dcastil/tailwind-merge) library has a function that will merge two class strings together **without** causing style conflicts, so that's my recommendation here.
+
+```tsx
+import { twMerge } from "tailwind-merge"
+
+return React.cloneElement(children, {
+  ...props,
+  ...children.props,
+  style: {
+    ...props.style,
+    ...children.props.style,
+  },
+  className: twMerge(
+    props.className,
+    children.props.className,
+  ),
+})
+```
+
+Add style and className props to the Button as an intersection type, so that they will work whether asChild is true or false.
+
+```tsx
+type ButtonProps = AsChildProps<
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+> & {
+  style?: React.CSSProperties
+  className?: string
+}
+
+function Button({ asChild, ...props }: ButtonProps) {
+  const Comp = asChild ? Slot : "button"
+  return <Comp {...props} />
+}
+```
+
+And you should now be able to pass in style and className props to the Button, and they will be merged with the child's props.
+
+```tsx
+<Button asChild className="text-blue-700">
+  <a
+    href="https://www.jacobparis.com/"
+    className="hover:text-blue-500 hover:underline"
+  />
+</Button>
+```
+
+## Code example
+
+Here's the final example code for the Button component.
+
+```tsx
+import { Slot, type AsChildProps } from "./slot.tsx"
+
+type ButtonProps = AsChildProps<
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+> & {
+  style?: React.CSSProperties
+  className?: string
+}
+
+function Button({ asChild, ...props }: ButtonProps) {
+  const Comp = asChild ? Slot : "button"
+  return <Comp {...props} />
+}
+```
+
+And the full snippet for the `slot.tsx` component.
+
+```tsx
+import { twMerge } from "tailwind-merge"
+
+export type AsChildProps<DefaultElementProps> =
+  | ({ asChild?: false } & DefaultElementProps)
+  | { asChild: true; children: React.ReactNode }
+
+function Slot({
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLElement> & {
+  children?: React.ReactNode
+}) {
+  if (React.isValidElement(children)) {
+    return React.cloneElement(children, {
+      ...props,
+      ...children.props,
+      style: {
+        ...props.style,
+        ...children.props.style,
+      },
+      className: twMerge(
+        props.className,
+        children.props.className,
+      ),
+    })
+  }
+
+  if (React.Children.count(children) > 1) {
+    React.Children.only(null)
+  }
+
+  return null
+}
+```
