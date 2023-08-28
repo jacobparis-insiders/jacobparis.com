@@ -1,0 +1,130 @@
+---
+title: Access Remix loader data from any component
+description: Use the useRouteLoaderData hook to access loader data from any component. Export a custom hook to make it easier to use. Use useMatches to find the ID of the route you want.
+tags: Remix
+published: true
+timestamp: "2023-08-28"
+---
+
+The typical method of accessing loader data is the `useLoaderData` hook, which will get the data for the nearest loader. This is implemented with React Context, so you can use it in components too.<SideNote> One of the most common mistakes new Remix devs make is to try to try to rebuild this themselves without realizing it already works. </SideNote>
+
+There's one footgun here: if you try to reuse the component in a different route, it's going to get that route's loader data instead.
+
+To fix this, Remix provides a `useRouteLoaderData` hook that lets you get the loader data for any active route, by passing its ID. It's important to note that this does not cause any new loader to run, it just gets data if it's available.
+
+## Access root loader data from anywhere
+
+The root route is always active, so it's a good place to store data that you want to be available everywhere.
+
+You can use this to access the root loader data from any route, but if you want type safety, you need to import the type of the root loader and pass it as a type parameter to `useRouteLoaderData`.
+
+```tsx
+// some-other-route.tsx
+import type { loader as rootLoader } from "./root.tsx"
+
+export default function SomeOtherRoute() {
+  const rootLoaderData =
+    useRouteLoaderData<typeof rootLoader>("root")
+  // …
+}
+```
+
+I'm not a big fan of that approach, because I have to import the loader (usually with an alias) and also write down the route ID, every time I use it. While the ID of the root is always `"root"`, other routes have different IDs. In pratice, t's really easy to end up with mismatches between the ID and the loader type.
+
+Instead of doing that, I prefer to create a custom hook inside my root.tsx file, where the loader is already available, and export that to be used by other files.
+
+```tsx
+// root.tsx
+export async function loader() { … }
+
+export function useRootLoaderData() {
+  return useRouteLoaderData<typeof loader>("root")
+}
+```
+
+Then I can use it anywhere like this, which feels much more portable.
+
+```tsx
+// some-other-route.tsx
+import { useRootLoaderData } from "./root.tsx"
+
+export default function SomeOtherRoute() {
+  const rootLoaderData = useRootLoaderData()
+  // …
+}
+```
+
+## Find the ID of the route you want
+
+Depending on the route convention you use, the ID for a particular route could be anything. Rather than trying to memorize the pattern or digging through the manifest, I like to use the `useMatches()` hook.
+
+Since useMatches returns an array of all active routes, it also forms a comprehensive list of which routes useRouteLoaderData will work with on a given page.
+
+```tsx
+// some-other-route.tsx
+import { useRootLoaderData } from "./root.tsx"
+
+export default function SomeOtherRoute() {
+  // temporary just to discover the route IDs
+  const matches = useMatches()
+  console.log(matches)
+  // [
+  //   {
+  //     id: 'root',
+  //     pathname: '/',
+  //     data: [Object],
+  //   },
+  //   {
+  //     id: '_layout',
+  //     pathname: '/',
+  //     data: [Object],
+  //   },
+  //   {
+  //     id: '_layout.content',
+  //     pathname: '/content',
+  //     data: null,
+  //   },
+  //   {
+  //     id: '_layout.content.$slug',
+  //     pathname: '/content/remix-route-loader-data',
+  //     data: [Object],
+  //   }
+  // ]
+}
+```
+
+The first route in useMatches is always the root, and the last route is always the current route. When you're doing this, you're usually looking for the ones in the middle. In this case, you can see that the ID for the layout route is `_layout`, so that's what I'll use.
+
+Once you know the ID, you can remove this code.
+
+The data will be null if the route doesn't have a loader, but undefined if you try to access a route that's not active. This is almost always a developer error (using a component in the wrong place) so it's a good idea to throw an error if you get undefined.<SideNote> You may recognize this pattern from React useContext, where it's common to throw an error if it's used outside of its provider. Remix uses context for this, so it's the exact same idea. </SideNote>
+
+## Non-root route loader data
+
+```tsx
+// routes/_layout.tsx
+export async function loader() { … }
+
+export function useLayoutLoaderData() {
+  const data = useRouteLoaderData<typeof loader>("_layout")
+
+  if (data === undefined) {
+    throw new Error(
+      "useLayoutLoaderData must be used within the _layout route or its children",
+    )
+  }
+
+  return data
+}
+```
+
+## Root route loader data
+
+```tsx
+// root.tsx
+export async function loader() { … }
+
+export function useRootLoaderData() {
+  return useRouteLoaderData<typeof loader>("root")
+}
+```
