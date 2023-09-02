@@ -21,7 +21,7 @@ export default function Index() {
                 </div>
                 <div className="relative z-10 flex-1 font-medium">
                   <div className="flex items-center gap-x-8">
-                    <div className="flex w-full items-center justify-between md:w-auto">
+                    <div className="flex items-center md:w-auto">
                       <span className="sr-only">Moulton</span>
                       <img
                         className="h-8 w-auto sm:h-10"
