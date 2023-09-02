@@ -53,6 +53,28 @@ export default function Example() {
   )
 }
 
+export function SubmenuExample() {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="relative z-10 py-4  text-base">
+      <button
+        onClick={() => setOpen((open) => !open)}
+        className="inline-flex h-10 min-w-[10rem] items-center justify-center rounded-md border border-neutral-200/60 bg-neutral-100 px-4 py-2 text-sm font-medium text-neutral-900 ring-offset-white transition-colors hover:bg-neutral-100/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 "
+      >
+        {open ? "Close" : "Open"} menu
+      </button>
+      {open ? (
+        <div className="relative">
+          <div className="absolute left-0 top-2 flex min-w-[10rem] flex-col rounded-md border  border-neutral-200/60 bg-neutral-100  py-2">
+            <Menu on={(item) => console.log(item)} />
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 function Menu({ on }: { on: (value: string) => void }) {
   return (
     <MenuProvider>
@@ -101,7 +123,7 @@ function Menu({ on }: { on: (value: string) => void }) {
 
 export function SubmenuTrigger({ children }: { children: React.ReactNode }) {
   return (
-    <SubmenuTriggerCore className="flex justify-between px-4 py-2 text-left hover:bg-red-200">
+    <SubmenuTriggerCore className="flex justify-between px-4 py-2 text-left hover:bg-neutral-200">
       <span>{children}</span>
       <span>▶</span>
     </SubmenuTriggerCore>
@@ -117,7 +139,7 @@ export function ButtonItem({
 }) {
   return (
     <ButtonItemCore
-      className="px-4 py-2 text-left hover:bg-red-200"
+      className="px-4 py-2 text-left hover:bg-neutral-200"
       onSelect={onSelect}
     >
       {children}

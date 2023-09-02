@@ -1,7 +1,6 @@
 // http://localhost:3000/
 
 import { Link, useLoaderData } from "@remix-run/react"
-import type { LoaderFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
 import FeaturedBlogItem from "~/components/FeaturedBlogItem"
@@ -14,7 +13,7 @@ function sample<T>(array: Array<T>) {
   return array[Math.floor(Math.random() * array.length)]
 }
 
-export const loader: LoaderFunction = async () => {
+export async function loader() {
   const greeting = sample(["Hi, I'm ", "Hey, I'm ", "It's ", "Hey there, I'm "])
 
   return json({ greeting })
@@ -64,7 +63,7 @@ export default function Index() {
                 />{" "}
                 Moulton
               </span>
-              , a Remix newsletter
+              , the Remix Community newsletter
             </h3>
 
             <p className="opacity-80">

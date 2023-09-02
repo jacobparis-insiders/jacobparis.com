@@ -19,7 +19,6 @@ import { SideNote } from "~/components/SideNote"
 import { loadMdx } from "~/utils/loadMdx"
 import { ButtonLink } from "~/components/ButtonLink"
 import { getMdxListItems } from "~/utils/mdx.server"
-import { safeEncode } from "~/utils/misc"
 import { getServerTiming } from "~/utils/timing.server"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall"
 import {
@@ -27,6 +26,7 @@ import {
   FileExamples,
   LocalStorageExamples,
 } from "~/examples/remix-progressive-client-only/examples"
+import { SubmenuExample } from "~/examples/react-headless-submenus/content.react-headless-submenus.example.route"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export const links: LinksFunction = () => {
@@ -137,7 +137,6 @@ export function CatchBoundary() {
 export default function Blog() {
   // videos are wrapped in a div with class="mx-auto max-w-full"
   const data = useLoaderData<MdxComponent>()
-
   const Component = React.useMemo(() => getMDXComponent(data.code), [data])
 
   const url = `https://www.jacobparis.com/content/${data.slug}`
@@ -167,6 +166,7 @@ export default function Blog() {
               LocalStorageExamples,
               FileExamples,
               DateExamples,
+              SubmenuExample,
               em: Highlight,
               pre: CodeBlock,
             }}
