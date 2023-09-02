@@ -1,0 +1,229 @@
+---
+title: Build your own headless UI components
+description: Write logical components that don't prescribe styles. Avoid manipulating children. Use React Context to provide state to nested components.
+tags: Advanced
+published: true
+timestamp: "2023-08-31"
+---
+
+Many of the most popular UI libraries these days are full of headless components. They provide the building blocks to create your own UI components, but don't provide any styling themselves.
+
+This is great for two main reasons
+
+- The library can take care of the complicated logic, such as positioning, keyboard control, focus management, and accessibility.
+- You can style the component however you want, without having to override any styles.<SideNote> The days of using `!important` to undo Bootstrap's default styles are finally over! </SideNote>
+
+While you can use Radix, React Aria, or Headless UI and take full advantage of the components they provide, you could also use the same headless techniques when designing reusable components for your own projects.
+
+Let's look at a custom menu for formatting text in a rich text editor. There should be a few buttons for bold, italic, underline, and strikethrough. Then there should be a few submenus for aligning text, setting styles, and setting spacing.
+
+If the user wants to add a divider or label anywhere, they should be able to do that too.
+
+```tsx
+function Menu() {
+  return (
+    <MenuProvider>
+      <ButtonItem>Bold</ButtonItem>
+      <ButtonItem>Italic</ButtonItem>
+      <ButtonItem>Underline</ButtonItem>
+      <ButtonItem>Strikethrough</ButtonItem>
+
+      <hr />
+
+      <Submenu name="align">
+        <SubmenuTrigger>Align</SubmenuTrigger>
+
+        <ButtonItem>Left</ButtonItem>
+        <ButtonItem>Center</ButtonItem>
+        <ButtonItem>Right</ButtonItem>
+        <ButtonItem>Justify</ButtonItem>
+      </Submenu>
+
+      <Submenu name="styles">
+        <SubmenuTrigger>Styles</SubmenuTrigger>
+
+        <ButtonItem>Heading 1</ButtonItem>
+        <ButtonItem>Heading 2</ButtonItem>
+        <ButtonItem>Heading 3</ButtonItem>
+        <ButtonItem>Heading 4</ButtonItem>
+        <ButtonItem>Heading 5</ButtonItem>
+        <ButtonItem>Heading 6</ButtonItem>
+      </Submenu>
+
+      <Submenu name="spacing">
+        <SubmenuTrigger>Spacing</SubmenuTrigger>
+
+        <ButtonItem>Single</ButtonItem>
+        <ButtonItem>Double</ButtonItem>
+
+        <Submenu name="custom">
+          <SubmenuTrigger>Custom</SubmenuTrigger>
+
+          <ButtonItem>1.0</ButtonItem>
+          <ButtonItem>1.5</ButtonItem>
+          <ButtonItem>2.0</ButtonItem>
+        </Submenu>
+      </Submenu>
+    </MenuProvider>
+  )
+}
+```
+
+This kind of component is very flexible. You can add event listeners to the buttons, or add custom styles to the menu items, and won't require changes to the underlying logic in order to use it in different scenarios.
+
+## Manipulating the React children is the wrong move
+
+A nested dropdown menu is a great candidate for a headless component.
+
+One approach to building this is to loop through the children of the Menu component and selectively render them based on their type, but this runs into problems almost immediately.
+
+Users should be able to extract groups of menu items into their own components, and then use those components in multiple places. When you're looping through the children, you would need to recursively loop through each child to try and find the real menu items.
+
+In order to style the items, developers will want to provide a custom version of each menu item that contains the styles they want. The looping logic would need to look for those custom components too.
+
+The right way to do this is with React Context.
+
+> “Context is made for UI components like this. Everything else we use it for is a hack” —Ryan Florence
+
+The idea here is that **every component decides for itself whether it should be displayed**. No manipulation of children, no looping, no recursion. **Any information a component needs to make that decision should be provided to it via React Context.**
+
+## Use React Context to provide the menu state
+
+Navigating the menu is similar to navigating a website. You can create a "path" variable and use it to decide which items to show.
+
+If the path is empty, you're at the root of the menu and should show the initial options. When you click one of the submenus, you can set the path to "align" or "spacing.custom" and then only display the items that match that path.
+
+- Submenus should appear when the path starts with the submenu name.
+- Submenu triggers should appear when the path is set to the submenu's parent.
+- Menu items should appear only when the path is set to their submenu name.
+
+We'll use React Context to inject the path into each of the child components, so they'll all be aware of the current path. This example will use the [createStateContext](/content/use-state-context) helper to allow child components to access a regular useState hook.
+
+Menu items on the top level are easy, but since submenus can be nested, each component will also need to know which submenus it's in. We can use another context to provide that information. This can be a regular createContext because we never need to update it: its value is determined based on the nesting of the components.
+
+Create a MenuProvider component that creates a state for the path and wraps its children in the two context providers.
+
+```tsx
+// Only provided in this component,
+const [MenuContext, useMenuContext] =
+  createStateContext<string>()
+
+// Each submenu will have its own provider to override this
+const SubmenuContext = createContext<string>()
+
+function useSubmenuContext() {
+  const submenuName = useContext(SubmenuContext)
+
+  if (submenuName === undefined) {
+    throw new Error(
+      `useSubmenuContext must be used within a context provider`,
+    )
+  }
+
+  return submenuName
+}
+
+export function MenuProvider({
+  defaultPath = "",
+  children,
+}: {
+  defaultPath?: string
+  children: React.ReactNode
+}) {
+  const state = useState<string>(defaultPath)
+
+  return (
+    <MenuContext.Provider value={state}>
+      <SubmenuContext.Provider value={""}>
+        {children}
+      </SubmenuContext.Provider>
+    </MenuContext.Provider>
+  )
+}
+```
+
+Next, create a Submenu component that will wrap each submenu. It will use the SubmenuContext to provide the name of the submenu to its children.
+
+There are two ways to do this. If you want each submenu to have absolute paths, like `<Submenu name="align.custom">`, then you can just pass the name directly to the context.
+
+If you want relative paths, like `<Submenu name="custom">`, where it will be nested inside the "align" submenu, then you can use the `useSubmenuContext` hook to build the full name. That's how this example will work.
+
+```tsx
+export function Submenu({
+  name,
+  children,
+}: {
+  name: string
+  children: React.ReactNode
+}) {
+  const submenuName = useSubmenuContext()
+  const nestedName = [submenuName, name]
+    .filter(Boolean)
+    .join(".")
+
+  const [path] = useMenuContext()
+  if (!path.startsWith(submenuName)) {
+    // Submenus are visible when the path starts with their name
+    return null
+  }
+
+  return (
+    // Overrides the value of useSubmenuContext for all children
+    <SubmenuContext.Provider value={nestedName}>
+      {children}
+    </SubmenuContext.Provider>
+  )
+}
+```
+
+Build the ButtonItem component with a similar check
+
+```tsx
+export function ButtonItem(props) {
+  const [path] = useMenuContext()
+  const submenuName = useSubmenuContext()
+
+  if (path !== submenuName) {
+    // Visible when the path is set to their submenu name
+    return null
+  }
+
+  return <button type="button" {...props} />
+}
+```
+
+The SubmenuTrigger component is a little different. It should only be visible when the path is set to the parent submenu.
+
+Create it as a button that updates the path when clicked.
+
+```tsx
+export function SubmenuTrigger({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const [path, setPath] = useMenuContext()
+  const submenuName = useSubmenuContext()
+  const parentPath = submenuName
+    .split(".")
+    .slice(0, -1)
+    .join(".")
+
+  if (path !== parentPath) {
+    return null
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => setPath(submenuName)}
+    >
+      {children}
+    </button>
+  )
+}
+```
+
+Everything is now wired up to the menu state and should be fully functional!
+
+You can add styles directly to these components as needed, or use the [asChild pattern](/content/react-as-child) to allow developers to pass in their own components.
