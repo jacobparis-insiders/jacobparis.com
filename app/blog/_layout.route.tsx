@@ -1,24 +1,5 @@
 import { Outlet, useLocation } from "@remix-run/react"
 
-import type { LoaderFunction } from "@remix-run/node"
-import { json } from "@remix-run/node"
-
-type LoaderData = {
-  greeting: string
-}
-
-function sample(array: Array<any>) {
-  return array[Math.floor(Math.random() * array.length)]
-}
-
-export const loader: LoaderFunction = async () => {
-  const greeting = sample(["Hi, I'm ", "Hey, I'm ", "It's ", "Hey there, I'm "])
-
-  return json<LoaderData>({
-    greeting,
-  })
-}
-
 export default function Index() {
   const location = useLocation()
 
@@ -38,28 +19,45 @@ export default function Index() {
                     alt="Professional headshot"
                   />
                 </div>
-                <div className="relative z-10 flex-1 py-10 font-medium">
-                  <h2 className="text-2xl sm:text-3xl">Hi, I'm Jacob</h2>
-                  <div className="prose prose-invert max-w-md space-y-5 pt-5 opacity-80 sm:prose-lg">
+                <div className="relative z-10 flex-1 font-medium">
+                  <div className="flex items-center gap-x-8">
+                    <div className="flex w-full items-center justify-between md:w-auto">
+                      <span className="sr-only">Moulton</span>
+                      <img
+                        className="h-8 w-auto sm:h-10"
+                        src="https://www.readmoulton.com/logo.svg"
+                        alt=""
+                      />
+                    </div>
+
+                    <div className="text-5xl font-extrabold tracking-tight sm:mt-5">
+                      <span className="block bg-gradient-to-r from-sky-400 to-teal-200 bg-clip-text pb-3 text-transparent sm:pb-5">
+                        Moulton
+                      </span>
+                    </div>
+                  </div>
+                  <div className="prose prose-invert max-w-md space-y-5 opacity-80 sm:prose-lg">
                     <div>
                       <p>
                         Hey there! I'm a developer, designer, and digital nomad
-                        with a background in lean manufacturing.
+                        building cool things with Remix, and I'm also writing{" "}
+                        <a
+                          href="https://www.readmoulton.com/"
+                          className="text-sky-300"
+                        >
+                          Moulton, the Remix Community Newsletter
+                        </a>
                       </p>
+                      <p>About once per month, I send an email with:</p>
+                      <ul>
+                        <li> New guides and tutorials </li>
+                        <li>Upcoming talks, meetups, and events</li>
+                        <li>Cool new libraries and packages</li>
+                        <li>What's new in the latest versions of Remix</li>
+                      </ul>
                       <p>
-                        About once per month, I send an email with new guides,
-                        new blog posts, and sneak peeks of what's coming next.{" "}
-                      </p>
-                      <p>
-                        <strong>
-                          Everyone who subscribes gets access to the source code
-                          for this website and every example project for all my
-                          tutorials.
-                        </strong>
-                      </p>
-                      <p>
-                        Stay up to date with everything I'm working on by{" "}
-                        <strong>entering your email below.</strong>
+                        Stay up to date with everything in the Remix community
+                        by <strong>entering your email below.</strong>
                       </p>
                     </div>
                   </div>
@@ -74,7 +72,7 @@ export default function Index() {
                   </div>
                   <div>
                     <form
-                      action="/emails/subscribe"
+                      action="https://www.readmoulton.com/subscribe"
                       method="post"
                       className="flex flex-col gap-4"
                     >

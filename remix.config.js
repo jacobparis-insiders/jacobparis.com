@@ -5,6 +5,7 @@ const { routeExtensions } = require("remix-custom-routes")
  */
 module.exports = {
   tailwind: true,
+  postcss: true,
   future: {
     v2_routeConvention: true,
     v2_meta: true,

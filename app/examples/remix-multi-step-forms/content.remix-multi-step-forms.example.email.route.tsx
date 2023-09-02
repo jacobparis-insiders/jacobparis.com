@@ -1,12 +1,10 @@
 // http://localhost:3000/content/remix-multi-step-forms/example
 
 import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
+import { redirect, json } from "@remix-run/node"
 import { Form, useLoaderData } from "@remix-run/react"
 
 import invariant from "tiny-invariant"
-import { action as subscribeAction } from "~/mailing-list/emails.subscribe.route"
 import db from "./db.server"
 import { FadeIn } from "./FadeIn"
 
@@ -23,7 +21,7 @@ export async function action(args: ActionArgs) {
     db.email = email.toString()
     db.sawNewsletterOffer = true
 
-    return subscribeAction(args)
+    return redirect("/content/remix-multi-step-forms/example/complete")
   }
 
   if (_action === "CONTINUE") {
