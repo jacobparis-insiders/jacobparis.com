@@ -8,9 +8,13 @@ import {
   ButtonItem as ButtonItemCore,
   SubmenuTrigger as SubmenuTriggerCore,
   MenuProvider,
-} from "./Submenu"
-import { Popover, PopoverContent, PopoverTrigger } from "./popover"
-import { Command, CommandItem, CommandList } from "./command"
+} from "../../components/Submenu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "~/components/ui/popover"
+import { Command, CommandItem, CommandList } from "~/components/ui/command"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function loader({ request }: LoaderArgs) {

@@ -1,11 +1,13 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: ["class"],
   content: ["./app/**/*.{ts,tsx,jsx,js}"],
   theme: {
-    extend: {
+    container: {
+      center: true,
+      padding: "2rem",
       screens: {
-        print: { raw: "print" },
-        screen: { raw: "screen" },
+        "2xl": "1400px",
       },
       typography: {
         DEFAULT: {
@@ -24,9 +26,13 @@ module.exports = {
           },
         },
       },
+    },
+    extend: {
       animation: {
         appear: "appear 800ms",
         fade: "fade 300ms ease-out",
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
       },
       keyframes: {
         appear: {
@@ -45,8 +51,20 @@ module.exports = {
           "0%": { opacity: "0" },
           "100%": { opacity: "1" },
         },
+        "accordion-down": {
+          from: { height: 0 },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: 0 },
+        },
       },
     },
   },
-  plugins: [require("@tailwindcss/typography"), require("@tailwindcss/forms")],
+  plugins: [
+    require("@tailwindcss/forms"),
+    require("tailwindcss-animate"),
+    require("@tailwindcss/typography"),
+  ],
 }

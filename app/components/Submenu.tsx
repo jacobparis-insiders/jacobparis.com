@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react"
 import type { AsChildProps } from "./Slot"
 import { Slot } from "./Slot"
-import { createStateContext } from "./createStateContext"
+import { createStateContext } from "../examples/react-headless-submenus/createStateContext"
 
 const [MenuContext, useMenuContext] = createStateContext<string>()
 MenuContext.displayName = "MenuContext"

@@ -1,5 +1,12 @@
 import type { HeadersFunction } from "@remix-run/node"
 
+import { type ClassValue, clsx } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
 export function getRequiredEnvVar(key: string, env = process.env): string {
   if (key in env && typeof env[key] === "string") {
     return env[key] ?? ""

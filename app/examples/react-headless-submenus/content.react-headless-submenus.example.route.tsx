@@ -8,7 +8,7 @@ import {
   ButtonItem as ButtonItemCore,
   SubmenuTrigger as SubmenuTriggerCore,
   MenuProvider,
-} from "./Submenu"
+} from "../../components/Submenu"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function loader({ request }: LoaderArgs) {
