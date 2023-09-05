@@ -2,8 +2,6 @@
 
 This is the source code for my personal website, [jacobparis.com](https://jacobparis.com)
 
-I've recently made the source available to this org, so anyone who [subscribes to my mailing list](https://jacobparis.com/emails/subscribe) will get an invite to the repository.
-
 ## Colocation over Separation
 
 I'm a big fan of colocating code by feature, rather than by type. Terms of art like "Domain Driven Design", "Feature folders", and "Vertical Slices" all describe approaches to the same philosophy.
