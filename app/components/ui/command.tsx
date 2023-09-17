@@ -6,19 +6,58 @@ import { Command as CommandPrimitive } from "cmdk"
 import { cn } from "~/utils/misc"
 import { Dialog, DialogContent } from "~/components/ui/dialog"
 
+// ESM is still a nightmare with Next.js so I'm just gonna copy the package code in
+// https://github.com/gregberge/react-merge-refs
+// Copyright (c) 2020 Greg Bergé
+function mergeRefs<T = any>(
+  refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>,
+): React.RefCallback<T> {
+  return (value) => {
+    refs.forEach((ref) => {
+      if (typeof ref === "function") {
+        ref(value)
+      } else if (ref != null) {
+        ;(ref as React.MutableRefObject<T | null>).current = value
+      }
+    })
+  }
+}
+
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, ref) => (
-  <CommandPrimitive
-    ref={ref}
-    className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-md bg-white text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50",
-      className,
-    )}
-    {...props}
-  />
-))
+>(({ className, ...props }, forwardedRef) => {
+  // attach event listener effect to the ref for `cmdk-item-select` event
+  const ref = React.useRef<HTMLDivElement>(null)
+  React.useEffect(() => {
+    const handleItemSelect = (event: Event) => {
+      console.log({ event })
+    }
+
+    const element = ref.current
+
+    if (element) {
+      element.addEventListener("cmdk-item-select", handleItemSelect)
+    }
+
+    return () => {
+      if (element) {
+        element.removeEventListener("cmdk-item-select", handleItemSelect)
+      }
+    }
+  }, [])
+
+  return (
+    <CommandPrimitive
+      ref={mergeRefs([ref, forwardedRef])}
+      className={cn(
+        "flex h-full w-full flex-col overflow-hidden rounded-md bg-white text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50",
+        className,
+      )}
+      {...props}
+    />
+  )
+})
 Command.displayName = CommandPrimitive.displayName
 
 interface CommandDialogProps extends DialogProps {}

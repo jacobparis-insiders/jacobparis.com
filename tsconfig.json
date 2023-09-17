@@ -12,6 +12,7 @@
     "target": "ES2019",
     "strict": true,
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "noImplicitAny": false,
