@@ -62,7 +62,6 @@ import { parse } from "odata-qs"
 
 parse(
   `(name eq 'Jacob' or name eq 'John') and age gt 18 and age lt 65`,
-  "and",
 )
 
 {
@@ -95,7 +94,6 @@ import { parse } from "odata-qs"
 
 const filter = parse(
   `(name eq 'Jacob' or name eq 'John') and age gt 18 and age lt 65`,
-  "and",
   ["name", "age"],
 )
 
@@ -156,7 +154,7 @@ export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url)
   const query = url.searchParams.get("$filter")
 
-  const tree = parse(query, "and", [
+  const tree = parse(query, [
     "status",
     "creatorId",
     "labels",
@@ -261,5 +259,3 @@ export async function loader({ request }: LoaderArgs) {
   })
 }
 ```
-
-##
