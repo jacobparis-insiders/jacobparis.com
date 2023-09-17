@@ -1,0 +1,265 @@
+---
+title: URL based database filtering with OData
+description: Use OData to create a flexible query language for your database. Give your users pre-made queries or let them construct their own.
+tags: Advanced
+published: true
+timestamp: "2023-09-14"
+---
+
+All CRUD applications have some sort of UI for displaying data from the database, and most of them have some way to filter that data.
+
+The simplest cases are just a few checkboxes or dropdowns to pick categories or tags from a preselected list. That can be modeled as a simple web form with a few fields.
+
+```html
+<form method="GET">
+  <label for="category">Category</label>
+  <select name="category">
+    <option value="1">Category 1</option>
+    <option value="2">Category 2</option>
+    <option value="3">Category 3</option>
+  </select>
+
+  <label for="tag">Tag</label>
+  <select name="tag">
+    <option value="1">Tag 1</option>
+    <option value="2">Tag 2</option>
+    <option value="3">Tag 3</option>
+  </select>
+  <button type="submit">Filter</button>
+</form>
+```
+
+When the user submits this form, the browser will serialize the selected options into a query string like `?category=1&tag=2` and submit to the server, which will use it to filter the data.
+
+Individual parameters for each field starts to break down when your data has more complex relationships.
+
+- Excluding specific values
+- Comparing numbers or dates
+- Combining multiple values with AND or OR
+
+There are unlimited ways to represent these relationships, like parameter prefixes for `-tag=3` or `lt:age=65`, and unfortunately that has led to countless engineering hours spent coming up with custom solutions for each application.
+
+## Use oData for complex queries
+
+The [Open Data Protocol](https://www.odata.org/) is an ISO standard for consuming REST APIs, and it includes a standardized URL format for querying complex data.
+
+Following the OData spec, the above examples would look like:
+
+- ?$filter=Category eq 1 and Tag eq 2
+- ?$filter=Category eq 1 and Tag need
+- ?$filter=Age gt 18 and Age lt 65
+
+This format is much more flexible, allowing for bracketed expressions, logical operators, and more.
+
+## Use a library to parse oData
+
+There are a number of libraries that can parse OData queries in some capacity, but parsing is only half the story. You also need to apply the query to your data, and many of the libraries I've tried don't provide a convenient way to do that.
+
+The `odata-qs` library parses OData queries into a simple object format that can be used to filter data.
+
+```ts
+import { parse } from "odata-qs"
+
+parse(
+  `(name eq 'Jacob' or name eq 'John') and age gt 18 and age lt 65`,
+  "and",
+)
+
+{
+  age: {
+    gt: {
+      operator: "gt",
+      subject: "age",
+      values: [18],
+    },
+    lt: {
+      operator: "lt",
+      subject: "age",
+      values: [65],
+    },
+  },
+  name: {
+    eq: {
+      operator: "eq",
+      subject: "name",
+      values: ["Jacob", "John"],
+    },
+  },
+}
+```
+
+If you want a type-safe result, you can pass a third argument as an array of allowed subjects. If the query contains a subject that isn't in the array, it will throw an error at runtime, and during development you'll get full intellisense support.
+
+```ts
+import { parse } from "odata-qs"
+
+const filter = parse(
+  `(name eq 'Jacob' or name eq 'John') and age gt 18 and age lt 65`,
+  "and",
+  ["name", "age"],
+)
+
+filter.name // ✅
+filter.age // ✅
+filter.foo // Property 'foo' does not exist on type Record<'name' | 'age', …>
+```
+
+## Creating queries
+
+If users are going to be using pre-made queries, you can create links that will apply the query to the current page.
+
+```html
+<a
+  href="?$filter=status eq 'todo' or status eq 'in-progress'"
+>
+  Incomplete tasks
+</a>
+<a href="?$filter=status eq 'done'"> Completed tasks </a>
+```
+
+But if users will be constructing their own queries, you can use the `serialize` function to create a query string from a structured object format
+
+```ts
+import { serialize } from "odata-qs"
+
+serialize({
+  subject: "name",
+  operator: "eq",
+  value: "Jacob",
+}) // name eq 'Jacob'
+
+serialize({
+  subject: {
+    subject: "name",
+    operator: "eq",
+    value: "Jacob",
+  },
+  operator: "or",
+  value: {
+    subject: "name",
+    operator: "eq",
+    value: "John",
+  },
+}) // name eq 'Jacob' or name eq 'John'
+```
+
+## Apply the filter to your data
+
+Ideally, you'll want to transform the query into a format that your database understands so that you can filter the data at the database level, but since everyone's database, schema, and query language is different, I'll just show how to filter an array of objects.
+
+As an interim solution, you could overfetch from your database in whichever way you want and then filter the resulting dataset in this way.
+
+The key idea here is to filter the array to exclude an item as soon as it fails a condition, rather than trying to accept items as they pass conditions.
+
+```ts
+export async function loader({ request }: LoaderArgs) {
+  const url = new URL(request.url)
+  const query = url.searchParams.get("$filter")
+
+  const tree = parse(query, "and", [
+    "status",
+    "creatorId",
+    "labels",
+    "content",
+    "isChild",
+    "isParent",
+    "isBlocked",
+    "isBlocking",
+    "createdDate",
+    "updatedDate",
+  ])
+
+  const issues = db.issues.filter((issue) => {
+    // These filters are simple property checks
+    const propertyCheck = [
+      tree.status.eq &&
+        !tree.status.eq.values.includes(issue.status),
+      tree.status.ne &&
+        tree.status.ne.values.includes(issue.status),
+      tree.creatorId.eq &&
+        !tree.creatorId.eq.values.includes(issue.creatorId),
+      tree.creatorId.ne &&
+        tree.creatorId.ne.values.includes(issue.creatorId),
+      tree.labels.eq &&
+        !tree.labels.eq.values.includes(issue.label),
+      tree.labels.ne &&
+        tree.labels.ne.values.includes(issue.label),
+      // There's a few ways to do booleans.
+      // eq false is reasonable
+      // But this assumes it'll be eq true or ne true
+      tree.isChild.eq && issue.parentIssueId === null,
+      tree.isChild.ne && issue.parentIssueId !== null,
+      tree.isBlocked.eq &&
+        issue.blockedByIssueIds.length === 0,
+      tree.isBlocked.ne &&
+        issue.blockedByIssueIds.length > 0,
+    ].some(Boolean)
+
+    if (propertyCheck) {
+      return false
+    }
+
+    // The content filter checks multiple fields to do a full text search
+    if (tree.content.eq) {
+      const patterns = tree.content.eq.values.map((value) =>
+        String(value).toLowerCase(),
+      )
+      const content = [
+        issue.title.toLowerCase(),
+        issue.description.toLowerCase(),
+      ].join(" ")
+
+      if (
+        !patterns.some((pattern) =>
+          content.includes(pattern),
+        )
+      ) {
+        return false
+      }
+    }
+
+    // These filters require looking up other issues
+    if (tree.isParent) {
+      const hasChild = db.issues.some(
+        (other) => other.parentIssueId === issue.id,
+      )
+
+      if (tree.isParent.eq && hasChild) return false
+      if (tree.isParent.ne && !hasChild) return false
+    }
+
+    if (tree.isBlocking) {
+      const isBlocked = db.issues.some((other) =>
+        other.blockedByIssueIds.includes(issue.id),
+      )
+
+      if (tree.isBlocking.eq && !isBlocked) return false
+      if (tree.isBlocking.ne && isBlocked) return false
+    }
+
+    // These filters just check dates
+    if (
+      tree.createdDate &&
+      !matchesDate(tree.createdDate, issue.createdDate)
+    ) {
+      return false
+    }
+
+    if (
+      tree.updatedDate &&
+      !matchesDate(tree.updatedDate, issue.updatedDate)
+    ) {
+      return false
+    }
+
+    // If the issue passes all the filters, keep it
+    return true
+  })
+
+  return json({
+    issues,
+  })
+}
+```
+
+##
