@@ -15,21 +15,33 @@ import {
 import { useState } from "react"
 import { FilterMenu } from "./FilterMenu"
 import { Command, CommandGroup, CommandItem } from "~/components/ui/command"
-import { useFilterData } from "../content.remix-filter-bar.__filter.route"
-import type { ComparisonOperators } from "odata-qs"
+import { useFilterData } from "../content.remix-filter-bar.example.__filter.route"
+import type { ComparisonOperator } from "odata-qs"
 import { en } from "../i18n"
 
-export function FilterBar({ filters }: { filters: FilterExpression[] }) {
-  const { filterTypes } = useFilterData()
-
+export function FilterBar({
+  filters,
+  types,
+}: {
+  filters: FilterExpression[]
+  types: Record<
+    string,
+    {
+      label: string
+      type: "operator" | "boolean"
+      operators: ComparisonOperator[]
+      values: { value: string; label: string }[]
+    }
+  >
+}) {
   return (
     <>
       {filters.map((filter) => {
-        if (!(filter.subject in filterTypes)) {
+        if (!(filter.subject in types)) {
           throw new Error(`Invalid filter subject: ${filter.subject}`)
         }
 
-        const { type } = filterTypes[filter.subject as keyof typeof filterTypes]
+        const { type } = types[filter.subject]
 
         return (
           <div
@@ -65,7 +77,7 @@ function OperatorFilter({ filter }: { filter: FilterExpression }) {
     operator,
   }: {
     subject: string
-    operator: ComparisonOperators
+    operator: ComparisonOperator
   }) => {
     setFilters((filters) =>
       filters.map((p) => ({
@@ -140,7 +152,7 @@ function BooleanFilter({ filter }: { filter: FilterExpression }) {
     operator,
   }: {
     subject: string
-    operator: ComparisonOperators
+    operator: ComparisonOperator
   }) => {
     setFilters((filters) =>
       filters.map((p) => ({

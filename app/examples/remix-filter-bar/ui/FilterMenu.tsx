@@ -15,7 +15,7 @@ import {
 import { Command, CommandList, CommandItem } from "~/components/ui/command"
 
 import { useFilterSearch } from "../useFilterSearch"
-import { useFilterData } from "../content.remix-filter-bar.__filter.route"
+import { useFilterData } from "../content.remix-filter-bar.example.__filter.route"
 
 export function FilterMenu({ path }: { path?: string }) {
   const { replaceFilter } = useFilterSearch()

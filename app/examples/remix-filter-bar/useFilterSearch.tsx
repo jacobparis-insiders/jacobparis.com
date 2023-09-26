@@ -1,7 +1,7 @@
 import { useCallback } from "react"
 import { useSearchParams } from "@remix-run/react"
 import type { GroupedExpression } from "odata-qs"
-import { groupValues, isOperator, joinTree, parse, serialize } from "odata-qs"
+import { getValuesFromMap, stringify, parse } from "odata-qs"
 
 export type FilterExpression = Omit<GroupedExpression, "values"> & {
   values: string[]
@@ -12,7 +12,7 @@ export function useFilterSearch() {
 
   const query = searchParams.get("q")
 
-  const groups = groupValues(parse(query, "and")).map((group) => ({
+  const groups = getValuesFromMap(parse(query)).map((group) => ({
     ...group,
     // Client side we just want to deal with strings
     values: group.values.map((value) => String(value)),
@@ -20,32 +20,11 @@ export function useFilterSearch() {
 
   const setFilters = useCallback(
     (fn: (input: FilterExpression[]) => FilterExpression[]) => {
-      const newFilters = fn(groups)
-        .filter(({ values }) => values.length > 0)
-        .flatMap((p) => {
-          if (!isOperator(p.operator))
-            throw new Error(`Invalid operator: ${p.operator}`)
-
-          return p.values.map((value) => ({
-            subject: p.subject,
-            operator: p.operator,
-            value,
-          }))
-        })
-        .filter(Boolean)
-
-      if (newFilters.length === 0) {
-        return setSearchParams((prev) => {
-          prev.delete("q")
-          return prev
-        })
-      }
-
-      const finalQuery = joinTree(newFilters, "and")
+      const finalQuery = stringify(fn(groups))
 
       return setSearchParams((prev) => {
         if (finalQuery) {
-          prev.set("q", serialize(finalQuery))
+          prev.set("q", finalQuery)
         } else {
           prev.delete("q")
         }

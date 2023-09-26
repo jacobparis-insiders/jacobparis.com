@@ -10,21 +10,22 @@ import {
 } from "~/components/ui/popover"
 import { Icon } from "~/components/icon"
 import { Button } from "~/components/ui/button"
-import { useLoaderData } from "@remix-run/react"
+import { Link, useLoaderData } from "@remix-run/react"
 import { FilterBar } from "./ui/FilterBar"
 import { FilterMenu } from "./ui/FilterMenu"
 import db from "./db.server"
 import { DataTable } from "./ui/DataTable"
 import type { GroupedExpression } from "odata-qs"
-import { groupValues, parse } from "odata-qs"
+import { getValuesFromMap, parse } from "odata-qs"
 import { en } from "./i18n"
+import { useFilterData } from "./content.remix-filter-bar.example.__filter.route"
 
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function loader({ request }: LoaderArgs) {
   const url = new URL(request.url)
   const query = url.searchParams.get("q")
-  const tree = parse(query, "and", [
+  const tree = parse(query, [
     "status",
     "assigneeId",
     "creatorId",
@@ -164,7 +165,7 @@ export async function loader({ request }: LoaderArgs) {
     }))
 
   return json({
-    filters: groupValues(tree).map((group, index) => ({
+    filters: getValuesFromMap(tree).map((group, index) => ({
       ...group,
       id: index,
       values: group.values.map((value) => String(value)),
@@ -215,9 +216,47 @@ function safeNewDate(input) {
   return new Date(input)
 }
 
+export function FilterExample() {
+  return (
+    <div className="not-prose">
+      <Link
+        to="/content/remix-filter-bar/example"
+        className="flex flex-wrap gap-2"
+      >
+        <div className="flex items-center rounded border border-neutral-200 bg-white text-sm text-neutral-600  dark:border-neutral-800 dark:bg-neutral-950 ">
+          <div className="px-2 py-1">Status</div>
+          <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            is
+          </div>
+          <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            todo
+          </div>
+          <button className="h-full rounded-r px-2 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            <Icon name="cross-2" className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex items-center rounded border border-neutral-200 bg-white text-sm text-neutral-600  dark:border-neutral-800 dark:bg-neutral-950 ">
+          <div className="px-2 py-1">Priority</div>
+          <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            is not
+          </div>
+          <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            done
+          </div>
+          <button className="h-full rounded-r px-2 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
+            <Icon name="cross-2" className="h-4 w-4" />
+          </button>
+        </div>
+      </Link>
+    </div>
+  )
+}
+
 export default function Example() {
   const { filters, issues } = useLoaderData<typeof loader>()
   const [open, setOpen] = useState(false)
+  const { filterTypes } = useFilterData()
 
   return (
     <div className="mx-auto max-w-6xl py-4">
@@ -243,7 +282,7 @@ export default function Example() {
       <p className="mt-4">Create filters to refine the data in the table</p>
 
       <div className="flex flex-wrap gap-x-4 gap-y-2 py-3">
-        <FilterBar filters={filters} />
+        <FilterBar filters={filters} types={filterTypes} />
       </div>
 
       <div className="mt-4">

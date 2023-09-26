@@ -3,8 +3,10 @@
 import type { LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Outlet, useRouteLoaderData } from "@remix-run/react"
+
 import db from "./db.server"
 import { en } from "./i18n"
+
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export async function loader({ request }: LoaderArgs) {
@@ -115,7 +117,7 @@ export async function loader({ request }: LoaderArgs) {
 
 export function useFilterData() {
   const data = useRouteLoaderData<typeof loader>(
-    "content.remix-filter-bar.__filter",
+    "content.remix-filter-bar.example.__filter",
   )
 
   if (data === undefined) {
