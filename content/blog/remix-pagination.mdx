@@ -1,0 +1,289 @@
+---
+title: Server-side pagination with Remix
+description: Use query parameters to implement server-side pagination with Remix. Create a rolling pagination component that shows the current page along with a few pages before and after it, like Google Search.
+tags: Remix
+published: true
+timestamp: "2023-10-08"
+---
+
+Developers often implement client-side pagination as a half-measure to avoid the complexity of server-side pagination.
+
+When you deal with pagination on the server, you need to communicate the specific page and page size to the server, and you need to return the total number of items so the client can render the pagination controls.
+
+As the page changes, you need to update the URL and create new history entries,
+so the user can use the back button to go to the previous page, and share specific pages with other users.
+
+And then there's the issue of data fetching: each time the page changes, you need to fetch the new data from the server and render it on the page.
+
+But Remix is built for this kind of thing.
+
+Showing the right data for each URL is what Remix was made for, so it's actually easier to implement server-side pagination with Remix than it is to do it on the client.
+
+If you store the page number and size in the URL, Remix will fetch the new data and display it on the page immediately when the URL changes, and since databases generally have a way to return a single page of data at once, you get that for free too.
+
+## Read query parameters from the URL
+
+The OData specification says that you should use the `$top` and `$skip` query parameters to specify the page size and page number, respectively.<SideNote> Other popular choices are `limit` and `skip`.</SideNote>
+
+So if you want to show the first page of 10 items, you would use the URL `?$top=10`, and to show the second page, you would use `?$top=10&$skip=10`.
+
+Read the query parameters from the request URL in your loader, and use them to grab the right page of data from your database.
+
+Depending on your database adapter, this part will look different, but there's usually a first-class way to do this like Prisma's `{ take, skip }` options or SQL's `LIMIT` and `OFFSET` clauses.
+
+```ts
+export async function loader({ request }: LoaderArgs) {
+  const url = new URL(request.url)
+  const $top = Number(url.searchParams.get("$top")) || 10
+  const $skip = Number(url.searchParams.get("$skip")) || 0
+
+  // Slice the current page of issues from the database
+  const issues = db.issues.slice($skip, $skip + $top)
+
+  return json({
+    total: db.issues.length,
+    issues,
+  })
+}
+```
+
+## Create a pagination component
+
+Let's create a rolling pagination component that shows the current page along with a few pages before and after it, like Google Search.<SideNote> Google has been embracing infinite scrolling lately, so this example may not age well.</SideNote>
+
+<PaginationExample />
+
+There are a few things to note about this implementation
+
+- When the first page is selected, the previous page button is disabled and it shows 6 pages to the right of the current page
+- When the last page is selected, the next page button is disabled and it shows 6 pages to the left of the current page
+- When the current page is in the middle, it shows 3 pages to the left and 3 pages to the right
+
+Since components can independently access the URL parameters, we don't need any callbacks or state management to make this work. Each button will just be a submit button in a form that sets the `$skip` parameter to the right value.
+
+The one value we do need to pass to the component is the total number of items, so it can calculate the total number of pages.
+
+```tsx
+export function PaginationBar({
+  total,
+}: {
+  total: number
+}) {
+  const [searchParams] = useSearchParams()
+  const $skip = Number(searchParams.get("$skip")) || 0
+  const $top = Number(searchParams.get("$top")) || 10
+
+  const totalPages = Math.ceil(total / $top)
+  const currentPage = Math.floor($skip / $top) + 1
+  const maxPages = 7
+  const halfMaxPages = Math.floor(maxPages / 2)
+
+  const canPageBackwards = $skip > 0
+  const canPageForwards = $skip + $top < total
+
+  const pageNumbers = [] as Array<number>
+  if (totalPages <= maxPages) {
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i)
+    }
+  } else {
+    let startPage = currentPage - halfMaxPages
+    let endPage = currentPage + halfMaxPages
+
+    if (startPage < 1) {
+      endPage += Math.abs(startPage) + 1
+      startPage = 1
+    }
+
+    if (endPage > totalPages) {
+      startPage -= endPage - totalPages
+      endPage = totalPages
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+      pageNumbers.push(i)
+    }
+  }
+
+  const existingParams = Array.from(
+    searchParams.entries(),
+  ).filter(([key]) => {
+    return key !== "$skip" && key !== "$top"
+  })
+
+  return (
+    <Form
+      method="GET"
+      className="flex items-center gap-1"
+      preventScrollReset
+    >
+      <>
+        {[["$top", String($top)], ...existingParams].map(
+          ([key, value]) => {
+            return (
+              <input
+                key={key}
+                type="hidden"
+                name={key}
+                value={value}
+              />
+            )
+          },
+        )}
+      </>
+
+      <button
+        type="submit"
+        name="$skip"
+        className="text-neutral-600"
+        value="0"
+        disabled={!canPageBackwards}
+        aria-label="First page"
+      >
+        <Icon name="double-arrow-left" />
+      </button>
+
+      <button
+        variant="outline"
+        size="xs"
+        type="submit"
+        name="$skip"
+        className="text-neutral-600"
+        value={Math.max($skip - $top, 0)}
+        disabled={!canPageBackwards}
+        aria-label="Previous page"
+      >
+        <Icon name="arrow-left" />
+      </button>
+
+      {pageNumbers.map((pageNumber) => {
+        const pageSkip = (pageNumber - 1) * $top
+        const isCurrentPage = pageNumber === currentPage
+        const isValidPage =
+          pageSkip >= 0 && pageSkip < total
+
+        if (isCurrentPage) {
+          return (
+            <button
+              type="submit"
+              name="$skip"
+              className="min-w-[2rem] bg-neutral-200 text-black"
+              key={`${pageNumber}-active`}
+              value={pageSkip}
+              aria-label={`Page ${pageNumber}`}
+              disabled={!isValidPage}
+            >
+              {pageNumber}
+            </button>
+          )
+        } else {
+          return (
+            <button
+              type="submit"
+              className="min-w-[2rem] font-normal text-neutral-600"
+              name="$skip"
+              key={pageNumber}
+              value={pageSkip}
+              aria-label={`Page ${pageNumber}`}
+              disabled={!isValidPage}
+            >
+              {pageNumber}
+            </button>
+          )
+        }
+      })}
+
+      <button
+        type="submit"
+        name="$skip"
+        className="text-neutral-600"
+        value={Math.min($skip + $top, total - $top + 1)}
+        disabled={!canPageForwards}
+        aria-label="Next page"
+      >
+        <Icon name="arrow-right" />
+      </button>
+
+      <button
+        type="submit"
+        name="$skip"
+        className="text-neutral-600"
+        value={(totalPages - 1) * $top}
+        disabled={!canPageForwards}
+        aria-label="Last page"
+      >
+        <Icon name="double-arrow-right" />
+      </button>
+    </Form>
+  )
+}
+```
+
+## Don't overwrite other query parameters
+
+The URL is a very convenient bit of global state for this, but it comes with the same caveats that all global state solutions share: they are global.
+
+Other parts of the app may rely on their own query params, and when we create a pagination component that sets the `$skip` parameter, we don't want to overwrite the other query parameters.
+
+To solve this, we can use the `useSearchParams` hook to get the existing query parameters, and create hidden inputs for each of them. This way, when the form is submitted, the existing query parameters will be included in the request.
+
+If there's no `$top` parameter, I like to also add that to the form so it's always sent along. As long as the loader code gives a reasonable default, you technically don't need to do that, but then you have two places where you need to remember to update the default page size.
+
+```tsx
+const [searchParams] = useSearchParams()
+
+const existingParams = Array.from(
+  searchParams.entries(),
+).filter(([key]) => {
+  return key !== "$skip" && key !== "$top"
+})
+
+return (
+  <Form method="GET" className="flex items-center gap-1">
+    <>
+      {[["$top", String($top)], ...existingParams].map(
+        ([key, value]) => {
+          return (
+            <input
+              key={key}
+              type="hidden"
+              name={key}
+              value={value}
+            />
+          )
+        },
+      )}
+    </>
+    {/* ... */}
+  </Form>
+)
+```
+
+## Use submit buttons instead of links
+
+Links might seem like a natural fit here, and using links wouldn't be wrong, but there are a few reasons why I prefer to use forms for this.
+
+First, there's no way to actually disable a link in HTML. When the user is at either end of the pagination, we want to disable the previous and next buttons, so you'd be stuck replacing them with a non-interactive element to indicate that they're disabled.
+
+Each link would need a constructed URL with all the existing query parameters on the page, plus the appropriate `$skip` value. When a screen reader user visits the page, every one of those links would be listed as navigation points, which would be very noisy.
+
+Search crawlers may also follow the links and index them, which could pollute your SEO profile with a bunch of duplicate pages or a divided pagerank.
+
+Using a form means you can add a hidden input for any existing query parameters once and it will be included no matter which submit button is clicked.
+
+## Add labels to the buttons
+
+There are a few icon buttons here with arrows instead of text, so make sure you add accessible labels to them so screen reader users know what they do.
+
+A simple `aria-label` attribute handles most cases, though some experts recommend using visually hidden text instead for better compatibility across devices.
+
+```tsx
+<button type="submit">
+  <Icon name="arrow-left" />
+  <span className="sr-only">Previous page</span>
+</button>
+```
+
+## Live demo
+
+[View the source code](https://github.com/jacobparis-insiders/jacobparis.com/tree/main/app/examples/remix-pagination) or check out the [live demo](/content/remix-pagination/example) to see it in action

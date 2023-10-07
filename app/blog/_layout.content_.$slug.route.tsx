@@ -28,6 +28,7 @@ import {
 } from "~/examples/remix-progressive-client-only/examples"
 import { SubmenuExample } from "~/examples/react-headless-submenus/content.react-headless-submenus.example.route"
 import { FilterExample } from "~/examples/remix-filter-bar/content.remix-filter-bar.example.__filter._index.route"
+import { PaginationExample } from "~/examples/remix-pagination/content.remix-pagination.example.__filter._index.route"
 export { mergeHeaders as headers } from "~/utils/misc"
 
 export const links: LinksFunction = () => {
@@ -169,6 +170,7 @@ export default function Blog() {
               DateExamples,
               SubmenuExample,
               FilterExample,
+              PaginationExample,
               em: Highlight,
               pre: CodeBlock,
             }}

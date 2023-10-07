@@ -4,6 +4,7 @@
   "scripts": {
     "build": "run-s build:*",
     "build:remix": "remix build",
+    "build:icons": "tsx ./other/build-icons.ts",
     "build:info": "node -r esbuild-register -r dotenv/config others/build-info.js",
     "build:redirects": "cp ./app/_redirects ./build/_redirects",
     "predev": "npm run setup",
@@ -110,6 +111,7 @@
     "eslint-plugin-no-template-curly-in-string-fix": "^1.0.4",
     "happy-dom": "^5.2.0",
     "msw": "^0.48.2",
+    "node-html-parser": "^6.1.10",
     "npm-run-all": "^4.1.5",
     "nx": "15.0.10",
     "postcss": "^8.4.14",
