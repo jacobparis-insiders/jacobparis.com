@@ -2,8 +2,7 @@
 
 import type { LoaderArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
-import { Icon } from "~/components/icon"
-import { Link, useLoaderData } from "@remix-run/react"
+import { useLoaderData } from "@remix-run/react"
 import db from "./db.server"
 import { DataTable } from "./ui/DataTable"
 import { en } from "./i18n"

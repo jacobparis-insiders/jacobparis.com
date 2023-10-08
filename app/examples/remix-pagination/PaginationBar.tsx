@@ -9,7 +9,7 @@ export function PaginationBar({ total }: { total: number }) {
 
   const totalPages = Math.ceil(total / $top)
   const currentPage = Math.floor($skip / $top) + 1
-  const maxPages = 7
+  const maxPages = 5
   const halfMaxPages = Math.floor(maxPages / 2)
 
   const canPageBackwards = $skip > 0
