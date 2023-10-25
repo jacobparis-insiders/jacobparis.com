@@ -1,0 +1,134 @@
+---
+title: Redirecting from a resource route
+description: Use redirect routes to redirect users to the right place. Implement dynamic next/previous buttons. Send users back to onboarding or login pages.
+tags: Remix
+published: true
+timestamp: "2023-10-15"
+---
+
+A resource route is any route without a default React export, which leaves it as a regular endpoint in your app. Most of the time you'll use these to return data, but they're super useful for returning redirects.
+
+## Next and previous buttons
+
+In many email clients, once you've opened an email, you can jump straight to the next or previous email either by pressing a button or hitting a hotkey.
+
+You can use a simple link for this. If you're on the URL `/emails/42`, then you could have the buttons be links to `/emails/41` and `/emails/43`, but it's a bit fragile. If you delete email 43, then the next button should actually be taking you to 44. You would need to look up the actual next email in the database before you generate the links.
+
+But what if there are multiple people managing your emails? You could have already loaded the page for email 42, with the correct links generated, but then someone else deletes the next email. Now your links are wrong.
+
+This is a good candidate for a redirect route. You can have a route like `/emails/42/next` that looks up the next email in the inbox and redirects you to it. If you're on the last email, then you can redirect to the first email instead.
+
+```ts
+// http://localhost:3000/emails/4/next
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
+  const emails = await prisma.email.findMany({
+    select: {
+      id: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  })
+
+  const emailIndex = emails.findIndex(
+    (email) => email.id === Number(params.id),
+  )
+  const nextEmail = emails[emailIndex + 1]
+
+  if (!nextEmail) {
+    // If there is no next email, redirect to the first email
+    return redirect(`/emails/${emails[0].id}`)
+  }
+
+  return redirect(`/emails/${nextEmail.id}`)
+}
+```
+
+You can use the same approach for the previous button.
+
+```ts
+// http://localhost:3000/emails/4/prev
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
+  const emails = await prisma.email.findMany({
+    select: {
+      id: true,
+    },
+    orderBy: {
+      id: "asc",
+    },
+  })
+
+  const emailIndex = emails.findIndex(
+    (email) => email.id === Number(params.id),
+  )
+  const prevEmail = emails[emailIndex - 1]
+
+  if (!prevEmail) {
+    // If there is no previous email, redirect to the last email
+    return redirect(
+      `/emails/${emails[emails.length - 1].id}`,
+    )
+  }
+
+  return redirect(`/emails/${prevEmail.id}`)
+}
+```
+
+Now you can have next and previous buttons that will seamlessly take the user to the next valid documents in the database.
+
+```tsx
+return (
+  <div>
+    <Link href={`/emails/${email.id}/prev`}>Previous</Link>
+    <Link href={`/emails/${email.id}/next`}>Next</Link>
+  </div>
+)
+```
+
+## Triaging users who don't have access yet
+
+Let's say you have a user who has signed up for your app, but hasn't completed their profile yet. You want to redirect them to the profile page to complete their profile before they can use the app.
+
+Users who haven't logged in at all need to be redirected to the login page, and some users who have tried to log in but haven't entered their 2FA code yet need to be redirected to the 2FA page.
+
+Instead of trying to handle all of these cases in every route, you can have one guard for whether they're fully activated, and if not just send them to a triage route that will redirect them to the right place.
+
+```ts
+// http://localhost:3000/triage
+export async function loader() {
+  const session = await authenticator.isAuthenticated(
+    request,
+  )
+  if (!session) return redirect("/auth/login")
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: session.userId,
+    },
+  })
+
+  if (!user) return redirect("/auth/login")
+
+  if (user.requiredOtp) {
+    return redirect("/auth/verify-code")
+  }
+
+  if (!user.name) {
+    return redirect(`/user/${user.id}}/onboarding`)
+  }
+
+  if (
+    !user.isVerified ||
+    !user.isPhoneVerified ||
+    !user.isActivated
+  ) {
+    return redirect(`/user/${user.id}}`)
+  }
+
+  return redirect("/auth/logged-in")
+}
+```
