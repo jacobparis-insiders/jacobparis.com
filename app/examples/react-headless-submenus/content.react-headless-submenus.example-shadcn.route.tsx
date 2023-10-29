@@ -1,23 +1,23 @@
 // http://localhost:3000/content/react-headless-submenus/example-shadcn
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { useState } from "react"
-import {
-  Submenu,
-  ButtonItem as ButtonItemCore,
-  SubmenuTrigger as SubmenuTriggerCore,
-  MenuProvider,
-} from "../../components/Submenu"
+import { Command, CommandItem, CommandList } from "~/components/ui/command.tsx"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
-import { Command, CommandItem, CommandList } from "~/components/ui/command"
-export { mergeHeaders as headers } from "~/utils/misc"
+} from "~/components/ui/popover.tsx"
+import {
+  ButtonItem as ButtonItemCore,
+  MenuProvider,
+  Submenu,
+  SubmenuTrigger as SubmenuTriggerCore,
+} from "../../components/Submenu.tsx"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({})
 }
 

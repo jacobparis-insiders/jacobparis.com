@@ -120,7 +120,9 @@ Next.js doesn't have a built-in pattern for data mutations, with users often lev
 Remix achieves downstream type-safety in a similar way to Next.js, requiring you to annotate your server data hooks like `useLoaderData<typeof loader>` and `useActionData<typeof action>`
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const query = zfd
     .formData({
       page: z.number().min(1).default(1),

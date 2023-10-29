@@ -1,15 +1,14 @@
 // http://localhost:3000/content/remix-crud/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { json, redirect } from "@remix-run/node"
 import { useActionData, useFetcher, useLoaderData } from "@remix-run/react"
-import db from "./db.server"
 import invariant from "tiny-invariant"
-import { useDebounceFetcher } from "../useDebounceFetcher"
-import { LastUpdated } from "./LastUpdated"
+import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import { LastUpdated } from "./LastUpdated.tsx"
+import db from "./db.server.ts"
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
   const id = params.id as string
@@ -41,7 +40,7 @@ export async function action({ params, request }: ActionArgs) {
   return json({ success: true, issueId, updatedAt: issue.updatedAt })
 }
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {

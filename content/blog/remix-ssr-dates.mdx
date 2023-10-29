@@ -68,7 +68,9 @@ In the loader of one of our pages that needs to render a date, we can use the `r
 If the cookie is set, we create a new date and skew it by the offset. If the cookie isn't set, we just use the current date.
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const clockOffset = request.headers
     .get("Cookie")
     ?.match(/clockOffset=(\d+)/)

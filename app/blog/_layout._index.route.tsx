@@ -2,12 +2,12 @@
 
 import { Link, useLoaderData } from "@remix-run/react"
 import { json } from "@remix-run/node"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
-import FeaturedBlogItem from "~/components/FeaturedBlogItem"
-import BlogCard from "~/components/BlogCard"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import FeaturedBlogItem from "~/components/FeaturedBlogItem.tsx"
+import BlogCard from "~/components/BlogCard.tsx"
 import { MoultonMatrix } from "./MoultonMatrix"
 
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
 function sample<T>(array: Array<T>) {
   return array[Math.floor(Math.random() * array.length)]

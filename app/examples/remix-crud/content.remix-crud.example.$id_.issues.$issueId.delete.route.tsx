@@ -1,10 +1,10 @@
 // http://localhost:3000/content/remix-crud/example
 
-import type { ActionArgs } from "@remix-run/node"
+import type { ActionFunctionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
-import db from "./db.server"
+import db from "./db.server.ts"
 
-export async function action({ params }: ActionArgs) {
+export async function action({ params }: ActionFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {

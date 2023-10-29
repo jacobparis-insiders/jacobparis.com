@@ -1,7 +1,7 @@
 /** @tutorial https://www.jacobparis.com/content/remix-snippets */
 {
 	"loader": {
-		"prefix": ";loader",
+		"prefix": "/loader",
 		"body": [
 			"import type { LoaderFunctionArgs } from \"@remix-run/node\"",
 			"",
@@ -11,7 +11,7 @@
 		]
 	},
 	"action": {
-		"prefix": ";action",
+		"prefix": "/action",
 		"body": [
 			"import type { ActionFunctionArgs } from \"@remix-run/node\"",
 			"",
@@ -21,7 +21,7 @@
 		]
 	},
 	"default": {
-		"prefix": ";default",
+		"prefix": "/default",
 		"body": [
 			"export default function ${TM_FILENAME_BASE/[^a-zA-Z0-9]*([a-zA-Z0-9])([a-zA-Z0-9]*)/${1:/capitalize}${2}/g}() {",
 			" return (",
@@ -33,7 +33,7 @@
 		]
 	},
 	"headers": {
-		"prefix": ";headers",
+		"prefix": "/headers",
 		"body": [
 			"import type { HeadersFunction } from '@remix-run/node'",
 			"",
@@ -43,7 +43,7 @@
 		]
 	},
 	"links": {
-		"prefix": ";links",
+		"prefix": "/links",
 		"body": [
 			"import type { LinksFunction } from '@remix-run/node'",
 			"",
@@ -53,7 +53,7 @@
 		]
 	},
 	"meta": {
-		"prefix": ";meta",
+		"prefix": "/meta",
 		"body": [
 			"import type { MetaFunction } from '@remix-run/node'",
 			"",
@@ -63,7 +63,7 @@
 		]
 	},
 	"shouldRevalidate": {
-		"prefix": ";shouldRevalidate",
+		"prefix": "/shouldRevalidate",
 		"body": [
 			"import type { ShouldRevalidateFunction } from '@remix-run/react'",
 			"",

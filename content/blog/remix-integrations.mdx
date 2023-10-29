@@ -1,0 +1,43 @@
+---
+title:
+description:
+tags:
+published: false
+timestamp: "2023-07-20"
+---
+
+Tutorials often get outdated, especially in a world where services improve rapidly and developer relations teams are constantly on top of making set up easier.
+
+This guide is a collection of possible integrations with Remix and the best way to get started with them.
+
+## Data handling
+
+This section deals with different databases and adapters that are often used with Remix
+
+### Prisma
+
+Prisma is a popular ORM for handling database interactions. Instead of querying your database directly, you generate a Prisma client that gives you a type-safe API for reading and writing data.
+
+Prisma will also handle migrations for you, so you can make changes to your schema and Prisma will automatically generate the SQL to update your database.
+
+Check out this guide to learn how to [add Prisma to a Remix app](/content/remix-prisma)
+
+### Drizzle
+
+Drizzle is an all-typescript ORM for interacting with relational databases. It gives you type-safe reads and writes, plus automatic migration handling.
+
+Check out this guide to learn how to [add Drizzle to a Remix app](/content/remix-drizzle)
+
+## Hosting
+
+This section deals with different hosting options for Remix apps.
+
+To learn more about the capabilities of each option, check out the [hosting guide](/content/where-to-host-remix)
+
+## Fly.io
+
+Fly.io is a platform for running your apps on a global network of servers. It's a great way to get a fast, global deployment for your Remix app.
+
+Remix is natively supported by Fly, so you can get started in minutes by downloading the Fly CLI and run `fly launch`.
+
+Follow the [official Remix setup guide on Fly.io](https://fly.io/docs/languages-and-frameworks/remix/)

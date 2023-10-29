@@ -1,10 +1,10 @@
 import { DevicePhoneMobileIcon } from "@heroicons/react/20/solid"
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
-import { ButtonLink } from "~/components/ButtonLink"
-import { FakeBrowser } from "~/components/FakeBrowser"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
-import { TwoColumnSection } from "~/components/TwoColumnSection"
-export { mergeHeaders as headers } from "~/utils/misc"
+import { ButtonLink } from "~/components/ButtonLink.tsx"
+import { FakeBrowser } from "~/components/FakeBrowser.tsx"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import { TwoColumnSection } from "~/components/TwoColumnSection.tsx"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
 export default function Projects() {
   return (

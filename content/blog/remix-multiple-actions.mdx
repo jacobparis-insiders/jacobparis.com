@@ -60,7 +60,7 @@ So if you want to submit multiple actions from a single form, you can add `name=
 In your action, you can use the value of the `_action` input to determine which action to take.
 
 ```ts
-export async function action(args: ActionArgs) {
+export async function action(args: ActionFunctionArgs) {
   const formData = await args.request.clone().formData()
 
   const _action = formData.get("_action")
@@ -83,7 +83,7 @@ export async function action(args: ActionArgs) {
   throw new Error("Unknown action")
 }
 
-async function likeTweetAction({ request }: ActionArgs) {
+async function likeTweetAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 
@@ -91,7 +91,7 @@ async function likeTweetAction({ request }: ActionArgs) {
   return null
 }
 
-async function retweetAction({ request }: ActionArgs) {
+async function retweetAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 

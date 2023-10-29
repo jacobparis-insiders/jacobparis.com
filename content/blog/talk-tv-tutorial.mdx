@@ -280,7 +280,7 @@ export const Container = styled.div`
 This is a small flex container that will center any elements placed within it. We'll wrap our Login scene text with it
 
 ```jsx numbered
-import { Container } from "~/components/containers"
+import { Container } from "~/components/containers.tsx"
 
 export default function () {
   return (
@@ -364,7 +364,7 @@ export const Icon = styled.p`
 Go back to our `login.js` and replace our `please log in` plea with our new components.
 
 ```jsx numbered
-import { Card, Divider, Icon } from "~/components/cards"
+import { Card, Divider, Icon } from "~/components/cards.tsx"
 
 export default function () {
   return (
@@ -449,7 +449,7 @@ It's better to focus on getting one dependency working at a time and then moving
 
 ````js numbered
 
-import { Button } from "~/components/button";
+import { Button } from "~/components/button.tsx";
 
 function LoginCard() {
     return (
@@ -704,7 +704,7 @@ export function Header() {
 and then add it to our `home.js`
 
 ```jsx numbered
-import { Header } from "~/components/header"
+import { Header } from "~/components/header.tsx"
 
 export default function () {
   return (
@@ -810,7 +810,7 @@ export function Loading() {
 Add it to our `index.js` where our loading text used to be
 
 ```js numbered
-import { Loading } from "./components/loading"
+import { Loading } from "./components/loading.tsx"
 ```
 
 ```js numbered
@@ -1005,7 +1005,7 @@ In our Home scene, we'll import these components and update our effect to put th
 import {
   BoxGrid,
   YoutubeGallery,
-} from "~/components/youtube"
+} from "~/components/youtube.tsx"
 
 export default function () {
   const [videos, setVideos] = React.useState([])
@@ -1091,9 +1091,9 @@ function getEmbedURL(channelId) {
 and then add it to our watch scene to complete this half of the project
 
 ```jsx numbered
-import { Header } from "~/components/header"
-import { Container } from "~/components/containers"
-import { VideoFrame } from "~/components/youtube"
+import { Header } from "~/components/header.tsx"
+import { Container } from "~/components/containers.tsx"
+import { VideoFrame } from "~/components/youtube.tsx"
 
 export default function () {
   const channelId = document.location.pathname

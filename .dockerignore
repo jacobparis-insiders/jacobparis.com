@@ -4,9 +4,10 @@
 /.cache
 /public/build
 .gitignore
-.eslintrc.js
+.eslintrc.cjs
 .eslintignore
 /build
 fly.toml
 /node_modules
 README.md
+.git

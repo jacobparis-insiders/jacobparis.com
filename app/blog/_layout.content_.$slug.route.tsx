@@ -1,58 +1,45 @@
-import * as React from "react"
 import type {
   LinksFunction,
-  LoaderFunction,
-  V2_MetaFunction,
+  LoaderFunctionArgs,
+  MetaFunction,
 } from "@remix-run/node"
+import { json } from "@remix-run/node"
 import { Link, useLoaderData } from "@remix-run/react"
 import { getMDXComponent } from "mdx-bundler/client"
 import invariant from "tiny-invariant"
-import type { MdxComponent } from "~/types"
 
-import CodeBlock from "~/components/code-block"
-import blogStyles from "app/styles/blog.css"
+import CodeBlock from "~/components/code-block.tsx"
+import blogStyles from "~/styles/blog.css"
 
-import { Highlight } from "~/components/Highlight"
-import { Tweet } from "~/components/Tweet"
-import { Excerpt } from "~/components/Excerpt"
-import { SideNote } from "~/components/SideNote"
-import { loadMdx } from "~/utils/loadMdx"
-import { ButtonLink } from "~/components/ButtonLink"
-import { getMdxListItems } from "~/utils/mdx.server"
-import { getServerTiming } from "~/utils/timing.server"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
+import { Excerpt } from "~/components/Excerpt.tsx"
+import { Highlight } from "~/components/Highlight.tsx"
+import { SideNote } from "~/components/SideNote.tsx"
+import { Tweet } from "~/components/Tweet.tsx"
+
+import { ButtonLink } from "~/components/ButtonLink.tsx"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import { SubmenuExample } from "~/examples/react-headless-submenus/content.react-headless-submenus.example.route.tsx"
+import { FilterExample } from "~/examples/remix-filter-bar/content.remix-filter-bar.example.__filter._index.route.tsx"
+import { PaginationExample } from "~/examples/remix-pagination/content.remix-pagination.example.__filter._index.route.tsx"
 import {
   DateExamples,
   FileExamples,
   LocalStorageExamples,
-} from "~/examples/remix-progressive-client-only/examples"
-import { SubmenuExample } from "~/examples/react-headless-submenus/content.react-headless-submenus.example.route"
-import { FilterExample } from "~/examples/remix-filter-bar/content.remix-filter-bar.example.__filter._index.route"
-import { PaginationExample } from "~/examples/remix-pagination/content.remix-pagination.example.__filter._index.route"
-export { mergeHeaders as headers } from "~/utils/misc"
+} from "~/examples/remix-progressive-client-only/examples.tsx"
+import { getServerTiming } from "~/utils/timing.server.ts"
 
+import { cache, cachified } from "#app/cache/cache.server.ts"
+import { compileMdx } from "#app/utils/compile-mdx.server.ts"
+import { downloadFileBySha } from "#app/utils/github.server.ts"
+import { MdxSchema } from "./_layout.content._index.route.tsx"
+import { getContentList } from "./content.server.ts"
+
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 export const links: LinksFunction = () => {
   return [{ rel: "stylesheet", href: blogStyles }]
 }
 
-export const handle = {
-  id: "blog-post",
-  getSitemapEntries: async (request) => {
-    const pages = await getMdxListItems({ contentDirectory: "blog" })
-
-    return pages
-      .filter((page) => {
-        const frontmatter = page.frontmatter ? JSON.parse(page.frontmatter) : {}
-
-        return frontmatter.published
-      })
-      .map((page) => {
-        return { route: `content/${page.slug}`, priority: 0.7 }
-      })
-  },
-}
-
-export const meta: V2_MetaFunction = ({ data, location }) => {
+export const meta: MetaFunction = ({ data }) => {
   if (!data) return [{ title: "Not found" }]
 
   const { keywords = [] } = data.frontmatter.meta ?? {}
@@ -101,15 +88,75 @@ export const meta: V2_MetaFunction = ({ data, location }) => {
   ]
 }
 
-export const loader: LoaderFunction = async ({ params }) => {
+export async function loader({ params, request }: LoaderFunctionArgs) {
   const { time, getHeaderField } = getServerTiming()
+
+  if (process.env.NODE_ENV === "development") {
+    await import("#app/refresh.ignored.js")
+  }
+
   const slug = params.slug
   invariant(typeof slug === "string", "Slug should be a string, and defined")
 
-  const response = await time("loadMdx", () => loadMdx(slug))
-  response.headers.set("Server-Timing", getHeaderField())
+  const compiledMdx = await cachified({
+    key: `mdx:compiled:${slug}`,
+    cache,
+    checkValue: MdxSchema,
 
-  return response
+    // Always show the cached version while we fetch a new one
+    ttl: 1000 * 60 * 60,
+    staleWhileRevalidate: Infinity,
+
+    // In development, always recompile
+    forceFresh: process.env.NODE_ENV === "development",
+    async getFreshValue() {
+      const contentList = await getContentList()
+
+      const content = contentList.find((content) => {
+        return content.name.replace(".mdx", "") === slug
+      })
+
+      if (!content) {
+        throw new Response("Not found", { status: 404 })
+      }
+
+      const file = await cachified({
+        key: `github:file:${slug}`,
+        cache,
+
+        // Always show the cached version while we fetch a new one
+        ttl: 1000 * 60 * 60,
+        staleWhileRevalidate: Infinity,
+
+        // In development, always recompile
+        forceFresh: process.env.NODE_ENV === "development",
+
+        async getFreshValue() {
+          return downloadFileBySha(content.sha)
+        },
+      })
+
+      return compileMdx({
+        slug: slug,
+        content: file,
+      }).then((compiled) => {
+        compiled.frontmatter.slug = slug
+        return compiled
+      })
+    },
+  })
+
+  if (!compiledMdx.code) {
+    throw new Response("Compilation error", { status: 500 })
+  }
+
+  return json(compiledMdx, {
+    headers: {
+      "cache-control": "private, max-age: 60",
+      Vary: "Cookie",
+      "Server-Timing": getHeaderField(),
+    },
+  })
 }
 
 export function CatchBoundary() {
@@ -138,10 +185,11 @@ export function CatchBoundary() {
 
 export default function Blog() {
   // videos are wrapped in a div with class="mx-auto max-w-full"
-  const data = useLoaderData<MdxComponent>()
-  const Component = React.useMemo(() => getMDXComponent(data.code), [data])
+  const { code, frontmatter } = useLoaderData<typeof loader>()
 
-  const url = `https://www.jacobparis.com/content/${data.slug}`
+  const Component = getMDXComponent(code)
+
+  const url = `https://www.jacobparis.com/content/${frontmatter.slug}`
 
   return (
     <div>
@@ -151,14 +199,14 @@ export default function Blog() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
       <div className="flex">
         <article
-          className="prose prose-sky mx-auto min-h-screen max-w-prose px-4 pt-24 lg:prose-lg sm:pl-12"
+          className="prose prose-sky lg:prose-lg mx-auto min-h-screen max-w-prose px-4 pt-24 sm:pl-12"
           style={{ counterReset: "footnote-counter 0" }}
         >
-          {data.img ? (
-            <img src={`/${data.img}`} alt="" className="w-full" />
+          {frontmatter.img ? (
+            <img src={`/${frontmatter.img}`} alt="" className="w-full" />
           ) : null}
           <Link to={`/content`}>← Back to all content</Link>
-          <h1 className="drop-shadow-sm"> {data.title} </h1>
+          <h1 className="drop-shadow-sm">{frontmatter.title} </h1>
           <Component
             components={{
               Tweet,

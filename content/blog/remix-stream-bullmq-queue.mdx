@@ -16,13 +16,13 @@ Create a new resource route at `app/routes/jobs.$id.progress.tsx`
 This route will use the `eventStream` utility from `remix-utils` to create an event source that will listen for the `progress` event from the job queue, and send the progress to the client.
 
 ```tsx
-import { processItemQueue } from "~/workers/processItem.server"
-import { eventStream } from "remix-utils"
+import { processItemQueue } from "~/workers/processItem.server.ts"
+import { eventStream } from "remix-utils/sse/server"
 
 export async function loader({
   request,
   params,
-}: LoaderArgs) {
+}: LoaderFunctionArgs) {
   const id = params.id as string
   if (!id) {
     return new Response("Not found", { status: 404 })
@@ -80,7 +80,7 @@ In any route that needs to read this progress, you can use the `useEventSource` 
 This is like `useState` but will automatically update the state when the event source sends a new event.
 
 ```tsx
-import { useEventSource } from "remix-utils"
+import { useEventSource } from "remix-utils/sse/react"
 
 export default function Route() {
   const jobId = "123"

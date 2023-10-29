@@ -1,15 +1,15 @@
 // http://localhost:3000/content/remix-filter-bar/example
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Outlet, useRouteLoaderData } from "@remix-run/react"
 
-import db from "./db.server"
-import { en } from "./i18n"
+import db from "./db.server.ts"
+import { en } from "./i18n.tsx"
 
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     filterTypes: {
       status: {

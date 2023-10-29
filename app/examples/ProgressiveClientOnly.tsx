@@ -1,4 +1,4 @@
-import { useHydrated } from "remix-utils"
+import { useHydrated } from "remix-utils/use-hydrated"
 
 export function ProgressiveClientOnly({
   children,

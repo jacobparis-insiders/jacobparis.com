@@ -1,7 +1,7 @@
 // http://localhost:3000/content/remix-crud/example
 
-import { Link, Outlet, useParams } from "@remix-run/react"
 import { XMarkIcon } from "@heroicons/react/24/outline"
+import { Link, Outlet, useParams } from "@remix-run/react"
 
 export default function Modal() {
   const params = useParams()

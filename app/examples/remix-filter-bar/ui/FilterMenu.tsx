@@ -3,19 +3,19 @@
  */
 import { Form } from "@remix-run/react"
 
-import { Icon } from "~/components/icon"
+import { Icon } from "~/components/icon.tsx"
 import {
   MenuProvider,
   Submenu,
   SubmenuSlot,
   ButtonItem as ButtonItemCore,
   SubmenuTrigger as SubmenuTriggerCore,
-} from "~/components/Submenu"
+} from "~/components/Submenu.tsx"
 
-import { Command, CommandList, CommandItem } from "~/components/ui/command"
+import { Command, CommandList, CommandItem } from "~/components/ui/command.tsx"
 
-import { useFilterSearch } from "../useFilterSearch"
-import { useFilterData } from "../content.remix-filter-bar.example.__filter.route"
+import { useFilterSearch } from "../useFilterSearch.tsx"
+import { useFilterData } from "../content.remix-filter-bar.example.__filter.route.tsx"
 
 export function FilterMenu({ path }: { path?: string }) {
   const { replaceFilter } = useFilterSearch()
@@ -261,7 +261,7 @@ export function CheckboxFilterMenu({
           >
             <div
               data-state={checkedValues.includes(value) ? "checked" : undefined}
-              className="peer mr-2 h-4 w-4 shrink-0 overflow-hidden rounded-sm border border-neutral-900 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-neutral-900 data-[state=checked]:text-neutral-50"
+              className="data-[state=checked]:bg-neutral-900 data-[state=checked]:text-neutral-50 peer mr-2 h-4 w-4 shrink-0 overflow-hidden rounded-sm border border-neutral-900 ring-offset-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {checkedValues.includes(value) ? (
                 <Icon name="check" className="block h-full w-full" />

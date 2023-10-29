@@ -147,10 +147,10 @@ Then re-export this in every route.<SideNote> You only need it in the leaf route
 Some people like to keep their imports and exports separate as a matter of preference, but you can also do it as a one-liner with `export from`.
 
 ```ts
-export { headers } from "~/defaults.server"
+export { headers } from "~/defaults.server.ts"
 
 // separate imports and exports look like this
-// import { headers as mergeHeaders } from "~/defaults.server"
+// import { headers as mergeHeaders } from "~/defaults.server.ts"
 // export const headers = mergeHeaders
 ```
 

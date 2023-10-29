@@ -1,4 +1,3 @@
-import * as React from "react"
 import { useUID } from "react-uid"
 
 export function SideNote({ children }) {

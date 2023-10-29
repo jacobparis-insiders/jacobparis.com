@@ -1,17 +1,17 @@
 // http://localhost:3000/content/remix-presence/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Form, useLoaderData } from "@remix-run/react"
-import { commitSession, getSession } from "./session.server"
-import crypto from "crypto"
-import db from "./db.server"
+import { randomUuid } from "../crypto.ts"
 import {
   Avatar,
   usePresenceUsers,
-} from "./content.remix-presence.example.presence.route"
+} from "./content.remix-presence.example.presence.route.tsx"
+import db from "./db.server.ts"
+import { commitSession, getSession } from "./session.server.ts"
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
   const form = await request.formData()
   const name = form.get("name")
@@ -37,11 +37,11 @@ export async function action({ request }: ActionArgs) {
   )
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
   let id = session.get("userId")
   if (!id) {
-    id = crypto.randomUUID()
+    id = randomUuid()
     session.set("userId", id)
     session.set("name", "Anonymous")
   }

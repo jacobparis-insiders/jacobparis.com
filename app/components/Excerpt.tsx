@@ -1,5 +1,3 @@
-import * as React from "react"
-
 export function Excerpt({ children, fade }) {
   return (
     <blockquote

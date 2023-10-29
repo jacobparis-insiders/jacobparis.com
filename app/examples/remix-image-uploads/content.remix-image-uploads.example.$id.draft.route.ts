@@ -1,17 +1,17 @@
 // http://localhost:3000/content/remix-image-uploads/example
 
-import type { ActionArgs } from "@remix-run/node"
+import type { ActionFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 
-import db from "./db.server"
 import { useParams } from "@remix-run/react"
 import { useCallback, useRef } from "react"
-import { useDebounceFetcher } from "../useDebounceFetcher"
+import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import db from "./db.server.ts"
 
 /**
  * @tutorial https://www.jacobparis.com/content/remix-form-autosave
  */
-export async function action({ request, params }: ActionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
   const formData = await request.formData()
 
   const id = params.id as string

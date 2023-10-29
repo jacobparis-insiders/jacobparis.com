@@ -1,16 +1,16 @@
 // http://localhost:3000/content/remix-pagination/example
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { useLoaderData } from "@remix-run/react"
-import db from "./db.server"
-import { DataTable } from "./ui/DataTable"
-import { en } from "./i18n"
-import { PaginationBar } from "./PaginationBar"
+import { PaginationBar } from "./PaginationBar.tsx"
+import db from "./db.server.ts"
+import { en } from "./i18n.tsx"
+import { DataTable } from "./ui/DataTable.tsx"
 
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const $top = Number(url.searchParams.get("$top")) || 10
   const $skip = Number(url.searchParams.get("$skip")) || 0

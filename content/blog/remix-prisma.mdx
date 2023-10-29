@@ -125,9 +125,11 @@ In one of your routes
 - add a form that submits to the action
 
 ```tsx
-import { prisma } from "~/db.server"
+import { prisma } from "~/db.server.ts"
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   await prisma.items.insert({
     data: {
       title: "Item title",
@@ -139,7 +141,9 @@ export async function action({ request }: ActionArgs) {
   }
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const data = await db.items.findMany()
 
   return json({

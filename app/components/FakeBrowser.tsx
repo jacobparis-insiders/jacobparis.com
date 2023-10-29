@@ -1,5 +1,5 @@
 import { LinkIcon } from "@heroicons/react/24/outline"
-import { ExternalLink } from "~/components/ExternalLink"
+import { ExternalLink } from "~/components/ExternalLink.tsx"
 
 export function FakeBrowser({ href, title, children, className = "" }) {
   return (

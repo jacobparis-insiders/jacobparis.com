@@ -1,4 +1,7 @@
-import type { LoaderArgs, V2_MetaFunction } from "@remix-run/node"
+import { cache, cachified } from "#app/cache/cache.server.ts"
+import { compileMdx } from "#app/utils/compile-mdx.server.ts"
+import { downloadFileBySha } from "#app/utils/github.server.ts"
+import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Link,
@@ -6,10 +9,11 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react"
-import { ButtonLink } from "~/components/ButtonLink"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
-import { prisma } from "~/db.server"
-export const meta: V2_MetaFunction = ({ params }) => {
+import { z } from "zod"
+import { ButtonLink } from "~/components/ButtonLink.tsx"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import { getContentList } from "./content.server.ts"
+export const meta: MetaFunction = ({ params }) => {
   return [
     {
       title: "Articles, Guides, and Cheatsheets | Jacob Paris",
@@ -17,87 +21,130 @@ export const meta: V2_MetaFunction = ({ params }) => {
   ]
 }
 
+export const MdxSchema = z.object({
+  code: z.string(),
+  frontmatter: z.object({
+    slug: z.string(),
+    title: z.string(),
+    description: z.string().optional().nullable().default(null),
+    tags: z
+      .string()
+      .optional()
+      .nullable()
+      .transform((val) => {
+        if (!val) return null
+
+        return val.split(",").map((tag) => tag.trim())
+      }),
+    img: z.string().optional().nullable().default(null),
+    timestamp: z.string().optional().nullable().default(null),
+    published: z.boolean().optional().default(false),
+  }),
+})
+
 export const handle = {
-  id: "content",
-  getSitemapEntries: () => [{ route: `content`, priority: 0.7 }],
+  id: "blog-post",
+  getSitemapEntries: async () => {
+    const content = await getContentListData()
+
+    return [
+      { route: `content`, priority: 0.7 },
+
+      ...content
+        .filter((page) => page.code)
+        .filter((page) => page.frontmatter.published)
+        .map((page) => {
+          return { route: `content/${page.frontmatter.slug}`, priority: 0.7 }
+        }),
+    ]
+  },
 }
 
-export async function loader({ request }: LoaderArgs) {
+async function getContentListData() {
+  const contentList = await getContentList()
+
+  return MdxSchema.array().parse(
+    await Promise.all(
+      contentList.map(async (content) => {
+        const slug = content.name.replace(".mdx", "")
+
+        const file = await cachified({
+          key: `github:file:${slug}`,
+          cache,
+          ttl: 1000 * 60 * 60,
+          forceFresh: false,
+          async getFreshValue() {
+            return downloadFileBySha(content.sha)
+          },
+        })
+
+        const compiledMdx = await cachified({
+          key: `mdx:compiled:${slug}`,
+          cache,
+          ttl: 1000 * 60 * 60,
+          forceFresh: false,
+          async getFreshValue() {
+            return compileMdx({
+              slug: slug,
+              content: file,
+            }).then((compiled) => {
+              compiled.frontmatter.slug = slug
+              return compiled
+            })
+          },
+        })
+
+        return compiledMdx
+      }),
+    ).then((list) => {
+      return list.filter((item) => item.frontmatter.title)
+    }),
+  )
+}
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const tag = url.searchParams.get("tag")
 
-  const blogList = await prisma.content
-    .findMany({
-      where: { published: true, contentDirectory: "blog" },
-      select: {
-        slug: true,
-        title: true,
-        img: true,
-        timestamp: true,
-        description: true,
-        frontmatter: true,
-      },
-      orderBy: { timestamp: "desc" },
+  const content = await getContentListData()
+
+  const blogList = content
+    .map((c) => c.frontmatter)
+    .sort((a, b) => {
+      if (!a.timestamp) return 1
+      if (!b.timestamp) return -1
+
+      const aDate = new Date(a.timestamp)
+      const bDate = new Date(b.timestamp)
+
+      if (aDate > bDate) return -1
+      if (aDate < bDate) return 1
+
+      return 0
     })
-    .then((blogList) =>
-      blogList
-        .map((blog) => ({
-          ...blog,
-          frontmatter: JSON.parse(blog.frontmatter),
-        }))
-        .map((blog) => {
-          const tags: Array<string> = blog.frontmatter.tags
-            ? blog.frontmatter.tags.split(",").map((tag) => tag.trim())
-            : []
+    .map((blog) => ({
+      ...blog,
+      timestamp: blog.timestamp
+        ? new Date(blog.timestamp).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : null,
+    }))
 
-          return {
-            ...blog,
-            tags,
-          }
-        })
-        .map((blog) => ({
-          ...blog,
-          timestamp: blog.frontmatter.timestamp
-            ? new Date(blog.frontmatter.timestamp).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : null,
-        })),
-    )
+  const tags = new Set<string>()
+  for (const blog of blogList) {
+    if (!blog.tags) continue
 
-  blogList.sort((a, b) => {
-    if (!a.timestamp) return 1
-    if (!b.timestamp) return -1
-
-    const aDate = new Date(a.timestamp)
-    const bDate = new Date(b.timestamp)
-
-    if (aDate > bDate) return -1
-    if (aDate < bDate) return 1
-
-    return 0
-  })
-
-  const tags = blogList.reduce((acc, blog) => {
-    if (!blog.frontmatter.tags) return acc
-
-    blog.frontmatter.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-      .forEach((tag: string) => {
-        acc.add(tag)
-      })
-
-    return acc
-  }, new Set<string>())
+    for (const tag of blog.tags) {
+      tags.add(tag)
+    }
+  }
 
   return json({
     blogList: blogList.filter((blog) => {
-      if (tag && !blog.frontmatter.tags) return false
-      if (tag && !blog.frontmatter.tags.includes(tag)) return false
+      if (tag && !blog.tags) return false
+      if (tag && !blog.tags?.includes(tag)) return false
 
       return true
     }),

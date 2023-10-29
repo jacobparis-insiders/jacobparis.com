@@ -55,7 +55,7 @@ export function MoultonMatrix() {
     return matrix.map((row) => row.map(Boolean))
   })
 
-  const toggleLed = (i, j) => {
+  const toggleLed = (i: number, j: number) => {
     setMat((prevMat) =>
       prevMat.map((row, rowIndex) =>
         rowIndex === i

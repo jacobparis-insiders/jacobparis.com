@@ -150,7 +150,7 @@ As an interim solution, you could overfetch from your database in whichever way 
 The key idea here is to filter the array to exclude an item as soon as it fails a condition, rather than trying to accept items as they pass conditions.
 
 ```ts
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const query = url.searchParams.get("$filter")
 

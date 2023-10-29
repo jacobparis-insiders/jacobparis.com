@@ -1,10 +1,8 @@
 import type {
-  HeadersFunction,
   LinksFunction,
   LoaderFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Links,
@@ -18,12 +16,12 @@ import {
   useLocation,
   useRouteError,
 } from "@remix-run/react"
-import tailwindStylesheetUrl from "./styles/tailwind.css"
 import isbot from "isbot"
-import { keepAwake } from "./server/sleep.server"
-import { getServerTiming } from "./utils/timing.server"
-import { ButtonLink } from "./components/ButtonLink"
-import { SocialBannerSmall } from "./components/SocialBannerSmall"
+import tailwindStylesheetUrl from "~/styles/tailwind.css"
+import { ButtonLink } from "./components/ButtonLink.tsx"
+import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
+import { keepAwake } from "./server/sleep.server.ts"
+import { getServerTiming } from "./utils/timing.server.ts"
 
 export const links: LinksFunction = () => {
   return [
@@ -35,7 +33,7 @@ export const links: LinksFunction = () => {
   ]
 }
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [
     { title: "Jacob Paris" },
     {

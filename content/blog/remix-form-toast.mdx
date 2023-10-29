@@ -77,7 +77,9 @@ export async function action() {
 Then, on the page you want to show the message, read the cookie and show the toast notification.
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const message = request.headers
     .get("Cookie")
     ?.match(/message=([^;]+)/)?.[1]
@@ -113,12 +115,15 @@ Create a `session.server.ts` file as per the [session docs](https://remix.run/do
 Rewrite the action to use the `getSession` and `commitSession` functions.
 
 ```tsx
-import { commitSession, getSession } from "./session.server"
+import {
+  commitSession,
+  getSession,
+} from "./session.server.ts"
 
 export async function action({
   params,
   request,
-}: ActionArgs) {
+}: ActionFunctionArgs) {
   // handle form submission
 
   const session = await getSession(
@@ -138,9 +143,11 @@ export async function action({
 And then read it in the loader of the page you want to show the message.
 
 ```tsx
-import { getSession } from "./session.server"
+import { getSession } from "./session.server.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie"),
   )

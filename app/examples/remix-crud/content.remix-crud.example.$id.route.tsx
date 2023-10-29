@@ -1,21 +1,20 @@
 // http://localhost:3000/content/remix-crud/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { json, redirect } from "@remix-run/node"
 import { Form, Outlet, useLoaderData } from "@remix-run/react"
-import db from "./db.server"
 import { useState } from "react"
 import invariant from "tiny-invariant"
 import useLocalStorageState from "use-local-storage-state"
-import { randomUuid } from "../crypto"
-import { FadeIn } from "../FadeIn"
-import { IssueRow } from "./IssueRow"
-import { useResetCallback } from "../useResetCallback"
+import { FadeIn } from "../FadeIn.tsx"
+import { randomUuid } from "../crypto.ts"
+import { useResetCallback } from "../useResetCallback.tsx"
+import { IssueRow } from "./IssueRow.tsx"
+import db from "./db.server.ts"
 
-import { ProgressiveClientOnly } from "../ProgressiveClientOnly"
+import { ProgressiveClientOnly } from "../ProgressiveClientOnly.tsx"
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
   const id = params.id as string
@@ -53,7 +52,7 @@ export async function action({ params, request }: ActionArgs) {
   })
 }
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {

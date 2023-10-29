@@ -1,13 +1,12 @@
-import { PassThrough } from "stream"
 import type { EntryContext } from "@remix-run/node"
-import { Response } from "@remix-run/node"
 import { RemixServer } from "@remix-run/react"
-import "./refresh.ignored"
 import isbot from "isbot"
-import { renderToPipeableStream } from "react-dom/server"
-import { getSitemapXml } from "./sitemap.server"
-import redirects from "./redirects.server"
 import minimatch from "minimatch"
+import { renderToPipeableStream } from "react-dom/server"
+import { PassThrough } from "stream"
+import redirects from "./redirects.server.ts"
+import "./refresh.ignored"
+import { getSitemapXml } from "./sitemap.server.ts"
 
 const ABORT_DELAY = 10 * 60 * 1000
 

@@ -32,7 +32,7 @@ Read the query parameters from the request URL in your loader, and use them to g
 Depending on your database adapter, this part will look different, but there's usually a first-class way to do this like Prisma's `{ take, skip }` options or SQL's `LIMIT` and `OFFSET` clauses.
 
 ```ts
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const $top = Number(url.searchParams.get("$top")) || 10
   const $skip = Number(url.searchParams.get("$skip")) || 0

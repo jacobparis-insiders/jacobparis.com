@@ -1,5 +1,9 @@
 import type { EntryContext } from "@remix-run/node"
-import { getDomainUrl, removeTrailingSlash, typedBoolean } from "./utils/misc"
+import {
+  getDomainUrl,
+  removeTrailingSlash,
+  typedBoolean,
+} from "./utils/misc.ts"
 
 export type SitemapEntry = {
   route: string

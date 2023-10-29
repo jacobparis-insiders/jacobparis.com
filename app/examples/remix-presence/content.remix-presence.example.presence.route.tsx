@@ -1,16 +1,17 @@
 // http://localhost:3000/content/remix-presence/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { getSession } from "./session.server"
-import type { ValidRoute } from "./db.server"
-import db from "./db.server"
-import invariant from "tiny-invariant"
-import { eventStream, useEventSource } from "remix-utils"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { useEffect } from "react"
+import { useEventSource } from "remix-utils/sse/react"
+import { eventStream } from "remix-utils/sse/server"
+import invariant from "tiny-invariant"
+import type { ValidRoute } from "./db.server.ts"
+import db from "./db.server.ts"
+import { getSession } from "./session.server.ts"
 
 const validRoutes: ValidRoute[] = ["/content/remix-presence/example"]
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
   const form = await request.formData()
   const route = form.get("route")
@@ -91,7 +92,7 @@ function validateEmoji(emoji: string) {
 
   return true
 }
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const route = url.searchParams.get("route")
   if (route && !validRoutes.includes(route as ValidRoute)) {

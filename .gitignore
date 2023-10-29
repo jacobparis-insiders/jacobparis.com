@@ -3,8 +3,5 @@ node_modules
 /build
 /public/build
 .env
-
+cache.db
 **.ignored.js
-
-prisma/data.db
-prisma/data.db-journal

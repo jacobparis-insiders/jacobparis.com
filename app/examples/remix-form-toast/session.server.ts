@@ -23,4 +23,4 @@ const { getSession, commitSession, destroySession } =
     },
   })
 
-export { getSession, commitSession, destroySession }
+export { commitSession, destroySession, getSession }

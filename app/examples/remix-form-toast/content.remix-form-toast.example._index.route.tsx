@@ -1,15 +1,15 @@
 // http://localhost:3000/content/remix-form-toast/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import { Transition } from "@headlessui/react"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Form, useLoaderData } from "@remix-run/react"
-import { commitSession, getSession } from "./session.server"
-import { db } from "./db.server"
-import invariant from "tiny-invariant"
-import { Transition } from "@headlessui/react"
 import { useEffect, useState } from "react"
+import invariant from "tiny-invariant"
+import { db } from "./db.server.ts"
+import { commitSession, getSession } from "./session.server.ts"
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
 
   const formData = await request.formData()
@@ -37,7 +37,7 @@ export async function action({ params, request }: ActionArgs) {
   })
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const session = await getSession(request.headers.get("Cookie"))
   const message = session.get("message") || null
 

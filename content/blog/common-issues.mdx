@@ -1,0 +1,23 @@
+---
+title:
+description:
+tags:
+published: false
+timestamp: "2023-09-17"
+---
+
+If you've ever asked for help on an issue, and without looking at your code, another dev tells you exactly what your code looks like and what's causing the problem, they've probably seen the issue before.
+
+## Page refreshes when clicking a button
+
+A button with no `type` attribute will default to `type="submit"`, which might not have any effect at first, but if it ever ends up inside a `<form>`, it will submit the form, which will cause the page to refresh.
+
+- Add `type="button"` to your buttons unless you're specifically using them to submit forms.
+
+## Clicking hash link scrolls to wrong place
+
+A link with a `href` attribute that starts with `#` is called a hash link. It will scroll to the element with the matching `id` attribute.
+
+If multiple elements have the same `id`, it will scroll to the first one, so if an additional element ends up on the page with with the same `id`, your link could take you somewhere unexpected.
+
+- When using component systems, try to generate unique IDs to avoid these conflicts.

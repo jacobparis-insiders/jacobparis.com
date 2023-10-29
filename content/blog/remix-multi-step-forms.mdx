@@ -33,7 +33,9 @@ To link the pages of the form together, we need to store the in-progress form da
 If the user should be able to complete the form from a different device than they started, store it in a database attached to a user account/identifier
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getUser(request)
   if (!session) throw new Error("Not logged in")
 
@@ -56,7 +58,9 @@ export async function action({ request }: ActionArgs) {
 If the user will be logged in and only use a single device, you can store it in their auth session and include the `Set-Cookie` header in the redirect.
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getUser(request)
   if (!session) throw new Error("Not logged in")
 
@@ -102,7 +106,9 @@ export const progress = global.progress
 
 ```tsx
 import { progress } from "../remix-multi-step-forms"
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const form = await request.formData()
   progress.firstName = form.get("firstName")
   progress.lastName = form.get("lastName")
@@ -118,7 +124,7 @@ The user can go to any page of the form at any time, so we need to re-fill the i
 ```tsx
 import { progress } from "../remix-multi-step-forms"
 
-export function loader({ request }: LoaderArgs) {
+export function loader({ request }: LoaderFunctionArgs) {
   return json({
     firstName: progress.firstName,
     lastName: progress.lastName,
@@ -153,7 +159,7 @@ Make a separate page called `/continue` with just a loader that redirects to the
 ```tsx
 import { progress } from "../remix-multi-step-forms"
 
-export function loader({ request }: LoaderArgs) {
+export function loader({ request }: LoaderFunctionArgs) {
   if (!progress.hasStarted) {
     return redirect("/step-1")
   }

@@ -119,7 +119,7 @@ import { zfd } from "zod-form-data"
 export async function loader({
   request,
   params,
-}: LoaderArgs) {
+}: LoaderFunctionArgs) {
   const query = zfd
     .formData({
       page: z.number().min(1).default(1),

@@ -29,7 +29,7 @@ Remix grew out of React Router, and routes are the language it speaks. Remix app
 In a single file, any page can become a POST endpoint by specifying an action function.
 
 ```ts
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const body = await request.formData()
 
   const title = body.get("title")
@@ -51,7 +51,7 @@ export async function action({ request }: ActionArgs) {
 Or it can become a GET endpoint by specifying a loader function.
 
 ```ts
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const item = db.get(params.id)
 
   if (item) {
@@ -131,7 +131,7 @@ export async function createItem(
 If you export that function from your resource route, you can use it anywhere in your app and get full end-to-end type safety and autocompletion.
 
 ```tsx
-import { createItem } from "~/routes/items.server"
+import { createItem } from "~/routes/items.server.ts"
 ```
 
 ## Validating your RPC with Zod
@@ -149,7 +149,7 @@ const itemSchema = zfd.formData({
   description: z.string().optional(),
 })
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const body = itemSchema.parse(await request.formData())
 
   const item = db.create({

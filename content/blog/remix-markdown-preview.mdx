@@ -68,12 +68,12 @@ export const processMarkdownToHtml = cachify(
 This will power the endpoint that we'll use to render markdown into HTML. Create a new action in a route of your choice and add the following code.
 
 ```ts
-import { processMarkdownToHtml } from "./markdown.server"
+import { processMarkdownToHtml } from "./markdown.server.ts"
 
 export async function action({
   params,
   request,
-}: ActionArgs) {
+}: ActionFunctionArgs) {
   const formData = await request.formData()
   const description = formData.get("description") || ""
 

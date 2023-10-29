@@ -39,9 +39,6 @@ COPY --from=deps /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 COPY --from=deps /myapp/package.json /myapp/package.json
 COPY --from=deps /myapp/node_modules /myapp/node_modules
 
-ADD prisma ./prisma
-RUN npx prisma@4.6.0 generate
-
 ADD . .
 RUN touch ./app/refresh.ignored.js
 RUN npm run build
@@ -59,7 +56,6 @@ RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-c
 WORKDIR /myapp
 
 COPY --from=production-deps /myapp/node_modules /myapp/node_modules
-COPY --from=build /myapp/node_modules/.prisma /myapp/node_modules/.prisma
 
 COPY --from=build /myapp/build /myapp/build
 COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
@@ -67,7 +63,6 @@ COPY --from=build /myapp/public /myapp/public
 COPY --from=build /myapp/package.json /myapp/package.json
 COPY --from=build /myapp/start.sh /myapp/start.sh
 COPY --from=build /myapp/server.ts /myapp/server.ts
-COPY --from=build /myapp/prisma /myapp/prisma
 COPY --from=flyio/litefs:0.4 /usr/local/bin/litefs /usr/local/bin/litefs
 ADD litefs.yml /etc/litefs.yml
 

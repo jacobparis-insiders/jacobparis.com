@@ -1,0 +1,34 @@
+---
+title:
+description:
+tags:
+published: false
+timestamp: "2023-09-17"
+---
+
+## Cookies
+
+Cookies are a browser feature that allows websites to store data on the client.
+
+Cookies are sent to the server with every request, so they can be used to store information about the user's session.
+
+The browser will update the cookie whenever the server returns a `Set-Cookie` header in its response.
+
+## Form submissions are navigations
+
+When you submit a form, the browser will navigate to the URL specified in the `action` attribute of the form, or the current URL if no `action` is specified.
+
+This gets stored in the browser's history, so you can press the back button to go back to the previous page before submission.
+
+Forms submitted as POST requests are also stored in the browser's history. If you've ever pressed the back button and seen a warning about resubmitting the form, this is why.
+
+## Forms submit GET requests by default
+
+By default, forms will send data to the server using the `GET` method and the contents of the form will be encoded into the URL as query parameters.
+
+## Forms submit when you press enter
+
+Pressing enter submits most forms by default, as long as one of these conditions is met
+
+- The form has exactly one input, and the input is focused
+- The form has a submit button, and a textarea is not focused

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
-import { ProgressiveClientOnly } from "../ProgressiveClientOnly"
-import { ClientOnly } from "remix-utils"
+import { ClientOnly } from "remix-utils/client-only"
+import { ProgressiveClientOnly } from "../ProgressiveClientOnly.tsx"
 
 export function DateExamples() {
   const serverDate = new Date("2023-01-01")

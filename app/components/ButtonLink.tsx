@@ -1,5 +1,5 @@
 import { useRef } from "react"
-import { useHoverEffect } from "./useHoverEffect"
+import { useHoverEffect } from "./useHoverEffect.tsx"
 
 export function ButtonLink({ children, ...props }) {
   const elementRef = useRef<HTMLAnchorElement>(null)

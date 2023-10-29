@@ -1,7 +1,7 @@
 import { type SVGProps } from 'react'
-import href from './icons/sprite.svg'
-import { type IconName } from './icons/names'
 import { twMerge } from 'tailwind-merge'
+import { type IconName } from './icons/names.ts'
+import href from './icons/sprite.svg'
 
 const sizeClassName = {
 	font: 'w-[1em] h-[1em]',
