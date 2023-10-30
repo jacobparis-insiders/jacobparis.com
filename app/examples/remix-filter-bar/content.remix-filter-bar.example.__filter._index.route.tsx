@@ -212,7 +212,9 @@ function matchesDate(
   return true
 }
 
-function safeNewDate(input) {
+function safeNewDate(input: string | number | boolean | Date) {
+  if (typeof input === "boolean") return new Date()
+
   return new Date(input)
 }
 

@@ -1,14 +1,15 @@
 import { BookOpenIcon, HomeIcon } from "@heroicons/react/20/solid"
 import { ButtonLink } from "./ButtonLink.tsx"
 
-export function SocialBannerSmall(props: any) {
+export function SocialBannerSmall(props: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div {...props}>
       <ul className="flex flex-row flex-wrap justify-center print:flex-col print:gap-2">
         <li>
           <ButtonLink
             className="flex flex-row items-center rounded-lg px-4 py-2"
-            href="/"
+            to="/"
+            prefetch="intent"
           >
             <HomeIcon className="h-6 w-6" aria-hidden="true" />
 
@@ -24,7 +25,8 @@ export function SocialBannerSmall(props: any) {
         <li>
           <ButtonLink
             className="flex flex-row items-center rounded-lg px-4 py-2"
-            href="/content"
+            to="/content"
+            prefetch="intent"
           >
             <BookOpenIcon className="h-6 w-6" aria-hidden="true" />
 
@@ -40,7 +42,7 @@ export function SocialBannerSmall(props: any) {
         <li>
           <ButtonLink
             className="flex flex-row items-center rounded-lg px-4 py-2"
-            href="https://github.com/JacobParis"
+            to="https://github.com/JacobParis"
             target="_blank"
             rel="noreferrer"
           >
@@ -65,7 +67,7 @@ export function SocialBannerSmall(props: any) {
         <li>
           <ButtonLink
             className="flex flex-row items-center  rounded-lg px-4 py-2"
-            href="https://twitter.com/jacobmparis"
+            to="https://twitter.com/jacobmparis"
             target="_blank"
             rel="noreferrer"
           >
@@ -90,7 +92,7 @@ export function SocialBannerSmall(props: any) {
         <li className="print:hidden">
           <ButtonLink
             className="flex flex-row items-center  rounded-lg px-4 py-2"
-            href="https://instagram.com/jacobmparis"
+            to="https://instagram.com/jacobmparis"
             target="_blank"
             rel="noreferrer"
           >
@@ -124,7 +126,7 @@ export function SocialBannerSmall(props: any) {
         <li className="print:hidden">
           <ButtonLink
             className="flex flex-row items-center rounded-lg px-4 py-2"
-            href="https://www.linkedin.com/in/jacobparis/"
+            to="https://www.linkedin.com/in/jacobparis/"
             target="_blank"
             rel="noreferrer"
           >

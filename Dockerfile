@@ -45,9 +45,15 @@ RUN npm run build
 # Finally, build the production image with minimal footprint
 FROM base as run
 
-ENV LITEFS_DIR="/data/litefs"
-ENV DATABASE_URL=file:/$LITEFS_DIR/sqlite.db
-ENV PORT="8080"
+ENV FLY="true"
+ENV LITEFS_DIR="/litefs/data"
+ENV DATABASE_FILENAME="sqlite.db"
+ENV DATABASE_PATH="$LITEFS_DIR/$DATABASE_FILENAME"
+ENV DATABASE_URL="file:$DATABASE_PATH"
+ENV CACHE_DATABASE_FILENAME="cache.db"
+ENV CACHE_DATABASE_PATH="/$LITEFS_DIR/$CACHE_DATABASE_FILENAME"
+ENV INTERNAL_PORT="8080"
+ENV PORT="8081"
 ENV NODE_ENV="production"
 
 # add shortcut for connecting to database CLI
@@ -61,9 +67,11 @@ COPY --from=build /myapp/build /myapp/build
 COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
 COPY --from=build /myapp/public /myapp/public
 COPY --from=build /myapp/package.json /myapp/package.json
-COPY --from=build /myapp/start.sh /myapp/start.sh
+COPY --from=build /myapp/other/setup-swap.js /myapp/other/setup-swap.js
 COPY --from=build /myapp/server.ts /myapp/server.ts
+
 COPY --from=flyio/litefs:0.4 /usr/local/bin/litefs /usr/local/bin/litefs
 ADD litefs.yml /etc/litefs.yml
+RUN mkdir -p /data ${LITEFS_DIR}
 
-CMD [ "litefs", "mount", "--", "sh", "./start.sh" ]
+CMD [ "litefs", "mount" ]

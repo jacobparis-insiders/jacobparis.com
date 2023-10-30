@@ -1,6 +1,6 @@
 import { useUID } from "react-uid"
 
-export function SideNote({ children }) {
+export function SideNote({ children }: { children: React.ReactNode }) {
   const id = useUID()
 
   return (

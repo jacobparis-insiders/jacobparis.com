@@ -33,6 +33,10 @@ export default {
       },
     },
     extend: {
+      screens: {
+        print: {raw: 'print'},
+        screen: {raw: 'screen'},
+      },
       animation: {
         appear: "appear 800ms",
         fade: "fade 300ms ease-out",

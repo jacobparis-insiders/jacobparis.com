@@ -1,11 +1,14 @@
-import * as React from "react"
-
 export function Tweet({
   text,
   imageUrl = "",
   tweetUrl = "",
   className = "",
   ...props
+}: {
+  text: string | string[]
+  imageUrl?: string
+  tweetUrl?: string
+  className?: string
 }) {
   const paragraphs = Array.isArray(text) ? text : [text]
   return (
@@ -39,11 +42,15 @@ export function Tweet({
         </div>
       </div>
 
-      {paragraphs.map((paragraph) => (
-        <p className="mb-4 text-black">{paragraph}</p>
+      {paragraphs.map((paragraph, i) => (
+        <p className="mb-4 text-black" key={i}>
+          {paragraph}
+        </p>
       ))}
 
-      {imageUrl ? <img className="rounded-lg border" src={imageUrl} /> : null}
+      {imageUrl ? (
+        <img className="rounded-lg border" src={imageUrl} alt="" />
+      ) : null}
     </div>
   )
 }

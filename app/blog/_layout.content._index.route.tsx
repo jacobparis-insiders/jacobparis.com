@@ -9,10 +9,13 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react"
-import { z } from "zod"
 import { ButtonLink } from "~/components/ButtonLink.tsx"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import { getContentList } from "./content.server.ts"
+import { getServerTiming } from "#app/utils/timing.server.ts"
+
+export { mergeHeaders as headers } from "~/utils/misc.ts"
+
 export const meta: MetaFunction = ({ params }) => {
   return [
     {
@@ -20,27 +23,6 @@ export const meta: MetaFunction = ({ params }) => {
     },
   ]
 }
-
-export const MdxSchema = z.object({
-  code: z.string(),
-  frontmatter: z.object({
-    slug: z.string(),
-    title: z.string(),
-    description: z.string().optional().nullable().default(null),
-    tags: z
-      .string()
-      .optional()
-      .nullable()
-      .transform((val) => {
-        if (!val) return null
-
-        return val.split(",").map((tag) => tag.trim())
-      }),
-    img: z.string().optional().nullable().default(null),
-    timestamp: z.string().optional().nullable().default(null),
-    published: z.boolean().optional().default(false),
-  }),
-})
 
 export const handle = {
   id: "blog-post",
@@ -51,7 +33,6 @@ export const handle = {
       { route: `content`, priority: 0.7 },
 
       ...content
-        .filter((page) => page.code)
         .filter((page) => page.frontmatter.published)
         .map((page) => {
           return { route: `content/${page.frontmatter.slug}`, priority: 0.7 }
@@ -63,49 +44,51 @@ export const handle = {
 async function getContentListData() {
   const contentList = await getContentList()
 
-  return MdxSchema.array().parse(
-    await Promise.all(
-      contentList.map(async (content) => {
-        const slug = content.name.replace(".mdx", "")
+  return Promise.all(
+    contentList.map(async (content) => {
+      const slug = content.name.replace(".mdx", "")
 
-        const file = await cachified({
-          key: `github:file:${slug}`,
-          cache,
-          ttl: 1000 * 60 * 60,
-          forceFresh: false,
-          async getFreshValue() {
-            return downloadFileBySha(content.sha)
-          },
-        })
+      const compiledMdx = await cachified({
+        key: `mdx:${slug}`,
+        cache,
+        ttl: 1000 * 60 * 60,
+        forceFresh: false,
+        async getFreshValue({ background }) {
+          const file = await downloadFileBySha(content.sha)
 
-        const compiledMdx = await cachified({
-          key: `mdx:compiled:${slug}`,
-          cache,
-          ttl: 1000 * 60 * 60,
-          forceFresh: false,
-          async getFreshValue() {
-            return compileMdx({
+          return compileMdx(
+            {
               slug: slug,
               content: file,
-            }).then((compiled) => {
-              compiled.frontmatter.slug = slug
-              return compiled
-            })
-          },
-        })
+            },
+            {
+              priority: background ? 0 : 1,
+            },
+          ).then((compiled) => {
+            if (!compiled) {
+              throw new Error("No compiled")
+            }
 
-        return compiledMdx
-      }),
-    ).then((list) => {
-      return list.filter((item) => item.frontmatter.title)
+            compiled.frontmatter.slug = slug
+            return compiled
+          })
+        },
+      })
+
+      return {
+        frontmatter: compiledMdx.frontmatter,
+      }
     }),
-  )
+  ).then((list) => {
+    return list.filter((item) => item.frontmatter.title)
+  })
 }
 export async function loader({ request }: LoaderFunctionArgs) {
+  const { time, getServerTimingHeader, serverTimings } = getServerTiming()
   const url = new URL(request.url)
   const tag = url.searchParams.get("tag")
 
-  const content = await getContentListData()
+  const content = await time("contentList", () => getContentListData())
 
   const blogList = content
     .map((c) => c.frontmatter)
@@ -123,6 +106,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
     })
     .map((blog) => ({
       ...blog,
+      slug: blog.slug as string,
       timestamp: blog.timestamp
         ? new Date(blog.timestamp).toLocaleDateString("en-US", {
             year: "numeric",
@@ -136,21 +120,29 @@ export async function loader({ request }: LoaderFunctionArgs) {
   for (const blog of blogList) {
     if (!blog.tags) continue
 
-    for (const tag of blog.tags) {
+    for (const tag of blog.tags.split(",").map((t) => t.trim())) {
       tags.add(tag)
     }
   }
 
-  return json({
-    blogList: blogList.filter((blog) => {
-      if (tag && !blog.tags) return false
-      if (tag && !blog.tags?.includes(tag)) return false
+  console.log({ serverTimings })
+  return json(
+    {
+      blogList: blogList.filter((blog) => {
+        if (tag && !blog.tags) return false
+        if (tag && !blog.tags?.includes(tag)) return false
 
-      return true
-    }),
-    tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
-    currentTag: tag,
-  })
+        return true
+      }),
+      tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
+      currentTag: tag,
+    },
+    {
+      headers: {
+        ...getServerTimingHeader(),
+      },
+    },
+  )
 }
 
 export default function Blog() {
@@ -199,7 +191,15 @@ export default function Blog() {
   )
 }
 
-function BlogItem({ slug, title, timestamp }) {
+function BlogItem({
+  slug,
+  title,
+  timestamp,
+}: {
+  slug: string
+  title: string
+  timestamp: string | null
+}) {
   return (
     <article className="">
       <Link
@@ -243,7 +243,7 @@ export function ErrorBoundary() {
           <div className="mt-6">
             <ButtonLink
               className="inline-flex flex-grow-0 items-center px-4 py-2"
-              href="/"
+              to="/"
             >
               <span className="mx-2 font-medium leading-6">Take me home</span>
             </ButtonLink>

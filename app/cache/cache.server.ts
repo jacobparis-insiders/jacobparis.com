@@ -7,6 +7,7 @@ import {
   type CacheEntry,
   type Cache as CachifiedCache,
   type CachifiedOptions,
+  mergeReporters,
 } from "cachified"
 import fs from "fs"
 import LRUCache from "lru-cache"
@@ -14,6 +15,8 @@ import invariant from "tiny-invariant"
 import { z } from "zod"
 import { updatePrimaryCacheValue } from "./cache_.sqlite.route.tsx"
 import { getInstanceInfo, getInstanceInfoSync } from "./litefs.server.ts"
+import type { PerformanceServerTimings } from "#app/utils/timing.server.ts"
+import { cachifiedTimingReporter } from "#app/utils/timing.server.ts"
 
 const CACHE_DATABASE_PATH = process.env.CACHE_DATABASE_PATH
 
@@ -157,9 +160,12 @@ export async function searchCacheKeys(search: string, limit: number) {
 }
 
 export async function cachified<Value>({
+  serverTimings,
   reporter = verboseReporter(),
   ...options
-}: CachifiedOptions<Value>): Promise<Value> {
+}: CachifiedOptions<Value> & {
+  serverTimings?: PerformanceServerTimings
+}): Promise<Value> {
   return baseCachified({
     // Always show the cached version while we fetch a new one
     staleWhileRevalidate: Infinity,
@@ -168,6 +174,6 @@ export async function cachified<Value>({
     forceFresh: process.env.NODE_ENV === "development",
 
     ...options,
-    reporter,
+    reporter: mergeReporters(cachifiedTimingReporter(serverTimings), reporter),
   })
 }

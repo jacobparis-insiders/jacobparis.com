@@ -20,7 +20,6 @@ import isbot from "isbot"
 import tailwindStylesheetUrl from "~/styles/tailwind.css"
 import { ButtonLink } from "./components/ButtonLink.tsx"
 import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
-import { keepAwake } from "./server/sleep.server.ts"
 import { getServerTiming } from "./utils/timing.server.ts"
 
 export const links: LinksFunction = () => {
@@ -62,14 +61,7 @@ export const shouldRevalidate = () => false
 export const loader: LoaderFunction = async ({ request }) => {
   const { time, getServerTimingHeader } = getServerTiming()
 
-  const isBot = await time("isBot", async () => {
-    const isBot = await isbot(request.headers.get("user-agent"))
-    if (!isBot) {
-      void keepAwake()
-    }
-
-    return isBot
-  })
+  const isBot = await isbot(request.headers.get("user-agent"))
 
   return json(
     {

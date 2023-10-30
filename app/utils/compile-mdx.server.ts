@@ -9,7 +9,9 @@ import remarkSlug from "remark-slug"
 import * as shiki from "shiki"
 import { visit } from "unist-util-visit"
 
-async function compileMdxImpl<FrontmatterType extends Record<string, unknown>>({
+import { z } from "zod"
+
+async function compileMdxImpl({
   slug,
   content,
 }: {
@@ -39,8 +41,7 @@ async function compileMdxImpl<FrontmatterType extends Record<string, unknown>>({
     theme: "poimandres",
   })
   try {
-    console.log("Bundling MDX", slug)
-    const { code, frontmatter, errors } = await bundleMDX({
+    const { code, frontmatter } = await bundleMDX({
       source: content,
       mdxOptions: (options) => ({
         remarkPlugins: [
@@ -62,31 +63,58 @@ async function compileMdxImpl<FrontmatterType extends Record<string, unknown>>({
       }),
     })
 
-    console.log({ errors })
-
-    return { code, frontmatter: frontmatter as FrontmatterType }
+    return {
+      code,
+      frontmatter,
+    }
   } catch (e) {
     console.error(chalk.red(`MDX Compilation failed for ${slug}`))
   }
 
   return {
     code: null,
-    frontmatter: {} as Record<string, unknown>,
+    frontmatter: {} as {
+      [key: string]: any
+    },
   }
 }
 
 const re = /\b([-\w]+(?![^{]*}))(?:=(?:"([^"]*)"|'([^']*)'|([^"'\s]+)))?/g
+export const MdxSchema = z.object({
+  code: z.string().optional(),
+  frontmatter: z.object({
+    slug: z.string(),
+    title: z.string(),
+    description: z.string().optional().nullable().default(null),
+    tags: z.string().optional().nullable(),
+    img: z.string().optional().nullable().default(null),
+    timestamp: z.string().optional().nullable().default(null),
+    published: z.boolean().optional().default(false),
+  }),
+})
 
-async function queuedCompileMdx<
-  FrontmatterType extends Record<string, unknown>,
->(...params: Parameters<typeof compileMdxImpl>) {
+async function queuedCompileMdx(
+  params: Parameters<typeof compileMdxImpl>[0],
+  { priority = 1 } = {},
+) {
   const queue = await getQueue()
 
-  const result = await queue.add(() =>
-    compileMdxImpl<FrontmatterType>(...params),
-  )
+  const result = await queue.add(() => compileMdxImpl(params), {
+    priority,
+  })
 
-  return result
+  if (result.code === null) {
+    return null
+  }
+
+  return z
+    .object({
+      code: z.string(),
+      frontmatter: MdxSchema.shape.frontmatter.extend({
+        slug: z.string().optional(),
+      }),
+    })
+    .parse(result)
 }
 
 export { queuedCompileMdx as compileMdx }

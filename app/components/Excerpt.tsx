@@ -1,4 +1,10 @@
-export function Excerpt({ children, fade }) {
+export function Excerpt({
+  children,
+  fade,
+}: {
+  children: React.ReactNode
+  fade?: boolean
+}) {
   return (
     <blockquote
       className={`my-4 rounded-lg border px-8 font-normal not-italic ${

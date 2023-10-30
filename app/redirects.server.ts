@@ -31,18 +31,18 @@ if (!global.__redirects || process.env.NODE_ENV === "development") {
 
 export default redirects
 
-function normalizeLine(line, index) {
+function normalizeLine(line: string, index: number) {
   return { line: line.trim(), index }
 }
 
-function hasRedirect({ line }) {
+function hasRedirect({ line }: { line: string }) {
   if (!line) return false
   if (line.startsWith("#")) return false
 
   return true
 }
 
-function parseRedirect({ line, index }) {
+function parseRedirect({ line, index }: { line: string; index: number }) {
   try {
     return parseRedirectLine(line)
   } catch (error) {
@@ -54,7 +54,7 @@ function parseRedirect({ line, index }) {
   }
 }
 
-function parseRedirectLine(line) {
+function parseRedirectLine(line: string) {
   const [from, ...parts] = trimComment(line.split(/\s+/g))
 
   if (parts.length === 0) {
@@ -73,7 +73,7 @@ function parseRedirectLine(line) {
   return { from, query, to, status, force, conditions, signed }
 }
 
-function parseParts(parts) {
+function parseParts(parts: Array<string>) {
   if (Number.isInteger(parseInt(parts[0], 10))) {
     return { queryParts: [], to: undefined, lastParts: parts }
   }
@@ -93,29 +93,29 @@ function parseParts(parts) {
   return { queryParts, to, lastParts }
 }
 
-function trimComment(line) {
+function trimComment(line: Array<string>) {
   const commentIndex = line.indexOf("#")
   if (commentIndex === -1) return line
 
   return line.slice(0, commentIndex)
 }
 
-function isUrl(pathOrUrl) {
+function isUrl(pathOrUrl: string) {
   const SCHEMES = ["http://", "https://"]
 
   return SCHEMES.some((scheme) => pathOrUrl.startsWith(scheme))
 }
 
-function parsePairs(conditions) {
+function parsePairs(conditions: Array<string>) {
   return Object.assign({}, ...conditions.map(parsePair))
 }
 
-function parsePair(condition) {
+function parsePair(condition: string) {
   const [key, value] = condition.split("=")
   return { [key]: value }
 }
 
-function parseStatus(statusPart) {
+function parseStatus(statusPart?: string) {
   if (statusPart === undefined) {
     return {}
   }
@@ -130,7 +130,7 @@ function parseStatus(statusPart) {
   return { status, force }
 }
 
-function splitResults(results) {
+function splitResults<T>(results: Array<T>) {
   const redirects = results.filter((result) => !(result instanceof Error))
   const errors = results.filter((result) => result instanceof Error)
   return { redirects, errors }
