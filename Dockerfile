@@ -70,7 +70,7 @@ COPY --from=build /myapp/package.json /myapp/package.json
 COPY --from=build /myapp/other/setup-swap.js /myapp/other/setup-swap.js
 COPY --from=build /myapp/server.ts /myapp/server.ts
 
-COPY --from=flyio/litefs:0.4 /usr/local/bin/litefs /usr/local/bin/litefs
+COPY --from=flyio/litefs:0.5.8 /usr/local/bin/litefs /usr/local/bin/litefs
 ADD litefs.yml /etc/litefs.yml
 RUN mkdir -p /data ${LITEFS_DIR}
 
