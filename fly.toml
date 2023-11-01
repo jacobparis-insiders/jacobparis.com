@@ -4,7 +4,7 @@
 #
 
 app = "chaos-lamp"
-primary_region = "fra"
+primary_region = "sea"
 kill_signal = "SIGINT"
 kill_timeout = "5s"
 

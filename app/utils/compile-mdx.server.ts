@@ -1,4 +1,3 @@
-import rehypeShiki from "@leafac/rehype-shiki"
 import { bundleMDX } from "mdx-bundler"
 import { getQueue } from "./p-queue.server.ts"
 
@@ -6,10 +5,10 @@ import chalk from "chalk"
 import remarkAutolinkHeadings from "remark-autolink-headings"
 import remarkGfm from "remark-gfm"
 import remarkSlug from "remark-slug"
-import * as shiki from "shiki"
 import { visit } from "unist-util-visit"
-
+import fromParisWithLoveTheme from "#public/from-paris-with-love.json"
 import { z } from "zod"
+import { rehypeShikiWorker } from "#app/blog/mdx/rehype-shiki.ts"
 
 async function compileMdxImpl({
   slug,
@@ -37,9 +36,6 @@ async function compileMdxImpl({
     }
   }
 
-  const highlighter = await shiki.getHighlighter({
-    theme: "poimandres",
-  })
   try {
     const { code, frontmatter } = await bundleMDX({
       source: content,
@@ -54,9 +50,9 @@ async function compileMdxImpl({
           ...(options.rehypePlugins ?? []),
           rehypeMetaAttribute,
           [
-            rehypeShiki,
+            rehypeShikiWorker,
             {
-              highlighter,
+              theme: fromParisWithLoveTheme,
             },
           ],
         ],
@@ -68,7 +64,9 @@ async function compileMdxImpl({
       frontmatter,
     }
   } catch (e) {
-    console.error(chalk.red(`MDX Compilation failed for ${slug}`))
+    console.error(
+      chalk.red(`MDX Compilation failed for /app/content/blog/${slug}`),
+    )
   }
 
   return {
@@ -105,6 +103,10 @@ async function queuedCompileMdx(
 
   if (result.code === null) {
     return null
+  }
+
+  if (!result.frontmatter.title) {
+    throw new Error("MDX file must have a title")
   }
 
   return z

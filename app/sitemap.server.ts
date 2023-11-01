@@ -83,7 +83,6 @@ export async function getSitemapXml(request: Request, context: EntryContext) {
       (e) => e.route === entry.route,
     )
     if (existingEntryForRoute) {
-      console.log({ existingEntryForRoute, entry })
       if (existingEntryForRoute !== entry) {
         console.warn(
           `Duplicate route for ${entry.route} with different sitemap data`,

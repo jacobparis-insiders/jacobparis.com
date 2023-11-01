@@ -8,7 +8,6 @@ import { Link, useLoaderData } from "@remix-run/react"
 import { getMDXComponent } from "mdx-bundler/client"
 import invariant from "tiny-invariant"
 
-import CodeBlock from "~/components/code-block.tsx"
 import blogStyles from "~/styles/blog.css"
 
 import { Excerpt } from "~/components/Excerpt.tsx"
@@ -99,7 +98,6 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     cache,
     serverTimings,
 
-    forceFresh: false,
     // Always show the cached version while we fetch a new one
     ttl: 1000 * 60 * 60,
 
@@ -199,7 +197,7 @@ export default function Blog() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
       <div className="flex">
         <article
-          className="prose prose-sky lg:prose-lg mx-auto min-h-screen max-w-prose px-4 pt-24 sm:pl-12"
+          className="prose prose-sky lg:prose-lg min-h-screen w-full max-w-prose px-4 pt-24 sm:mx-auto sm:pl-12"
           style={{ counterReset: "footnote-counter 0" }}
         >
           {frontmatter.img ? (
@@ -220,7 +218,6 @@ export default function Blog() {
               FilterExample,
               PaginationExample,
               em: Highlight,
-              pre: CodeBlock,
             }}
           />
 

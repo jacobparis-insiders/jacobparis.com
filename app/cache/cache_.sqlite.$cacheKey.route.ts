@@ -1,12 +1,12 @@
 import { cache } from "#app/cache/cache.server.ts"
-import { invariantResponse } from "#app/utils/misc.ts"
+import { invariantResponse, requireRequestWithToken } from "#app/utils/misc.ts"
 import { json, type DataFunctionArgs } from "@remix-run/node"
 import { getAllInstances, getInstanceInfo } from "litefs-js"
 import { ensureInstance } from "litefs-js/remix.js"
-// import { requireUserWithRole } from '#app/utils/permissions.ts'
 
 export async function loader({ request, params }: DataFunctionArgs) {
-  // await requireUserWithRole(request, 'admin')
+  await requireRequestWithToken(request)
+
   const searchParams = new URL(request.url).searchParams
   const currentInstanceInfo = await getInstanceInfo()
   const allInstances = await getAllInstances()

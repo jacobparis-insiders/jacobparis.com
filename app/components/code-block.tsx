@@ -3,6 +3,7 @@ import * as React from "react"
 import useClipboard from "react-use-clipboard"
 
 export default function CodeBlock(props) {
+  return props.children
   const language = props.children.props.className
 
   const { numbered, linesHighlighted, labeled, filePath } = props
@@ -72,7 +73,7 @@ export default function CodeBlock(props) {
         </>
       )}
       <div className="p-3">
-        <pre className="-mx-5 overflow-x-auto px-5 py-0 text-sm text-white sm:mx-0 sm:px-6">
+        <pre className="-mx-5 overflow-x-auto px-5 py-0 text-[0.8125rem] text-white antialiased sm:mx-0 sm:px-6">
           <code>{linesNodes}</code>
         </pre>
       </div>
@@ -87,7 +88,6 @@ function Line({ highlight, children }) {
         backgroundColor: highlight ? "#007acc" : "",
       }}
       className={`
-      [&:after]:content-['_']
       ${
         highlight
           ? "-mx-4 whitespace-pre-wrap px-4"

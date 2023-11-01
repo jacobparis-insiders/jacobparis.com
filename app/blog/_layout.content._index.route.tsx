@@ -1,7 +1,11 @@
 import { cache, cachified } from "#app/cache/cache.server.ts"
 import { compileMdx } from "#app/utils/compile-mdx.server.ts"
 import { downloadFileBySha } from "#app/utils/github.server.ts"
-import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
+import type {
+  LoaderFunctionArgs,
+  MetaFunction,
+  LinksFunction,
+} from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Link,
@@ -73,18 +77,21 @@ async function getContentListData() {
             return compiled
           })
         },
+      }).catch((error) => {
+        console.error("caught", error)
+        return null
       })
 
-      return {
-        frontmatter: compiledMdx.frontmatter,
-      }
+      return compiledMdx
+        ? {
+            frontmatter: compiledMdx.frontmatter,
+          }
+        : null
     }),
-  ).then((list) => {
-    return list.filter((item) => item.frontmatter.title)
-  })
+  ).then((content) => content.filter((c) => c !== null))
 }
 export async function loader({ request }: LoaderFunctionArgs) {
-  const { time, getServerTimingHeader, serverTimings } = getServerTiming()
+  const { time, getServerTimingHeader } = getServerTiming()
   const url = new URL(request.url)
   const tag = url.searchParams.get("tag")
 
@@ -125,7 +132,6 @@ export async function loader({ request }: LoaderFunctionArgs) {
     }
   }
 
-  console.log({ serverTimings })
   return json(
     {
       blogList: blogList.filter((blog) => {

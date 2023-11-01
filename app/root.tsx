@@ -88,6 +88,7 @@ export default function App() {
         <Links />
         <style>
           {`.bg-light {
+          -webkit-backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
           backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
           background-color: rgba(255, 255, 255, 0.5);
         }`}
@@ -130,7 +131,7 @@ export function ErrorBoundary() {
               <div className="mt-6">
                 <ButtonLink
                   className="inline-flex flex-grow-0 items-center px-4 py-2"
-                  href="/"
+                  to="/"
                 >
                   <span className="mx-2 font-medium leading-6">
                     Take me home
