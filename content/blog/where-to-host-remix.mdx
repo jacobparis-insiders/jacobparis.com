@@ -4,19 +4,19 @@ description: Should you host your Remix app on a serverless provider like Vercel
 tags: Remix
 published: true
 guide: true
-timestamp: "2023-07-06"
+timestamp: "2023-10-31"
 ---
 
 Remix supports many different hosting options. This guide will help you choose the right one for your app.
 
-> Last updated on July 06 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
+> Last updated on Oct 31 2023. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
 
 - [Serverless functions](#serverless-functions)
   - [Vercel](#vercel)
   - [Fastly](#fastly)
   - [Netlify](#netlify)
   - [Cloudflare Pages](#cloudflare)
-  - [AWS Lambda](#aws-lambda)
+  - [SST](#sst)
 - [Long-lived servers](#long-lived-servers)
   - [Fly](#flyio)
   - [Render](#render)
@@ -37,18 +37,18 @@ In general, serverless functions run Node.js and edge functions run the **very**
 
 Because of the ephemeral nature of these functions, the first request to a function may cause a `cold-start` and take several seconds to respond.
 
-|                        | Vercel              | Fastly   | Netlify | Cloudflare | AWS Lambda |
-| ---------------------- | ------------------- | -------- | ------- | ---------- | ---------- |
-| **Runtime**            | Node/V8 (per route) | WASM     | Node/V8 | V8         | Node       |
-| **Bundle size**        | 50MB                | 100MB    | 50MB    | 25MB       | 50MB       |
-| **Request body size**  | 4.5MB               | No limit | 3MB     | 100MB      | 6MB        |
-| **Streaming**          | Yes                 | Yes      | No      | Yes        | Yes        |
-| **Deferred data**      | Yes                 | Yes      | No      | Yes        | Yes        |
-| **Server-sent events** | No                  | Yes      | No      | Yes        | Yes        |
-| **Cache-control**      | Yes                 | Yes      | Yes     | Yes        | Yes        |
-| **Git-based deploys**  | Yes                 | No       | Yes     | Yes        | No         |
-| **Deploy previews**    | Yes                 | No       | Yes     | Yes        | No         |
-| **Websockets**         | No                  | Yes      | No      | Yes        | Yes        |
+|                        | Vercel              | Fastly   | Netlify | Cloudflare | SST  |
+| ---------------------- | ------------------- | -------- | ------- | ---------- | ---- |
+| **Runtime**            | Node/V8 (per route) | WASM     | Node/V8 | V8         | Node |
+| **Bundle size**        | 50MB                | 100MB    | 50MB    | 25MB       | 50MB |
+| **Request body size**  | 4.5MB               | No limit | 3MB     | 100MB      | 6MB  |
+| **Streaming**          | Yes                 | Yes      | Yes     | Yes        | Yes  |
+| **Deferred data**      | Yes                 | Yes      | Yes     | Yes        | Yes  |
+| **Server-sent events** | No                  | Yes      | No      | Yes        | Yes  |
+| **Cache-control**      | Yes                 | Yes      | Yes     | Yes        | Yes  |
+| **Git-based deploys**  | Yes                 | No       | Yes     | Yes        | Yes  |
+| **Deploy previews**    | Yes                 | No       | Yes     | Yes        | Yes  |
+| **Websockets**         | No                  | Yes      | No      | Yes        | Yes  |
 
 ### Vercel
 
@@ -94,11 +94,14 @@ With built-in git-based deployments, every time you push to your git repo, Netli
 
 Netlify supports both Node (Netlify functions) and V8 (Netlify Edge Functions) runtimes as separate targets, so your entire app will run on one or the other.
 
-- The Remix server bundle is limited to 50MB
-- Netlify honors cache-control headers including `s-maxage` for their CDN, but does not support `stale-while-revalidate` or `stale-if-error`.
+Netlify supports powerful fine-grained cache control in a few ways
+
+- [`Cache-Tag` headers](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) which can be used to invalidate specific pages or assets
+- [`Netlify-Vary` header](https://www.netlify.com/blog/netlify-cache-key-variations/), which can vary cache policies on specific headers, like device type, or specific cookie values, like user sessions or A/B tests.
+
+You can [choose which region your functions are deployed to](https://www.netlify.com/blog/netlify-functions-region-selection/), but you can't deploy to multiple regions at once.
+
 - The maximum request body size with Netlify is 3MB, which can be problematic for direct file uploads.
-- Only cloud databases are supported
-- Does not support streaming, so you can't use Server-Sent Events or `defer()`
 - Does not support websockets
 
 ### Cloudflare
@@ -121,16 +124,14 @@ Websockets also work on Cloudflare, which is not common for serverless platforms
 - Deployments have a 200ms startup time limit, which can be problematic as your app grows.<SideNote> If you hit a `No deployment available` error after your build and upload succeeds, this may be the cause.</SideNote>
 - Only cloud databases are supported, and Prisma requires using their Data Platform, which has a generous free tier but is a paid service.
 
-## AWS Lambda
+## SST
 
-AWS Lambda is a serverless function platform that runs on the edge. It's the most popular serverless platform, and the one that most people think of when they hear "serverless".
+SST is a framework for building serverless applications on AWS. It's built on top of AWS CDK, which is a framework for building cloud infrastructure.
 
-Lambda functions run node, so they have full support for node modules, but there is no option to use a different runtime. Lambda@Edge is not a true edge function offering, but instead allows your functions to be invoked from any AWS region and will be proxied internally within AWS's network.
+They support Remix via the [RemixSite construct](https://docs.sst.dev/constructs/RemixSite) which will deploy your app to AWS Lambda or AWS Lambda@Edge<SideNote> Not to be confused with edge functions, these are regular node lambda functions that will proxy between AWS regions, so users connect to the closest AWS region instead of just the one you're deployed to. </SideNote> and using Cloudfront as a CDN.
 
-- There is no built in git based deployments, so most devs deploy to Lambda through a tool like Serverless, SST, Architect, or AWS CDK.
-- Lambda has a 50MB bundle size limit.
-- Lambda has a 6MB request body limit
-- Only cloud databases are supported
+- Git based deploys are not included, but you can easily set up your own with a Github Action or by using [Seed, the deployment infrastucture tool](https://seed.run/docs/adding-a-cdk-app) that is built by the SST team.
+- Preview and staging environments are created via the SST CLI, which you can do in a Github Action.
 
 ## Long-lived servers
 
@@ -164,8 +165,8 @@ Fly also supports Postgres and Redis databases that can be deployed alongside yo
 
 Fly offers a CDN for serving static assets, but does not offer APIs to programmatically purge the cache. Cache-control headers are supported, including `stale-while-revalidate` and `stale-if-error`.
 
-- There is no built in git based deployments, but Fly has a CLI that can be used to deploy to Fly from your local machine, or you can use GitHub Actions.
-- No automatic preview environments, but it's easy to set up staging environments
+- There is no built in git based deployments, but easy to set up in GitHub Actions
+- No preview environments. You can use [FlyCD for automatic preview environments on Fly.io](https://flycd.dev/)
 - Fly has an 8GB uncompressed docker image limit
 - Fly has a 10MB request body buffer, but can handle larger bodies by streaming them
 
