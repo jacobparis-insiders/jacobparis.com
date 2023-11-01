@@ -1,6 +1,6 @@
 import { useState } from "react"
-import { useResetCallback } from "../useResetCallback"
-import { ProgressiveClientOnly } from "../ProgressiveClientOnly"
+import { ProgressiveClientOnly } from "../ProgressiveClientOnly.tsx"
+import { useResetCallback } from "../useResetCallback.tsx"
 
 type FalsyType = false | null | undefined | "" | 0
 function typedBoolean<ValueType>(

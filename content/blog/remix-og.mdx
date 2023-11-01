@@ -60,7 +60,9 @@ Put that in a resource route<SideNote> A resource route is just a regular Remix 
 ```tsx
 import satori from "satori"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const jsx = <div style="color: black">hello, world</div>
 
   // From satori docs example
@@ -117,7 +119,9 @@ export async function loader({ request }: LoaderArgs) {
 This resource route is a regular web endpoint, so you can use query parameters to pass in dynamic text.
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const title = url.searchParams.get("title")
   const description = url.searchParams.get("description")
@@ -270,7 +274,7 @@ You can find the sandbox at [og-playground.vercel.app](https://og-playground.ver
 This is the code for the image generator I use for this article as of April 9 2023. You can find the live endpoint by checking the source for this page and looking for the `og:image` meta tag under the `head` element.
 
 ```tsx
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import type { SatoriOptions } from "satori"
 import satori from "satori"
 import svg2img from "svg2img"
@@ -285,7 +289,9 @@ declare module "react" {
   }
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const params = new URL(request.url).searchParams
   const titleInput = params.get("title")
   invariant(titleInput, "title is required")

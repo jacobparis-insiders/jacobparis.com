@@ -1,8 +1,8 @@
 // http://localhost:3000/content/remix-markdown-preview/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
+import { Transition } from "@headlessui/react"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { json, redirect } from "@remix-run/node"
 import type { ShouldRevalidateFunction } from "@remix-run/react"
 import {
   Link,
@@ -10,11 +10,10 @@ import {
   useLoaderData,
   useSearchParams,
 } from "@remix-run/react"
-import db from "./db.server"
-import { processMarkdownToHtml } from "./markdown.server"
 import { useCallback, useRef, useState } from "react"
-import { Transition } from "@headlessui/react"
-export async function action({ params, request }: ActionArgs) {
+import db from "./db.server.ts"
+import { processMarkdownToHtml } from "./markdown.server.ts"
+export async function action({ params, request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const description = formData.get("description") || ""
 
@@ -50,7 +49,7 @@ function useDebounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   )
 }
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {

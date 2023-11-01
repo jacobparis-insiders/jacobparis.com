@@ -1,0 +1,32 @@
+{
+  "entry": [
+    "server.ts",
+    "remix.config.js",
+    "tailwind.config.ts",
+    "postcss.config.js",
+    "mocks/index.ts",
+    "app/**/*.route.{js,jsx,ts,tsx,md,mdx}",
+    "app/entry.client.tsx",
+    "app/entry.server.tsx",
+    "app/root.tsx"
+  ],
+  "extensions": [".ts", ".js", ".tsx", ".jsx", ".mdx"],
+  "respectGitignore": true,
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/*.tests.{js,jsx,ts,tsx}",
+    "**/*.test.{js,jsx,ts,tsx}",
+    "**/*.spec.{js,jsx,ts,tsx}",
+    "**/tests/**",
+    "**/__tests__/**",
+    "**/*.d.ts",
+    "**/build/**",
+    "content/**/*.mdx",
+    "content/index.ts",
+    "others/build-info.js",
+    "others/is-deployable.js"
+  ],
+  "ignoreUnimported": [],
+  "ignoreUnused": [],
+  "ignoreUnresolved": []
+}

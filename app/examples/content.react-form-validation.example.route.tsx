@@ -1,11 +1,11 @@
 // http://localhost:3000/content/react-form-validation/example
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Form } from "@remix-run/react"
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({})
 }
 

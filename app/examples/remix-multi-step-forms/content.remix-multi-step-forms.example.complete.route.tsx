@@ -1,15 +1,14 @@
 // http://localhost:3000/content/remix-multi-step-forms/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { json, redirect } from "@remix-run/node"
 import { Form, Link, useLoaderData } from "@remix-run/react"
 
 import invariant from "tiny-invariant"
-import db from "./db.server"
-import { FadeIn } from "./FadeIn"
+import { FadeIn } from "./FadeIn.tsx"
+import db from "./db.server.ts"
 
-export async function action(args: ActionArgs) {
+export async function action(args: ActionFunctionArgs) {
   const formData = await args.request.clone().formData()
 
   const _action = formData.get("_action")
@@ -22,7 +21,7 @@ export async function action(args: ActionArgs) {
   throw new Error(`Unknown action ${_action}`)
 }
 
-async function continueAction({ request }: ActionArgs) {
+async function continueAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const email = formData.get("email")
   invariant(email)
@@ -33,7 +32,7 @@ async function continueAction({ request }: ActionArgs) {
   return redirect("/content/remix-multi-step-forms/example/name")
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     hasStarted: db.hasStarted,
     firstName: db.firstName,

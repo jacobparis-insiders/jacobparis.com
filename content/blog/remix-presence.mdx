@@ -185,7 +185,9 @@ export { getSession, commitSession, destroySession }
 We can now use this in the our page's action to save the user's name and emoji.
 
 ```tsx
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie"),
   )
@@ -223,7 +225,9 @@ In our loader, we can read the session data from the cookie and return it so we 
 This is also a good place to set some sensible defaults for new users. If the user doesn't have an ID yet, generate a random one and set the name to "Anonymous".
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie"),
   )
@@ -359,7 +363,7 @@ Create a new route `presence.tsx`<SideNote> This should match the fetch request 
 export async function action({
   params,
   request,
-}: ActionArgs) {
+}: ActionFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie"),
   )
@@ -387,7 +391,9 @@ export async function action({
 We can now update the loader in our main page to return the current list of users.
 
 ```tsx
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const session = await getSession(
     request.headers.get("Cookie"),
   )
@@ -457,9 +463,11 @@ In the `presence.tsx` file, add a loader that will return a stream of events.
 Take the route and fetch interval from the query string, so we can use the same loader for multiple streams, and each page can decide how often to fetch the data.
 
 ```tsx
-import { eventStream } from "remix-utils"
+import { eventStream } from "remix-utils/sse/server";
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const route = url.searchParams.get("route")
   const fetchInterval =

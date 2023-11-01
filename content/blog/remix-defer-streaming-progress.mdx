@@ -44,7 +44,7 @@ This is especially useful for data-heavy pages, such as dashboards with many asy
 When the user navigates to `items/$hash`, (we redirect them there automatically upon dispatching the long-running process), we have a loader that continuously watches the `$hash.json` file to check its progress. The loader defers a promise that will resolve only when the json's progress has hit 100.
 
 ```ts
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   if (!params.hash) return redirect("/")
   const pathname = path.join(
     "public",
@@ -103,7 +103,7 @@ In Remix, we can use a resource route to make this endpoint, and our loader will
 export async function loader({
   request,
   params,
-}: LoaderArgs) {
+}: LoaderFunctionArgs) {
   const hash = params.hash
 
   return eventStream(request.signal, function setup(send) {

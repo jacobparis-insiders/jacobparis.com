@@ -1,20 +1,20 @@
 // http://localhost:3000/content/remix-conform-autosave/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import { conform, useForm } from "@conform-to/react"
+import { getFieldsetConstraint, parse } from "@conform-to/zod"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 import { useActionData, useLoaderData } from "@remix-run/react"
-import db from "./db.server"
-import { parse, getFieldsetConstraint } from "@conform-to/zod"
 import { z } from "zod"
-import { conform, useForm } from "@conform-to/react"
-import { useDebounceFetcher } from "../useDebounceFetcher"
+import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import db from "./db.server.ts"
 
 const schema = z.object({
   email: z.string().email(),
   name: z.string(),
 })
 
-export async function action({ request, params }: ActionArgs) {
+export async function action({ request, params }: ActionFunctionArgs) {
   const id = params.id
   if (!id || !db[id]) {
     throw new Response("Not found", { status: 404 })
@@ -42,7 +42,7 @@ export async function action({ request, params }: ActionArgs) {
   })
 }
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id
   if (!id || !db[id]) {
     throw redirect("/content/remix-form-autosave/example")

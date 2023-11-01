@@ -1,14 +1,14 @@
 // http://localhost:3000/content/remix-crud/example
 
-import type { ActionArgs } from "@remix-run/node"
+import type { ActionFunctionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
-import type { Issue } from "./db.server"
-import db from "./db.server"
-import { randomUuid } from "../crypto"
-import { FadeIn } from "../FadeIn"
+import type { Issue } from "./db.server.ts"
+import db from "./db.server.ts"
+import { randomUuid } from "../crypto.ts"
+import { FadeIn } from "../FadeIn.tsx"
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const id = randomUuid()
 
   db[id] = {

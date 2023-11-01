@@ -162,7 +162,7 @@ The completed `queue.server.ts` file should look like this:
 import type { Processor } from "bullmq"
 import { QueueEvents } from "bullmq"
 import { Queue, Worker } from "bullmq"
-import connection from "./redis.server"
+import connection from "./redis.server.ts"
 import path from "path"
 
 type AugmentedQueue<T> = Queue<T> & {
@@ -239,7 +239,7 @@ export const renderQueue = registerQueue(
 We can now import our queue from anywhere in the application and add new jobs to it.
 
 ```ts
-import { emailQueue } from "./queue.server"
+import { emailQueue } from "./queue.server.ts"
 
 await emailQueue.add("send-welcome-email", {
   to: "help@example.com",
@@ -255,7 +255,7 @@ The emailQueue will now process the job and send the email, and the rest of your
 From our queue, we can get any job by its ID and check its status.
 
 ```ts
-import { renderQueue } from "./queue.server"
+import { renderQueue } from "./queue.server.ts"
 
 const job = await renderQueue.getJob("123")
 

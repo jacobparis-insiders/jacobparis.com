@@ -15,9 +15,11 @@ BullMQ is a modern, fast, and robust queue system for Node.js. It is a successor
 
 ```tsx
 import { defer, redirect } from "@remix-run/node"
-import { processItemQueue } from "~/queue.server"
+import { processItemQueue } from "~/queue.server.ts"
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({
+  params,
+}: LoaderFunctionArgs) {
   const hash = params.hash
   if (!hash) {
     return redirect("/")

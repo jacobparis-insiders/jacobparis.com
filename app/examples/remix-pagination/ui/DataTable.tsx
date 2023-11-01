@@ -2,10 +2,10 @@
  * This is the shadcn/ui Data Table component
  */
 import {
-  type ColumnDef,
   flexRender,
   getCoreRowModel,
   useReactTable,
+  type ColumnDef,
 } from "@tanstack/react-table"
 import {
   Table,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "~/components/ui/table"
+} from "~/components/ui/table.tsx"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]

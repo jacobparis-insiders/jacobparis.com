@@ -1,3 +1,5 @@
+import type { CreateReporter } from "cachified"
+
 export type PerformanceServerTimings = Record<
   string,
   Array<PerformanceServerTiming>
@@ -30,6 +32,7 @@ export function getServerTiming() {
         "Server-Timing": getServerTimeHeaderField(serverTimings),
       }
     },
+    serverTimings,
   }
 }
 
@@ -43,8 +46,6 @@ export async function time<T>(
       },
   fn: Promise<T> | (() => T | Promise<T>),
 ) {
-  const start = performance.now()
-
   const name =
     typeof serverTimingParam === "string"
       ? serverTimingParam
@@ -52,30 +53,47 @@ export async function time<T>(
   const description =
     typeof serverTimingParam === "string" ? "" : serverTimingParam.description
 
-  if (!serverTimings[name]) {
-    serverTimings[name] = []
-  }
+  const timer = createTimer({ name, description }, serverTimings)
 
   let result: T
   try {
     result = typeof fn === "function" ? await fn() : await fn
   } catch (error) {
-    void recordServerTiming(serverTimings, {
-      name,
-      description: "Error",
-    })
+    void timer.error()
 
     // Re-throw the error so that the caller can handle it
     throw error
   }
 
-  void recordServerTiming(serverTimings, {
-    name,
-    description,
-    duration: performance.now() - start,
-  })
+  void timer.end()
 
   return result
+}
+
+function createTimer(
+  { name, description }: { name: string; description: string },
+  serverTimings: PerformanceServerTimings,
+) {
+  if (!serverTimings[name]) {
+    serverTimings[name] = []
+  }
+
+  const start = performance.now()
+  return {
+    end() {
+      void recordServerTiming(serverTimings, {
+        name,
+        description,
+        duration: performance.now() - start,
+      })
+    },
+    error() {
+      void recordServerTiming(serverTimings, {
+        name,
+        description: "Error",
+      })
+    },
+  }
 }
 
 function recordServerTiming(
@@ -126,4 +144,41 @@ export function getServerTimeHeaderField(
         .join(";")
     })
     .join(",")
+}
+
+export function cachifiedTimingReporter<Value>(
+  serverTimings?: PerformanceServerTimings,
+): undefined | CreateReporter<Value> {
+  if (!serverTimings) return
+
+  return ({ key }) => {
+    const cacheRetrievalTimer = createTimer(
+      {
+        name: `cache:${key}`,
+        description: `${key} cache retrieval`,
+      },
+      serverTimings,
+    )
+
+    let getFreshValueTimer: ReturnType<typeof createTimer> | undefined
+    return (event) => {
+      switch (event.name) {
+        case "getFreshValueStart":
+          getFreshValueTimer = createTimer(
+            {
+              name: `getFreshValue:${key}`,
+              description: `request forced to wait for a fresh ${key} value`,
+            },
+            serverTimings,
+          )
+          break
+        case "getFreshValueSuccess":
+          getFreshValueTimer?.end()
+          break
+        case "done":
+          cacheRetrievalTimer.end()
+          break
+      }
+    }
+  }
 }

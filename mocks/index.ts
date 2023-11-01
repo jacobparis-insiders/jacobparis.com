@@ -1,10 +1,10 @@
-import { setupServer } from 'msw/node'
-import { GitHubMocks } from './github'
+import { setupServer } from "msw/node"
+import { GitHubMocks } from "./github.ts"
 
 const server = setupServer(...GitHubMocks)
 
-server.listen({ onUnhandledRequest: 'warn' })
-console.info('MSW initialised')
+server.listen({ onUnhandledRequest: "warn" })
+console.info("MSW initialised")
 
-process.once('SIGINT', () => server.close())
-process.once('SIGTERM', () => server.close())
+process.once("SIGINT", () => server.close())
+process.once("SIGTERM", () => server.close())

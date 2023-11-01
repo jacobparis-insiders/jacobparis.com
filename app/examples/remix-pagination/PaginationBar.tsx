@@ -1,6 +1,6 @@
 import { Form, useSearchParams } from "@remix-run/react"
-import { Icon } from "~/components/icon"
-import { Button } from "~/components/ui/button"
+import { Icon } from "~/components/icon.tsx"
+import { Button } from "~/components/ui/button.tsx"
 
 export function PaginationBar({ total }: { total: number }) {
   const [searchParams] = useSearchParams()

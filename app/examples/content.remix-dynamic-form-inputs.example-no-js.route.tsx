@@ -1,9 +1,8 @@
 // http://localhost:3000/content/remix-dynamic-form-inputs/example-no-js
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { useLoaderData } from "@remix-run/react"
-import { useState } from "react"
 
 declare global {
   var mutedWords: string[]
@@ -13,7 +12,7 @@ if (!global.mutedWords) {
   global.mutedWords = []
 }
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const mutedWords = formData.getAll("mutedWords[]")
   global.mutedWords = mutedWords.filter(Boolean) as string[]
@@ -21,7 +20,7 @@ export async function action({ request }: ActionArgs) {
   return null
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     mutedWords: global.mutedWords,
   })

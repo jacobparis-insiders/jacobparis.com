@@ -1,7 +1,4 @@
 import { Link } from "@remix-run/react"
-import type { getMdxListItems } from "~/utils/mdx.server"
-
-type BlogCardType = Awaited<ReturnType<typeof getMdxListItems>>[0]
 
 export default function BlogCard({
   slug,
@@ -9,7 +6,9 @@ export default function BlogCard({
   img = "",
   tags = "",
   className = "",
-}: Pick<BlogCardType, "slug" | "title"> & {
+}: {
+  slug: string
+  title: string
   img?: string
   tags?: string
   className?: string

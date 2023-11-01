@@ -1,38 +1,22 @@
 import { bundleMDX } from "mdx-bundler"
-import type { GitHubFile } from "~/types"
-import { getQueue } from "./p-queue.server"
+import { getQueue } from "./p-queue.server.ts"
 
-async function compileMdxImpl<FrontmatterType extends Record<string, unknown>>({
+import chalk from "chalk"
+import remarkAutolinkHeadings from "remark-autolink-headings"
+import remarkGfm from "remark-gfm"
+import remarkSlug from "remark-slug"
+import { visit } from "unist-util-visit"
+import fromParisWithLoveTheme from "#public/from-paris-with-love.json"
+import { z } from "zod"
+import { rehypeShikiWorker } from "#app/blog/mdx/rehype-shiki.ts"
+
+async function compileMdxImpl({
   slug,
-  files,
+  content,
 }: {
   slug: string
-  files: Array<GitHubFile>
+  content: string
 }) {
-  // prettier-ignore
-  const { default: remarkAutolinkHeader } = await import("remark-autolink-headings")
-  const { default: remarkGfm } = await import("remark-gfm")
-  const { default: remarkSlug } = await import("remark-slug")
-
-  const { visit } = await import("unist-util-visit")
-
-  const indexPattern = /index.mdx?$/
-  const indexFile = files.find(({ path }) => path.match(indexPattern))
-  if (!indexFile) {
-    return null
-  }
-
-  const rootDir = indexFile.path.replace(indexPattern, "")
-  const relativeFiles = files.map(({ path, content }) => ({
-    path: path.replace(rootDir, "./"),
-    content,
-  }))
-
-  const filesObject = arrayToObject(relativeFiles, {
-    keyname: "path",
-    valuename: "content",
-  })
-
   const rehypeMetaAttribute = () => {
     return (tree) => {
       visit(tree, "element", visitor)
@@ -54,65 +38,85 @@ async function compileMdxImpl<FrontmatterType extends Record<string, unknown>>({
 
   try {
     const { code, frontmatter } = await bundleMDX({
-      source: indexFile.content,
-      files: filesObject,
+      source: content,
       mdxOptions: (options) => ({
         remarkPlugins: [
           ...(options.remarkPlugins ?? []),
           remarkSlug,
-          [remarkAutolinkHeader, { behavior: "wrap" }],
+          [remarkAutolinkHeadings, { behavior: "wrap" }],
           remarkGfm,
         ],
         rehypePlugins: [
           ...(options.rehypePlugins ?? []),
           rehypeMetaAttribute,
           [
-            require(`rehype-shiki`),
+            rehypeShikiWorker,
             {
-              theme: `public/from-paris-with-love.json`,
-              useBackground: true,
+              theme: fromParisWithLoveTheme,
             },
           ],
         ],
       }),
     })
 
-    return { code, frontmatter: frontmatter as FrontmatterType }
+    return {
+      code,
+      frontmatter,
+    }
   } catch (e) {
-    throw new Error(`MDX Compilation failed for ${slug}`)
+    console.error(
+      chalk.red(`MDX Compilation failed for /app/content/blog/${slug}`),
+    )
+  }
+
+  return {
+    code: null,
+    frontmatter: {} as {
+      [key: string]: any
+    },
   }
 }
 
 const re = /\b([-\w]+(?![^{]*}))(?:=(?:"([^"]*)"|'([^']*)'|([^"'\s]+)))?/g
+export const MdxSchema = z.object({
+  code: z.string().optional(),
+  frontmatter: z.object({
+    slug: z.string(),
+    title: z.string(),
+    description: z.string().optional().nullable().default(null),
+    tags: z.string().optional().nullable(),
+    img: z.string().optional().nullable().default(null),
+    timestamp: z.string().optional().nullable().default(null),
+    published: z.boolean().optional().default(false),
+  }),
+})
 
-function arrayToObject<Item extends Record<string, unknown>>(
-  array: Array<Item>,
-  { keyname, valuename }: { keyname: keyof Item; valuename: keyof Item },
+async function queuedCompileMdx(
+  params: Parameters<typeof compileMdxImpl>[0],
+  { priority = 1 } = {},
 ) {
-  const obj: Record<string, Item[keyof Item]> = {}
-
-  for (const item of array) {
-    const key = item[keyname]
-    if (typeof key !== "string") {
-      throw new Error(`Type of ${key} should be a string`)
-    }
-    const value = item[valuename]
-    obj[key] = value
-  }
-
-  return obj
-}
-
-async function queuedCompileMdx<
-  FrontmatterType extends Record<string, unknown>,
->(...params: Parameters<typeof compileMdxImpl>) {
   const queue = await getQueue()
 
-  const result = await queue.add(() =>
-    compileMdxImpl<FrontmatterType>(...params),
-  )
+  const result = await queue.add(() => compileMdxImpl(params), {
+    priority,
+  })
 
-  return result
+  if (result.code === null) {
+    return null
+  }
+
+  if (!result.frontmatter.title) {
+    throw new Error("MDX file must have a title")
+  }
+
+  return z
+    .object({
+      code: z.string(),
+      frontmatter: MdxSchema.shape.frontmatter.extend({
+        slug: z.string().optional(),
+      }),
+    })
+    .parse(result)
 }
 
 export { queuedCompileMdx as compileMdx }

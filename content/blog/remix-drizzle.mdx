@@ -113,10 +113,12 @@ In one of your routes
 - add a form that submits to the action
 
 ```tsx
-import { db } from "~/drizzle/config.server"
-import { items } from "~/drizzle/schema.server"
+import { db } from "~/drizzle/config.server.ts"
+import { items } from "~/drizzle/schema.server.ts"
 
-export async function action({ request }: ActionArgs) {
+export async function action({
+  request,
+}: ActionFunctionArgs) {
   db.insert(items).values({ title: "Item title" }).run()
 
   return {
@@ -124,7 +126,9 @@ export async function action({ request }: ActionArgs) {
   }
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   // use drizzle to get the data
   const data = db.select().from(items).all()
 

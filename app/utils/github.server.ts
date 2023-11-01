@@ -2,8 +2,10 @@ import nodepath from "path"
 import { Octokit as createOctokit } from "@octokit/rest"
 import { throttling } from "@octokit/plugin-throttling"
 import Lrucache from "lru-cache"
-import type { GitHubFile } from "~/types"
-import { getRequiredEnvVar } from "./misc"
+import type { GitHubFile } from "~/types.ts"
+import { getRequiredEnvVar } from "./misc.ts"
+
+import { z } from "zod"
 
 type ThrottleOptions = {
   method: string
@@ -55,8 +57,14 @@ function cachify<TArgs, TReturn>(fn: (args: TArgs) => Promise<TReturn>) {
     return result
   }
 }
+const GitHubFileSchema = z.object({
+  name: z.string(),
+  path: z.string(),
+  sha: z.string(),
+  type: z.string(),
+})
 
-async function downloadDirectoryListImpl(path: string) {
+export async function downloadDirectoryList(path: string) {
   const response = await octokit.repos
     .getContent({
       owner: getGHOwner(),
@@ -73,16 +81,10 @@ async function downloadDirectoryListImpl(path: string) {
     throw new Error("GitHub token is invalid")
   }
 
-  if (!Array.isArray(response.data)) {
-    throw new Error(
-      `GitHub should always return an array, not sure what happened for the path ${path}`,
-    )
-  }
-
-  return response.data
+  return GitHubFileSchema.array().parse(response.data)
 }
 
-async function downloadFileByShaImpl(sha: string) {
+export async function downloadFileBySha(sha: string) {
   const { data } = await octokit.request(
     "GET /repos/{owner}/{repo}/git/blobs/{file_sha}",
     {
@@ -95,8 +97,6 @@ async function downloadFileByShaImpl(sha: string) {
   const encoding = data.encoding as Parameters<typeof Buffer.from>["1"]
   return Buffer.from(data.content, encoding).toString()
 }
-
-export const downloadFileBySha = cachify(downloadFileByShaImpl)
 
 async function downloadFirstMdxFileImpl(
   list: Array<{ name: string; sha: string; type: string }>,
@@ -114,7 +114,6 @@ async function downloadFirstMdxFileImpl(
 }
 
 const downloadFirstMdxFile = cachify(downloadFirstMdxFileImpl)
-export const downloadDirectoryList = cachify(downloadDirectoryListImpl)
 
 async function downloadDirectoryImpl(path: string): Promise<Array<GitHubFile>> {
   const fileOrDirectoryList = await downloadDirectoryList(path)

@@ -11,10 +11,10 @@ Remix uses esbuild to bundle your app. When you import a file, esbuild will use 
 A resource route can fetch the image from this path and return it as a response to serve it to the client.
 
 ```ts
-import { LoaderArgs } from "@remix-run/node"
+import { LoaderFunctionArgs } from "@remix-run/node"
 import image from "./image.jpg"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   url.pathname = image
 

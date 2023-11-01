@@ -1,12 +1,12 @@
-import type { ActionArgs } from "@remix-run/node"
+import type { ActionFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 
-import { getRequiredEnvVar } from "~/utils/misc"
 import crypto from "node:crypto"
+import { getRequiredEnvVar } from "~/utils/misc.ts"
 /**
  * Return a signed URL for Cloudflare Images.
  */
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const accountId = getRequiredEnvVar("CLOUDFLARE_IMAGES_ACCOUNT_ID")
   const apiToken = getRequiredEnvVar("CLOUDFLARE_IMAGES_API_TOKEN")
 

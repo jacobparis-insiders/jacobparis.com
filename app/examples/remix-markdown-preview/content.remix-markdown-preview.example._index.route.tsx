@@ -1,14 +1,14 @@
 // http://localhost:3000/content/remix-markdown-preview/example
 
-import type { ActionArgs } from "@remix-run/node"
+import { Transition } from "@headlessui/react"
+import type { ActionFunctionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
-import db from "./db.server"
-import { Transition } from "@headlessui/react"
-import crypto from "crypto"
+import { randomUuid } from "../crypto.ts"
+import db from "./db.server.ts"
 
-export async function action({ params, request }: ActionArgs) {
-  const id = crypto.randomUUID()
+export async function action({ params, request }: ActionFunctionArgs) {
+  const id = randomUuid()
 
   db[id] = {
     description: `# hello world`,

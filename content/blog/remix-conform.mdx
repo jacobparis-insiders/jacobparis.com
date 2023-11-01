@@ -111,7 +111,7 @@ The last step is to create an action that will handle the form submission.
 ```ts
 import { parse } from "@conform-to/zod"
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const submission = await parse(formData, { schema })
 

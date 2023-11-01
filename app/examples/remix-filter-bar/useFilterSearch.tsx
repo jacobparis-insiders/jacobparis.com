@@ -1,7 +1,7 @@
-import { useCallback } from "react"
 import { useSearchParams } from "@remix-run/react"
 import type { GroupedExpression } from "odata-qs"
-import { getValuesFromMap, stringify, parse } from "odata-qs"
+import { getValuesFromMap, parse, stringify } from "odata-qs"
+import { useCallback } from "react"
 
 export type FilterExpression = Omit<GroupedExpression, "values"> & {
   values: string[]

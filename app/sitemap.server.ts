@@ -1,5 +1,9 @@
 import type { EntryContext } from "@remix-run/node"
-import { getDomainUrl, removeTrailingSlash, typedBoolean } from "./utils/misc"
+import {
+  getDomainUrl,
+  removeTrailingSlash,
+  typedBoolean,
+} from "./utils/misc.ts"
 
 export type SitemapEntry = {
   route: string
@@ -24,12 +28,17 @@ export async function getSitemapXml(request: Request, context: EntryContext) {
   const rawSitemapEntries = (
     await Promise.all(
       Object.entries(context.routeModules).map(async ([id, mod]) => {
-        console.log(id)
         if (id === "root") return
+        if (id.startsWith("cache")) return
 
         const handle = mod.handle
-        if (handle?.getSitemapEntries) {
-          return handle.getSitemapEntries(request)
+        if (handle && typeof handle === "object") {
+          if (
+            "getSitemapEntries" in handle &&
+            typeof handle.getSitemapEntries === "function"
+          ) {
+            return handle.getSitemapEntries(request)
+          }
         }
 
         // exclude resource routes from the sitemap
@@ -57,8 +66,11 @@ export async function getSitemapXml(request: Request, context: EntryContext) {
         if (id === "root") return
         if (path === "*") return
 
-        const entry: SitemapEntry = { route: removeTrailingSlash(path) }
-        return entry
+        // This is a bug in the route convention that we need to fix
+        // These are children of content.remix-multi-step-forms.example.route.tsx
+        if (["complete", "email", "name"].includes(path)) return
+
+        return { route: removeTrailingSlash(path) } as SitemapEntry
       }),
     )
   )
@@ -71,7 +83,6 @@ export async function getSitemapXml(request: Request, context: EntryContext) {
       (e) => e.route === entry.route,
     )
     if (existingEntryForRoute) {
-      console.log({ existingEntryForRoute, entry })
       if (existingEntryForRoute !== entry) {
         console.warn(
           `Duplicate route for ${entry.route} with different sitemap data`,

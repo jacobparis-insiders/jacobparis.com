@@ -2,12 +2,12 @@
 
 import { Link, useLoaderData } from "@remix-run/react"
 import { json } from "@remix-run/node"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
-import FeaturedBlogItem from "~/components/FeaturedBlogItem"
-import BlogCard from "~/components/BlogCard"
-import { MoultonMatrix } from "./MoultonMatrix"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import FeaturedBlogItem from "~/components/FeaturedBlogItem.tsx"
+import BlogCard from "~/components/BlogCard.tsx"
+import { MoultonMatrix } from "./MoultonMatrix.tsx"
 
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
 function sample<T>(array: Array<T>) {
   return array[Math.floor(Math.random() * array.length)]
@@ -88,7 +88,7 @@ export default function Index() {
 
         <div className="mb-8 text-center">
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent from-50% to-white to-75%" />
+            <div className="from-50% to-75% absolute inset-0 bg-gradient-to-b from-transparent to-white" />
             <img
               src="/remix.svg"
               alt="Remix logo"

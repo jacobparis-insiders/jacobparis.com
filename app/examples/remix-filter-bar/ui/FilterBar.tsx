@@ -4,20 +4,20 @@
  * This is the bar that shows the current filters applied to the list.
  * It's also interactive and allows you to add new ones
  */
-import { Icon } from "~/components/icon"
-import type { FilterExpression } from "../useFilterSearch"
-import { useFilterSearch } from "../useFilterSearch"
+import type { ComparisonOperator } from "odata-qs"
+import { useState } from "react"
+import { Icon } from "~/components/icon.tsx"
+import { Command, CommandGroup, CommandItem } from "~/components/ui/command.tsx"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
-import { useState } from "react"
-import { FilterMenu } from "./FilterMenu"
-import { Command, CommandGroup, CommandItem } from "~/components/ui/command"
-import { useFilterData } from "../content.remix-filter-bar.example.__filter.route"
-import type { ComparisonOperator } from "odata-qs"
-import { en } from "../i18n"
+} from "~/components/ui/popover.tsx"
+import { useFilterData } from "../content.remix-filter-bar.example.__filter.route.tsx"
+import { en } from "../i18n.tsx"
+import type { FilterExpression } from "../useFilterSearch.tsx"
+import { useFilterSearch } from "../useFilterSearch.tsx"
+import { FilterMenu } from "./FilterMenu.tsx"
 
 export function FilterBar({
   filters,
@@ -46,7 +46,7 @@ export function FilterBar({
         return (
           <div
             key={filter.subject}
-            className="flex items-center rounded border border-neutral-200 bg-white text-sm text-neutral-600  dark:border-neutral-800 dark:bg-neutral-950 "
+            className="dark:bg-neutral-950 flex items-center rounded border border-neutral-200 bg-white text-sm  text-neutral-600 dark:border-neutral-800 "
           >
             {type === "operator" ? (
               <OperatorFilter filter={filter} />

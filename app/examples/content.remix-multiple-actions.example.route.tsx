@@ -1,6 +1,6 @@
 // http://localhost:3000/content/remix-multiple-actions/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { Form, useLoaderData } from "@remix-run/react"
 import { useRef } from "react"
@@ -13,7 +13,7 @@ if (!global.actions) {
   global.actions = []
 }
 
-export async function action(args: ActionArgs) {
+export async function action(args: ActionFunctionArgs) {
   const formData = await args.request.clone().formData()
 
   const _action = formData.get("_action")
@@ -36,7 +36,7 @@ export async function action(args: ActionArgs) {
   throw new Error("Unknown action")
 }
 
-async function likeTweetAction({ request }: ActionArgs) {
+async function likeTweetAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 
@@ -45,7 +45,7 @@ async function likeTweetAction({ request }: ActionArgs) {
   return null
 }
 
-async function retweetAction({ request }: ActionArgs) {
+async function retweetAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 
@@ -54,7 +54,7 @@ async function retweetAction({ request }: ActionArgs) {
   return null
 }
 
-async function replyAction({ request }: ActionArgs) {
+async function replyAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 
@@ -63,7 +63,7 @@ async function replyAction({ request }: ActionArgs) {
   return null
 }
 
-async function shareAction({ request }: ActionArgs) {
+async function shareAction({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
   const id = formData.get("id")
 
@@ -72,7 +72,7 @@ async function shareAction({ request }: ActionArgs) {
   return null
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({
     actions: global.actions,
   })

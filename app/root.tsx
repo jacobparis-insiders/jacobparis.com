@@ -1,10 +1,8 @@
 import type {
-  HeadersFunction,
   LinksFunction,
   LoaderFunction,
-  V2_MetaFunction,
+  MetaFunction,
 } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Links,
@@ -18,12 +16,11 @@ import {
   useLocation,
   useRouteError,
 } from "@remix-run/react"
-import tailwindStylesheetUrl from "./styles/tailwind.css"
 import isbot from "isbot"
-import { keepAwake } from "./server/sleep.server"
-import { getServerTiming } from "./utils/timing.server"
-import { ButtonLink } from "./components/ButtonLink"
-import { SocialBannerSmall } from "./components/SocialBannerSmall"
+import tailwindStylesheetUrl from "~/styles/tailwind.css"
+import { ButtonLink } from "./components/ButtonLink.tsx"
+import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
+import { getServerTiming } from "./utils/timing.server.ts"
 
 export const links: LinksFunction = () => {
   return [
@@ -35,7 +32,7 @@ export const links: LinksFunction = () => {
   ]
 }
 
-export const meta: V2_MetaFunction = () => {
+export const meta: MetaFunction = () => {
   return [
     { title: "Jacob Paris" },
     {
@@ -64,14 +61,7 @@ export const shouldRevalidate = () => false
 export const loader: LoaderFunction = async ({ request }) => {
   const { time, getServerTimingHeader } = getServerTiming()
 
-  const isBot = await time("isBot", async () => {
-    const isBot = await isbot(request.headers.get("user-agent"))
-    if (!isBot) {
-      void keepAwake()
-    }
-
-    return isBot
-  })
+  const isBot = await isbot(request.headers.get("user-agent"))
 
   return json(
     {
@@ -98,6 +88,7 @@ export default function App() {
         <Links />
         <style>
           {`.bg-light {
+          -webkit-backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
           backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
           background-color: rgba(255, 255, 255, 0.5);
         }`}
@@ -140,7 +131,7 @@ export function ErrorBoundary() {
               <div className="mt-6">
                 <ButtonLink
                   className="inline-flex flex-grow-0 items-center px-4 py-2"
-                  href="/"
+                  to="/"
                 >
                   <span className="mx-2 font-medium leading-6">
                     Take me home

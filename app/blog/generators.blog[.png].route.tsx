@@ -1,4 +1,4 @@
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import type { SatoriOptions } from "satori"
 import satori from "satori"
 import svg2img from "svg2img"
@@ -9,7 +9,7 @@ declare module "react" {
   }
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const params = new URL(request.url).searchParams
   const titleInput = params.get("title")
   invariant(titleInput, "title is required")

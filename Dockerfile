@@ -39,18 +39,21 @@ COPY --from=deps /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
 COPY --from=deps /myapp/package.json /myapp/package.json
 COPY --from=deps /myapp/node_modules /myapp/node_modules
 
-ADD prisma ./prisma
-RUN npx prisma@4.6.0 generate
-
 ADD . .
 RUN touch ./app/refresh.ignored.js
 RUN npm run build
 # Finally, build the production image with minimal footprint
 FROM base as run
 
-ENV LITEFS_DIR="/data/litefs"
-ENV DATABASE_URL=file:/$LITEFS_DIR/sqlite.db
-ENV PORT="8080"
+ENV FLY="true"
+ENV LITEFS_DIR="/litefs/data"
+ENV DATABASE_FILENAME="sqlite.db"
+ENV DATABASE_PATH="$LITEFS_DIR/$DATABASE_FILENAME"
+ENV DATABASE_URL="file:$DATABASE_PATH"
+ENV CACHE_DATABASE_FILENAME="cache.db"
+ENV CACHE_DATABASE_PATH="/$LITEFS_DIR/$CACHE_DATABASE_FILENAME"
+ENV INTERNAL_PORT="8080"
+ENV PORT="8081"
 ENV NODE_ENV="production"
 
 # add shortcut for connecting to database CLI
@@ -59,16 +62,16 @@ RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-c
 WORKDIR /myapp
 
 COPY --from=production-deps /myapp/node_modules /myapp/node_modules
-COPY --from=build /myapp/node_modules/.prisma /myapp/node_modules/.prisma
 
 COPY --from=build /myapp/build /myapp/build
 COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
 COPY --from=build /myapp/public /myapp/public
 COPY --from=build /myapp/package.json /myapp/package.json
-COPY --from=build /myapp/start.sh /myapp/start.sh
+COPY --from=build /myapp/other/setup-swap.js /myapp/other/setup-swap.js
 COPY --from=build /myapp/server.ts /myapp/server.ts
-COPY --from=build /myapp/prisma /myapp/prisma
-COPY --from=flyio/litefs:0.4 /usr/local/bin/litefs /usr/local/bin/litefs
-ADD litefs.yml /etc/litefs.yml
 
-CMD [ "litefs", "mount", "--", "sh", "./start.sh" ]
+COPY --from=flyio/litefs:0.5.8 /usr/local/bin/litefs /usr/local/bin/litefs
+ADD litefs.yml /etc/litefs.yml
+RUN mkdir -p /data ${LITEFS_DIR}
+
+CMD [ "litefs", "mount" ]

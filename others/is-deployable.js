@@ -1,4 +1,4 @@
-const { getChangedFiles } = require("./utils")
+import { getChangedFiles } from "./utils.js"
 
 async function go() {
   const changes = getChangedFiles()

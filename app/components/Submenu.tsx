@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState } from "react"
-import type { AsChildProps } from "./Slot"
-import { Slot } from "./Slot"
-import { createStateContext } from "./createStateContext"
+import type { AsChildProps } from "./Slot.tsx"
+import { Slot } from "./Slot.tsx"
+import { createStateContext } from "./createStateContext.tsx"
 
 const [MenuContext, useMenuContext] = createStateContext<string>()
 MenuContext.displayName = "MenuContext"

@@ -1,7 +1,6 @@
-import { useParams } from "@remix-run/react"
-import { Link, useFetcher } from "@remix-run/react"
-import { useState } from "react"
 import { PencilIcon, TrashIcon } from "@heroicons/react/20/solid"
+import { Link, useFetcher, useParams } from "@remix-run/react"
+import { useState } from "react"
 
 export function IssueRow(item: { id: number; title: string; date: string }) {
   const idString = String(item.id).padStart(3, "0")
@@ -13,7 +12,7 @@ export function IssueRow(item: { id: number; title: string; date: string }) {
     <li className="group relative hover:bg-gray-50">
       <Link
         prefetch="intent"
-        to={`issues/${item.id}`}
+        to={`iåssues/${item.id}`}
         className="flex items-center gap-x-4 px-4 py-3 text-sm text-gray-600"
       >
         <span className="min-w-[4rem]">{idString}</span>{" "}

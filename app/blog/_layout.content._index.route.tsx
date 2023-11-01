@@ -1,4 +1,11 @@
-import type { LoaderArgs, V2_MetaFunction } from "@remix-run/node"
+import { cache, cachified } from "#app/cache/cache.server.ts"
+import { compileMdx } from "#app/utils/compile-mdx.server.ts"
+import { downloadFileBySha } from "#app/utils/github.server.ts"
+import type {
+  LoaderFunctionArgs,
+  MetaFunction,
+  LinksFunction,
+} from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Link,
@@ -6,10 +13,14 @@ import {
   useLoaderData,
   useRouteError,
 } from "@remix-run/react"
-import { ButtonLink } from "~/components/ButtonLink"
-import { SocialBannerSmall } from "~/components/SocialBannerSmall"
-import { prisma } from "~/db.server"
-export const meta: V2_MetaFunction = ({ params }) => {
+import { ButtonLink } from "~/components/ButtonLink.tsx"
+import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
+import { getContentList } from "./content.server.ts"
+import { getServerTiming } from "#app/utils/timing.server.ts"
+
+export { mergeHeaders as headers } from "~/utils/misc.ts"
+
+export const meta: MetaFunction = ({ params }) => {
   return [
     {
       title: "Articles, Guides, and Cheatsheets | Jacob Paris",
@@ -18,92 +29,126 @@ export const meta: V2_MetaFunction = ({ params }) => {
 }
 
 export const handle = {
-  id: "content",
-  getSitemapEntries: () => [{ route: `content`, priority: 0.7 }],
+  id: "blog-post",
+  getSitemapEntries: async () => {
+    const content = await getContentListData()
+
+    return [
+      { route: `content`, priority: 0.7 },
+
+      ...content
+        .filter((page) => page.frontmatter.published)
+        .map((page) => {
+          return { route: `content/${page.frontmatter.slug}`, priority: 0.7 }
+        }),
+    ]
+  },
 }
 
-export async function loader({ request }: LoaderArgs) {
+async function getContentListData() {
+  const contentList = await getContentList()
+
+  return Promise.all(
+    contentList.map(async (content) => {
+      const slug = content.name.replace(".mdx", "")
+
+      const compiledMdx = await cachified({
+        key: `mdx:${slug}`,
+        cache,
+        ttl: 1000 * 60 * 60,
+        forceFresh: false,
+        async getFreshValue({ background }) {
+          const file = await downloadFileBySha(content.sha)
+
+          return compileMdx(
+            {
+              slug: slug,
+              content: file,
+            },
+            {
+              priority: background ? 0 : 1,
+            },
+          ).then((compiled) => {
+            if (!compiled) {
+              throw new Error("No compiled")
+            }
+
+            compiled.frontmatter.slug = slug
+            return compiled
+          })
+        },
+      }).catch((error) => {
+        console.error("caught", error)
+        return null
+      })
+
+      return compiledMdx
+        ? {
+            frontmatter: compiledMdx.frontmatter,
+          }
+        : null
+    }),
+  ).then((content) => content.filter((c) => c !== null))
+}
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { time, getServerTimingHeader } = getServerTiming()
   const url = new URL(request.url)
   const tag = url.searchParams.get("tag")
 
-  const blogList = await prisma.content
-    .findMany({
-      where: { published: true, contentDirectory: "blog" },
-      select: {
-        slug: true,
-        title: true,
-        img: true,
-        timestamp: true,
-        description: true,
-        frontmatter: true,
-      },
-      orderBy: { timestamp: "desc" },
+  const content = await time("contentList", () => getContentListData())
+
+  const blogList = content
+    .map((c) => c.frontmatter)
+    .sort((a, b) => {
+      if (!a.timestamp) return 1
+      if (!b.timestamp) return -1
+
+      const aDate = new Date(a.timestamp)
+      const bDate = new Date(b.timestamp)
+
+      if (aDate > bDate) return -1
+      if (aDate < bDate) return 1
+
+      return 0
     })
-    .then((blogList) =>
-      blogList
-        .map((blog) => ({
-          ...blog,
-          frontmatter: JSON.parse(blog.frontmatter),
-        }))
-        .map((blog) => {
-          const tags: Array<string> = blog.frontmatter.tags
-            ? blog.frontmatter.tags.split(",").map((tag) => tag.trim())
-            : []
+    .map((blog) => ({
+      ...blog,
+      slug: blog.slug as string,
+      timestamp: blog.timestamp
+        ? new Date(blog.timestamp).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })
+        : null,
+    }))
 
-          return {
-            ...blog,
-            tags,
-          }
-        })
-        .map((blog) => ({
-          ...blog,
-          timestamp: blog.frontmatter.timestamp
-            ? new Date(blog.frontmatter.timestamp).toLocaleDateString("en-US", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : null,
-        })),
-    )
+  const tags = new Set<string>()
+  for (const blog of blogList) {
+    if (!blog.tags) continue
 
-  blogList.sort((a, b) => {
-    if (!a.timestamp) return 1
-    if (!b.timestamp) return -1
+    for (const tag of blog.tags.split(",").map((t) => t.trim())) {
+      tags.add(tag)
+    }
+  }
 
-    const aDate = new Date(a.timestamp)
-    const bDate = new Date(b.timestamp)
+  return json(
+    {
+      blogList: blogList.filter((blog) => {
+        if (tag && !blog.tags) return false
+        if (tag && !blog.tags?.includes(tag)) return false
 
-    if (aDate > bDate) return -1
-    if (aDate < bDate) return 1
-
-    return 0
-  })
-
-  const tags = blogList.reduce((acc, blog) => {
-    if (!blog.frontmatter.tags) return acc
-
-    blog.frontmatter.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean)
-      .forEach((tag: string) => {
-        acc.add(tag)
-      })
-
-    return acc
-  }, new Set<string>())
-
-  return json({
-    blogList: blogList.filter((blog) => {
-      if (tag && !blog.frontmatter.tags) return false
-      if (tag && !blog.frontmatter.tags.includes(tag)) return false
-
-      return true
-    }),
-    tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
-    currentTag: tag,
-  })
+        return true
+      }),
+      tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
+      currentTag: tag,
+    },
+    {
+      headers: {
+        ...getServerTimingHeader(),
+      },
+    },
+  )
 }
 
 export default function Blog() {
@@ -152,7 +197,15 @@ export default function Blog() {
   )
 }
 
-function BlogItem({ slug, title, timestamp }) {
+function BlogItem({
+  slug,
+  title,
+  timestamp,
+}: {
+  slug: string
+  title: string
+  timestamp: string | null
+}) {
   return (
     <article className="">
       <Link
@@ -196,7 +249,7 @@ export function ErrorBoundary() {
           <div className="mt-6">
             <ButtonLink
               className="inline-flex flex-grow-0 items-center px-4 py-2"
-              href="/"
+              to="/"
             >
               <span className="mx-2 font-medium leading-6">Take me home</span>
             </ButtonLink>

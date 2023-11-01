@@ -1,29 +1,70 @@
-import {
-  json,
-  type LoaderFunction,
-} from "@remix-run/node"
+import { cache, cachified } from "#app/cache/cache.server.ts"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import invariant from "tiny-invariant"
 
+import { compileMdx } from "#app/utils/compile-mdx.server.ts"
+import { downloadFileBySha } from "#app/utils/github.server.ts"
+import { safeEncode } from "~/utils/misc.ts"
+import { getServerTiming } from "~/utils/timing.server.ts"
+import { getContentList } from "./content.server.ts"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-import { getMdxPage } from "~/utils/mdx.server"
-import { safeEncode } from "~/utils/misc"
-import { getServerTiming } from "~/utils/timing.server"
-export { mergeHeaders as headers } from "~/utils/misc"
-
-export const loader: LoaderFunction = async ({ request, params }) => {
-  const { time, getHeaderField } = getServerTiming()
+export async function loader({ request, params }: LoaderFunctionArgs) {
+  const { time, getHeaderField, serverTimings } = getServerTiming()
   const slug = params.slug
   invariant(typeof slug === "string", "Slug should be a string, and defined")
 
-  const data = await time("mdx", () =>
-    getMdxPage({ contentDirectory: "blog", slug }),
-  )
+  const { frontmatter, code } = await cachified({
+    key: `mdx:${slug}`,
+    cache,
+    serverTimings,
 
-  if (!data) {
-    throw json({ error: "Not found" }, { status: 404 })
+    forceFresh: false,
+    // Always show the cached version while we fetch a new one
+    ttl: 1000 * 60 * 60,
+
+    async getFreshValue({ background }) {
+      const contentList = await getContentList()
+
+      const content = contentList.find((content) => {
+        return content.name.replace(".mdx", "") === slug
+      })
+
+      if (!content) {
+        throw new Response("Not found", { status: 404 })
+      }
+
+      const file = await downloadFileBySha(content.sha)
+
+      const compiled = await compileMdx(
+        {
+          slug: slug,
+          content: file,
+        },
+        {
+          priority: background ? 0 : 1,
+        },
+      )
+
+      if (!compiled) {
+        throw new Error("Failed to compile")
+      }
+
+      return {
+        code: compiled.code,
+        frontmatter: {
+          ...compiled.frontmatter,
+          slug,
+        },
+      }
+    },
+  })
+
+  if (!code) {
+    throw new Response("Compilation error", { status: 500 })
   }
 
-  const timestamp = data.frontmatter.timestamp
+  const timestamp = frontmatter.timestamp
   invariant(
     typeof timestamp === "string" || timestamp == undefined,
     "Timestamp should be a string",
@@ -31,10 +72,10 @@ export const loader: LoaderFunction = async ({ request, params }) => {
 
   const url = new URL(request.url)
   const ogUrl = new URL("/generators/blog.png", url.origin)
-  ogUrl.searchParams.set("title", safeEncode(data.title))
-  ogUrl.searchParams.set("description", safeEncode(data.description))
+  ogUrl.searchParams.set("title", safeEncode(frontmatter.title))
+  ogUrl.searchParams.set("description", safeEncode(frontmatter.description))
   ogUrl.searchParams.set("date", safeEncode(timestamp))
-  ogUrl.searchParams.set("img", safeEncode(data.img))
+  ogUrl.searchParams.set("img", safeEncode(frontmatter.img))
 
   const response = await time("image", () => fetch(ogUrl))
 

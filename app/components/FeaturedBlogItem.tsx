@@ -1,16 +1,15 @@
 import { Link } from "@remix-run/react"
-import type { getMdxListItems } from "~/utils/mdx.server"
 
-type BlogItemType = Awaited<ReturnType<typeof getMdxListItems>>[0]
-
-export default function BlogItem({
+export default function FeaturedBlogItem({
   slug,
   title,
   tags = "",
   img = "",
-}: Pick<BlogItemType, "slug" | "title"> & {
-  img?: string
+}: {
+  slug: string
+  title: string
   tags?: string
+  img?: string
 }) {
   return (
     <article className="sm:col-span-2">

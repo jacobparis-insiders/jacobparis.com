@@ -1,27 +1,26 @@
 // http://localhost:3000/content/remix-image-uploads/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
-import { redirect } from "@remix-run/node"
-import { json } from "@remix-run/node"
-import { Form, useActionData, useLoaderData } from "@remix-run/react"
-import db from "./db.server"
-import { useEffect, useRef, useState } from "react"
 import { Transition } from "@headlessui/react"
-import { useDropzone } from "react-dropzone"
 import { PaperAirplaneIcon, XCircleIcon } from "@heroicons/react/20/solid"
 import { PhotoIcon } from "@heroicons/react/24/outline"
-import { useHydrated } from "remix-utils"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import { json, redirect } from "@remix-run/node"
+import { Form, useActionData, useLoaderData } from "@remix-run/react"
+import { useEffect, useRef, useState } from "react"
+import { useDropzone } from "react-dropzone-esm"
+import { useHydrated } from "remix-utils/use-hydrated"
+import invariant from "tiny-invariant"
+import { randomUuid } from "../crypto.ts"
+import { useResetCallback } from "../useResetCallback.tsx"
+import { useDraftSubmit } from "./content.remix-image-uploads.example.$id.draft.route.ts"
 import {
   generateSignedUrl,
   uploadImages,
-} from "./content.remix-image-uploads.example.cloudflare-images.route"
-import { useDraftSubmit } from "./content.remix-image-uploads.example.$id.draft.route"
-import { useResetCallback } from "../useResetCallback"
-import { useFileURLs } from "./useFileUrls"
-import invariant from "tiny-invariant"
-import { randomUuid } from "../crypto"
+} from "./content.remix-image-uploads.example.cloudflare-images.route.ts"
+import db from "./db.server.ts"
+import { useFileURLs } from "./useFileUrls.ts"
 
-export async function action({ params, request }: ActionArgs) {
+export async function action({ params, request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
   const id = params.id as string
@@ -73,7 +72,7 @@ export async function action({ params, request }: ActionArgs) {
   })
 }
 
-export async function loader({ params }: LoaderArgs) {
+export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {

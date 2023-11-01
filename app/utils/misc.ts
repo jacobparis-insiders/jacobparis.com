@@ -1,10 +1,24 @@
 import type { HeadersFunction } from "@remix-run/node"
 
 import { type ClassValue, clsx } from "clsx"
+import { useEffect, useMemo, useRef } from "react"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+export async function requireRequestWithToken(request: Request) {
+  const url = new URL(request.url)
+  const token = url.searchParams.get("token")
+
+  invariantResponse(
+    token === process.env.INTERNAL_COMMAND_TOKEN,
+    "Unauthorized",
+    {
+      status: 401,
+    },
+  )
 }
 
 export function getRequiredEnvVar(key: string, env = process.env): string {
@@ -91,4 +105,68 @@ function setDefaultHeaders(
   }
 
   return headers
+}
+
+/**
+ * Provide a condition and if that condition is falsey, this throws a 400
+ * Response with the given message.
+ *
+ * inspired by invariant from 'tiny-invariant'
+ *
+ * @example
+ * invariantResponse(typeof value === 'string', `value must be a string`)
+ *
+ * @param condition The condition to check
+ * @param message The message to throw (or a callback to generate the message)
+ * @param responseInit Additional response init options if a response is thrown
+ *
+ * @throws {Response} if condition is falsey
+ */
+export function invariantResponse(
+  condition: any,
+  message: string | (() => string),
+  responseInit?: ResponseInit,
+): asserts condition {
+  if (!condition) {
+    throw new Response(typeof message === "function" ? message() : message, {
+      status: 400,
+      ...responseInit,
+    })
+  }
+}
+
+/**
+ * Simple debounce implementation
+ */
+function debounce<Callback extends (...args: Parameters<Callback>) => void>(
+  fn: Callback,
+  delay: number,
+) {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return (...args: Parameters<Callback>) => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      fn(...args)
+    }, delay)
+  }
+}
+
+/**
+ * Debounce a callback function
+ */
+export function useDebounce<
+  Callback extends (...args: Parameters<Callback>) => ReturnType<Callback>,
+>(callback: Callback, delay: number) {
+  const callbackRef = useRef(callback)
+  useEffect(() => {
+    callbackRef.current = callback
+  })
+  return useMemo(
+    () =>
+      debounce(
+        (...args: Parameters<Callback>) => callbackRef.current(...args),
+        delay,
+      ),
+    [delay],
+  )
 }

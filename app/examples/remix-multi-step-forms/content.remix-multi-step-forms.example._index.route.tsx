@@ -1,18 +1,18 @@
 // http://localhost:3000/content/remix-multi-step-forms/example
 
-import type { ActionArgs, LoaderArgs } from "@remix-run/node"
+import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
-import db from "./db.server"
-import { FadeIn } from "./FadeIn"
+import { FadeIn } from "./FadeIn.tsx"
+import db from "./db.server.ts"
 
-export async function action({ request }: ActionArgs) {
+export async function action({ request }: ActionFunctionArgs) {
   db.hasStarted = true
 
   return redirect("/content/remix-multi-step-forms/example/name")
 }
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   return json({})
 }
 

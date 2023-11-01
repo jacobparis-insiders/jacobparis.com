@@ -1,28 +1,28 @@
 // http://localhost:3000/content/remix-filter-bar/example
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
+import { Link, useLoaderData } from "@remix-run/react"
+import type { GroupedExpression } from "odata-qs"
+import { getValuesFromMap, parse } from "odata-qs"
 import { useState } from "react"
+import { Icon } from "~/components/icon.tsx"
+import { Button } from "~/components/ui/button.tsx"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "~/components/ui/popover"
-import { Icon } from "~/components/icon"
-import { Button } from "~/components/ui/button"
-import { Link, useLoaderData } from "@remix-run/react"
-import { FilterBar } from "./ui/FilterBar"
-import { FilterMenu } from "./ui/FilterMenu"
-import db from "./db.server"
-import { DataTable } from "./ui/DataTable"
-import type { GroupedExpression } from "odata-qs"
-import { getValuesFromMap, parse } from "odata-qs"
-import { en } from "./i18n"
-import { useFilterData } from "./content.remix-filter-bar.example.__filter.route"
+} from "~/components/ui/popover.tsx"
+import { useFilterData } from "./content.remix-filter-bar.example.__filter.route.tsx"
+import db from "./db.server.ts"
+import { en } from "./i18n.tsx"
+import { DataTable } from "./ui/DataTable.tsx"
+import { FilterBar } from "./ui/FilterBar.tsx"
+import { FilterMenu } from "./ui/FilterMenu.tsx"
 
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const query = url.searchParams.get("q")
   const tree = parse(query, [
@@ -212,7 +212,9 @@ function matchesDate(
   return true
 }
 
-function safeNewDate(input) {
+function safeNewDate(input: string | number | boolean | Date) {
+  if (typeof input === "boolean") return new Date()
+
   return new Date(input)
 }
 
@@ -223,7 +225,7 @@ export function FilterExample() {
         to="/content/remix-filter-bar/example"
         className="flex flex-wrap gap-2"
       >
-        <div className="flex items-center rounded border border-neutral-200 bg-white text-sm text-neutral-600  dark:border-neutral-800 dark:bg-neutral-950 ">
+        <div className="dark:bg-neutral-950 flex items-center rounded border border-neutral-200 bg-white text-sm  text-neutral-600 dark:border-neutral-800 ">
           <div className="px-2 py-1">Status</div>
           <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
             is
@@ -236,7 +238,7 @@ export function FilterExample() {
           </button>
         </div>
 
-        <div className="flex items-center rounded border border-neutral-200 bg-white text-sm text-neutral-600  dark:border-neutral-800 dark:bg-neutral-950 ">
+        <div className="dark:bg-neutral-950 flex items-center rounded border border-neutral-200 bg-white text-sm  text-neutral-600 dark:border-neutral-800 ">
           <div className="px-2 py-1">Priority</div>
           <div className="px-2 py-1 hover:bg-neutral-100 hover:text-neutral-900 dark:hover:bg-neutral-800 dark:hover:text-neutral-50">
             is not

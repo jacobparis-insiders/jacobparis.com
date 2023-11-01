@@ -1,15 +1,14 @@
 // http://localhost:3000/content/remix-dates-ssr/example
 
-import type { LoaderArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import { useLoaderData } from "@remix-run/react"
 import type { ReactNode } from "react"
-import { Suspense } from "react"
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 let hydrating = true
-export { mergeHeaders as headers } from "~/utils/misc"
+export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-export async function loader({ request }: LoaderArgs) {
+export async function loader({ request }: LoaderFunctionArgs) {
   const clockOffset = request.headers.get("Cookie")?.match(/clockOffset=(\d+)/)
 
   return json({
@@ -46,7 +45,7 @@ export default function Example() {
   )
 }
 
-function formatDate(date) {
+function formatDate(date: string) {
   return new Date(date).toLocaleDateString("en-US", {
     weekday: "long",
     year: "numeric",
