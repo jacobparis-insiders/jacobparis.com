@@ -77,8 +77,16 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
   ogUrl.searchParams.set("date", safeEncode(timestamp))
   ogUrl.searchParams.set("img", safeEncode(frontmatter.img))
 
+  const sourceParam = url.searchParams.get("source")
+  if (sourceParam) {
+    ogUrl.searchParams.set("source", sourceParam)
+  }
+
   const response = await time("image", () => fetch(ogUrl))
 
+  // In https://www.jacobparis.com/content/remix-og I use cachified here
+  // But the OG image for that article fetches itself in a smaller window
+  // So for that use-case I can't cache these
   return new Response(response.body, {
     headers: {
       "Content-Type": "image/png",

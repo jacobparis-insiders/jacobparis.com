@@ -2,9 +2,9 @@
 title: Generate open graph social preview images with Remix
 description: Learn how to generate social preview images for your website with Remix and Tailwind. Use Vercel's Satori package with Remix for dynamic open graph images. Fetch fonts from Google automatically.
 tags: Remix
+img: content/remix-og.png
 published: true
-guide: true
-timestamp: "2023-04-09"
+timestamp: "2023-11-04"
 ---
 
 When people share your website, blog posts, or other content on social media, those websites will often display a preview image of your content.
@@ -16,49 +16,127 @@ In this guide, you'll learn
 - how to set a social preview image that works on Twitter, Facebook, Discord, and more
 - how to use Remix to generate a social preview image for your website automatically
 
-## Using a static image
+## Use a static image
 
 The easiest way to set a social preview image is to use a static image. You can upload an image to your website and use that as the preview image.
 
 For example, if you have an image called `social-preview.png` in your website's `public` folder, you can set the preview image by linking to it with a `meta` tag.<SideNote> Open graph does not support relative links, so you must include the full URL including your website domain in the link.</SideNote>
 
-```html
-<meta
-  property="og:image"
-  content="https://www.example.com/social-preview.png"
-/>
-```
-
 Remix gives each route a special function for setting meta tags. You can set one in your `root.tsx` to handle your whole site, and then override it with specific ones for pages that need different images.
 
 ```tsx
 export const meta: MetaFunction = () => {
-  return {
-    title: "Website title",
-    ["og:image"]:
-      "https://www.example.com/social-preview.png",
-  }
+  return [
+    { title: "Website title" },
+    {
+      property: "og:image",
+      content: "https://www.example.com/social-preview.png",
+    },
+  ]
 }
 ```
 
-## Dynamically generating social preview images with Remix
+## Set open graph tags for Twitter and blog posts
+
+There are many different meta tags that you can set for open graph.<SideNote>Check out [the Open Graph documentation for the OG tags](https://ogp.me/).</SideNote>. These all start with `og:`
+
+Twitter uses a combination of og tags and Twitter-specific tags. In theory it's meant to use the og tags if the twitter ones aren't present, but I've found that behavior to be unreliable in practice. I always set both. Twitter tags start with `twitter:`
+
+The important one you'll want to see is `twitter:card` which tells Twitter how to display the link. The default is `summary` which is a small preview image with a title and description.
+
+- **You will probably want to use `summary_large_image` which is the full size card with a large image**, however as of October 2023 Twitter has stopped showing the title and description along with it, making potentially hard to tell the difference between an image and a link.<SideNote>If you use the large image, I recommend including the title and description in the image itself.</SideNote>
+- The image URL is going to be read by the website that is displaying the link, so you need to use a full URL and not a relative path to the image.
+
+Here is the meta function that I use for content on this website. The data comes from my loader which parses markdown and returns its frontmatter.
+
+```tsx
+export const meta: MetaFunction<typeof loader> = ({
+  data,
+}) => {
+  if (!data) return [{ title: "Not found" }]
+
+  const titleElements = data.frontmatter.title
+    ? [
+        { title: data.frontmatter.title },
+        {
+          name: "twitter:title",
+          content: data.frontmatter.title,
+        },
+        {
+          property: "og:title",
+          content: data.frontmatter.title,
+        },
+      ]
+    : []
+
+  const descriptionElements = data.frontmatter.description
+    ? [
+        {
+          name: "description",
+          content: data.frontmatter.description,
+        },
+        {
+          name: "twitter:description",
+          content: data.frontmatter.description,
+        },
+        {
+          property: "og:description",
+          content: data.frontmatter.description,
+        },
+      ]
+    : []
+
+  const imageElements = [
+    {
+      name: "twitter:image",
+      content: `https://www.jacobparis.com/content/${data.frontmatter.slug}.png`,
+    },
+    {
+      property: "og:image",
+      content: `https://www.jacobparis.com/content/${data.frontmatter.slug}.png`,
+    },
+    {
+      name: "twitter:card",
+      content: "summary_large_image",
+    },
+  ]
+  return [
+    ...titleElements,
+    ...descriptionElements,
+    ...imageElements,
+    { name: "twitter:site", content: "@jacobmparis" },
+    { name: "twitter:creator", content: "@jacobmparis" },
+    {
+      property: "og:url",
+      content: `https://www.jacobparis.com/content/${data.frontmatter.slug}`,
+    },
+    { property: "og:type", content: "article" },
+    { property: "og:site_name", content: "Jacob Paris" },
+    { property: "og:locale", content: "en_US" },
+  ]
+}
+```
+
+## Dynamically generate social preview images with Remix
 
 Using a dynamic image is the same process, but instead of linking to a static image, you'll link to an endpoint that generates the image dynamically.
 
 Vercel has first class support for generating social preview images with [Vercel OG](https://vercel.com/docs/concepts/functions/edge-functions/og-image-generation), but this requires running on Vercel's edge functions.
 
-Luckily, their package for turning HTML and CSS into SVG images is open source and does not require edge functions. It's called [Satori](https://github.com/vercel/satori) and it works great with Remix.
+The workflow to build it yourself looks like this:
 
-There are 3 steps making this work:
-
-1. Write the HTML for your social preview image
-2. Use Satori to turn your HTML into an SVG image
-3. Use a package like `svg2img` to turn your SVG image into a PNG image<SideNote> This is the step that Vercel OG handles for you, but if you're not running on Vercel's edge functions, svg2img is a great alternative.</SideNote>
+1. Write the JSX for your social preview image
+2. Use [Satori](https://github.com/vercel/satori) to turn your JSX into an SVG image
+3. Use [resvg-js](https://github.com/yisibl/resvg-js) to turn your SVG image into a PNG image
+4. Return the PNG image from your loader function with a `Content-Type` header of `image/png`
 
 Put that in a resource route<SideNote> A resource route is just a regular Remix route that doesn't return a component, and instead acts as a regular web endpoint.</SideNote> that you can link to from your meta function and you're all set!
 
+Make a new route at `image-generator.tsx` and add a loader function.
+
 ```tsx
 import satori from "satori"
+import { Resvg } from "@resvg/resvg-js"
 
 export async function loader({
   request,
@@ -80,31 +158,9 @@ export async function loader({
     ],
   })
 
-  const { data, error } = await new Promise(
-    (
-      resolve: (value: {
-        data: Buffer | null
-        error: Error | null
-      }) => void,
-    ) => {
-      svg2img(svg, (error, buffer) => {
-        if (error) {
-          resolve({ data: null, error })
-        } else {
-          resolve({ data: buffer, error: null })
-        }
-      })
-    },
-  )
-
-  if (error) {
-    return new Response(error.toString(), {
-      status: 500,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    })
-  }
+  const resvg = new Resvg(svg)
+  const pngData = resvg.render()
+  const data = pngData.asPng()
 
   return new Response(data, {
     headers: {
@@ -140,21 +196,26 @@ When you link to this resource route, you can pass in the dynamic text as query 
 Remix's meta function has access to the data from its loader function, so you can use that to set the dynamic text.
 
 ```tsx
-export const meta: MetaFunction = ({ data }) => {
+export const meta: MetaFunction<typeof loader> = ({
+  data,
+}) => {
   const ogUrl = new URL(
     "https://www.example.com/social-preview.png",
   )
   ogUrl.searchParams.set("title", data.title)
   ogUrl.searchParams.set("description", data.description)
 
-  return {
-    title: "Website title",
-    ["og:image"]: ogUrl.toString(),
-  }
+  return [
+    { title: "Website title" },
+    {
+      property: "og:image",
+      content: ogUrl.toString(),
+    },
+  ]
 }
 ```
 
-## Using Tailwind for your image HTML
+## Use Tailwind for your image HTML
 
 Rather than bundling CSS or messing with inline styles, you may prefer to use Tailwind CSS to style your social preview image.
 
@@ -191,7 +252,19 @@ const svg = await satori(jsx, {
 })
 ```
 
-## Loading fonts from Google Fonts automatically
+If you're using the [Tailwind CSS Intellisense plugin](https://marketplace.visualstudio.com/items?itemName=bradlc.vscode-tailwindcss) then you'll also want to add `tw` to the list of attributes that it recognizes.
+
+```json
+{
+  "tailwindCSS.classAttributes": [
+    "class",
+    "className",
+    "tw"
+  ]
+}
+```
+
+## Load fonts from Google Fonts automatically
 
 You can use Google Fonts to load fonts for your social preview images in Remix without needing to download and bundle them with your app.
 
@@ -261,183 +334,47 @@ const svg = await satori(jsx, {
 })
 ```
 
-## Bonus: use Vercel's sandbox for rapid prototyping
+## Optional: Add .png to your article URLs
 
-Vercel has a sandbox that lets you quickly prototype images using Satori.
+You can point the `og:image` tag directly at the resource route that generates the images dynamically, but I like to use a URL that looks like a static image.
 
-I like to use this to quickly test out different options and then paste the code into my Remix app.
+If you [add `.png` to the end of the URL for this blog post](remix-og.png), you'll get the generated open graph image directly.
 
-You can find the sandbox at [og-playground.vercel.app](https://og-playground.vercel.app/)
+Create a new route at `content.$slug[.png].ts` with a loader that fetches the post data and returns a fetch request to the image generator.<SideNote> Since Remix uses the same Request/Response API as the browser, you can return fetch directly from a loader. .</SideNote>
+
+```ts
+export async function loader({
+  request,
+  params,
+}: LoaderFunctionArgs) {
+  const { frontmatter } = await getPost(params.slug)
+
+  const url = new URL(request.url)
+  const ogUrl = new URL("/image-generator.png", url.origin)
+  ogUrl.searchParams.set("title", frontmatter.title)
+  ogUrl.searchParams.set(
+    "description",
+    frontmatter.description,
+  )
+  ogUrl.searchParams.set("date", frontmatter.timestamp)
+  ogUrl.searchParams.set("img", frontmatter.img)
+
+  return fetch(ogUrl)
+}
+```
+
+Or if you want to cache the image so it isn't regenerated every time, you can [use a server cache with cachified](/content/server-cache).
+
+```ts
+return cachified({
+  key: ogUrl.toString(),
+  cache,
+  async getFreshValue() {
+    return fetch(ogUrl)
+  },
+})
+```
 
 ## Code example
 
-This is the code for the image generator I use for this article as of April 9 2023. You can find the live endpoint by checking the source for this page and looking for the `og:image` meta tag under the `head` element.
-
-```tsx
-import type { LoaderFunctionArgs } from "@remix-run/node"
-import type { SatoriOptions } from "satori"
-import satori from "satori"
-import svg2img from "svg2img"
-import invariant from "tiny-invariant"
-
-// Code for getFont is in the previous section.
-import { getFont } from "./utils"
-
-declare module "react" {
-  interface HTMLAttributes<T> {
-    tw?: string
-  }
-}
-
-export async function loader({
-  request,
-}: LoaderFunctionArgs) {
-  const params = new URL(request.url).searchParams
-  const titleInput = params.get("title")
-  invariant(titleInput, "title is required")
-  const title = decodeURIComponent(titleInput)
-
-  const titleSize =
-    title.length < 40 ? "text-6xl" : "text-5xl"
-
-  const descriptionInput = params.get("description")
-  const description = decodeURIComponent(
-    descriptionInput || "",
-  )
-  const descriptionSize =
-    description.length < 80 ? "text-2xl" : "text-xl"
-
-  const dateInput = params.get("date")
-  invariant(dateInput, "date is required")
-  const date = new Date(
-    decodeURIComponent(dateInput),
-  ).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  })
-
-  const imgInput = params.get("img") || "null"
-  const img =
-    imgInput !== "null"
-      ? decodeURIComponent(imgInput)
-      : null
-
-  // sanitize the params
-  const svg = await satori(
-    // If the blog post has an image, show only the image
-    img ? (
-      <div
-        tw="h-full w-full flex flex-col justify-end bg-gray-700 relative"
-        style={{
-          backgroundImage: img
-            ? `url(https://www.jacobparis.com/${img})`
-            : "",
-          backgroundSize: "1200px 600px",
-        }}
-      />
-    ) : (
-      // If the blog post doesn't have an image, show the title, description, and date
-      <div tw="h-full w-full flex flex-col bg-white pt-16 pl-24 relative text-2xl">
-        <div tw="bg-gray-100 rounded-l-3xl flex flex-col gap-0">
-          <div tw="flex px-8 pb-0 mb-0">
-            <div tw="h-6 w-6 mt-6 mr-2 rounded-full border border-red-600 border-opacity-30 bg-red-500"></div>
-            <div tw="h-6 w-6 mt-6 mx-2 rounded-full border border-yellow-600 border-opacity-30 bg-yellow-500"></div>
-            <div tw="h-6 w-6 mt-6 mx-2 rounded-full border border-green-600 border-opacity-30 bg-green-500"></div>
-            <div tw="bg-gray-200 text-gray-500 mt-4 mx-8 px-16 py-2 rounded-full flex w-full">
-              jacobparis.com
-            </div>
-          </div>
-
-          <div tw="flex flex-col w-full px-8 justify-between px-16 py-8">
-            {date !== "Invalid Date" ? (
-              <span tw="w-full uppercase text-lg font-bold text-gray-500">
-                {date}
-              </span>
-            ) : null}
-            <h2
-              tw={`flex flex-col text-left ${titleSize} font-bold text-gray-800 mb-0`}
-            >
-              {title}
-            </h2>
-
-            <p
-              tw={`text-gray-600 ${descriptionSize} mb-8`}
-              style={{ lineHeight: "2rem" }}
-            >
-              {description}
-            </p>
-
-            <div tw="flex justify-between items-end w-full">
-              <div tw="flex">
-                <img
-                  tw="w-24 rounded-full"
-                  src="https://jacobparis.com/images/jacob.png"
-                  alt=""
-                />
-                <div tw="flex flex-col px-8 py-2">
-                  <span tw="font-bold mb-2">
-                    {" "}
-                    Jacob Paris{" "}
-                  </span>
-                  <span tw="text-gray-500">
-                    {" "}
-                    @jacobmparis{" "}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div tw="absolute right-0 top-0 hidden px-4 py-4">
-          <img
-            tw="w-24 rounded-full"
-            src="https://jacobparis.com/images/jacob.png"
-            alt=""
-          />
-        </div>
-      </div>
-    ),
-    {
-      width: 1200,
-      height: 600,
-      fonts: await Promise.all([
-        getFont("Inter"),
-        getFont("Playfair Display"),
-      ]).then((fonts) => fonts.flat()),
-    },
-  )
-
-  const { data, error } = await new Promise(
-    (
-      resolve: (value: {
-        data: Buffer | null
-        error: Error | null
-      }) => void,
-    ) => {
-      svg2img(svg, (error, buffer) => {
-        if (error) {
-          resolve({ data: null, error })
-        } else {
-          resolve({ data: buffer, error: null })
-        }
-      })
-    },
-  )
-
-  if (error) {
-    return new Response(error.toString(), {
-      status: 500,
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    })
-  }
-
-  return new Response(data, {
-    headers: {
-      "Content-Type": "image/png",
-    },
-  })
-}
-```
+This is the code for the image generator I use for this article as of Nov 3 2023. The [image generation code for this blog is on Github](https://github.com/jacobparis-insiders/jacobparis.com/blob/main/app/blog/generators.blog%5B.png%5D.route.tsx)
