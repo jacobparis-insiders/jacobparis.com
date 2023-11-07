@@ -197,7 +197,7 @@ export default function Blog() {
       <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
       <div className="flex">
         <article
-          className="prose prose-sky lg:prose-lg min-h-screen w-full max-w-prose px-4 pt-24 sm:mx-auto sm:pl-12"
+          className="prose prose-neutral lg:prose-lg prose-code:bg-stone-300 prose-code:before:hidden prose-code:after:hidden prose-blockquote:bg-white min-h-screen w-full max-w-prose px-4 pt-24 sm:mx-auto sm:pl-12"
           style={{ counterReset: "footnote-counter 0" }}
         >
           {frontmatter.img ? (

@@ -42,7 +42,7 @@ export default function Index() {
           </div>
         </section>
       </div>
-      <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
+      <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-white py-1" />
 
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
         <div className=" relative block w-full overflow-hidden rounded-lg bg-gray-900 text-neutral-100">
@@ -86,143 +86,13 @@ export default function Index() {
           </div>
         </div>
 
-        <div className="mb-8 text-center">
-          <div className="relative">
-            <div className="from-50% to-75% absolute inset-0 bg-gradient-to-b from-transparent to-white" />
-            <img
-              src="/remix.svg"
-              alt="Remix logo"
-              width="200"
-              // mask linear gradient to transparent top to bottom
-              className="mx-auto -mb-16"
-            />
-          </div>
-          <h2 className="relative mb-4 text-7xl font-bold ">Remix</h2>
-          <p className="mx-auto max-w-xs text-xl font-medium text-gray-700">
-            Full stack React apps with SSR and declarative data fetching
-          </p>
-        </div>
-
-        <section className="mb-16 grid  gap-8 sm:grid-cols-2">
-          <article className="sm:col-span-2">
-            <Link
-              prefetch="intent"
-              to="/content/where-to-host-remix"
-              className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-[#f4f4f4]"
-            >
-              <div className="p-8">
-                <h3
-                  className="mb-4 text-2xl font-medium tracking-tight"
-                  style={{ wordBreak: "break-word" }}
-                >
-                  Where to host your Remix app
-                </h3>
-
-                <p className="text-gray-600">
-                  Should you host your Remix app on a serverless provider like
-                  Vercel, Fastly, Netlify, Cloudflare, or AWS Lambda? Or a
-                  long-lived server like Fly, Render, Railway, or DigitalOcean?
-                  This guide will help you choose the right hosting option for
-                  your app.
-                </p>
-              </div>
-
-              <div className="relative h-48">
-                <div
-                  style={{
-                    backgroundImage:
-                      "radial-gradient(circle at center, transparent 0, #f4f4f4 100%)",
-                  }}
-                  className="absolute inset-0 z-10 "
-                />
-                <ul>
-                  {[
-                    {
-                      src: "/netlify.png",
-                      alt: "placekitten",
-                      style: {
-                        left: "5%",
-                        top: "70%",
-                        transform: `rotate(-10deg) translate(-50%, -50%)`,
-                      },
-                    },
-                    {
-                      src: "/vercel-icon-dark.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "80%",
-                        top: "0%",
-                      },
-                    },
-                    {
-                      src: "/fastly.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "20%",
-                        top: "40%",
-                        transform: `rotate(0deg) translate(-50%, -50%)`,
-                      },
-                    },
-                    {
-                      src: "/cloudflare.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "55%",
-                        top: "25%",
-                        transform: `rotate(10deg) translate(-50%, -50%)`,
-                      },
-                    },
-                    {
-                      src: "/aws.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "35%",
-                        top: "20%",
-                        transform: `rotate(-10deg) translate(-50%, -50%)`,
-                      },
-                    },
-                    {
-                      src: "/fly.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "75%",
-                        top: "60%",
-                        transform: `rotate(30deg) translate(-50%, -50%)`,
-                      },
-                    },
-                    {
-                      src: "/digitalocean.svg",
-                      alt: "placekitten",
-                      style: {
-                        left: "45%",
-                        top: "50%",
-                        transform: `rotate(-20deg) translate(-50%, -50%)`,
-                      },
-                    },
-                  ].map((image, index) => (
-                    <li
-                      key={index}
-                      className="absolute h-16 w-16 transition-all group-hover:h-20 group-hover:w-20"
-                      style={image.style}
-                    >
-                      <div>
-                        <img
-                          src={image.src}
-                          alt={image.alt}
-                          className="h-full w-full object-cover"
-                        />
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Link>
-          </article>
+        <section className="mb-16 mt-8 grid  gap-8 sm:grid-cols-2">
+          <WhereToHostRemixCard />
 
           <BlogCard
             title="Generate open graph social preview images"
             slug="remix-og"
-            img="https://www.jacobparis.com/generators/blog.png?title=Generate%2520open%2520graph%2520social%2520preview%2520images%2520with%2520Remix&description=Learn%2520how%2520to%2520generate%2520social%2520preview%2520images%2520for%2520your%2520website%2520with%2520Remix%2520and%2520Tailwind.%2520Use%2520Vercel%27s%2520Satori%2520package%2520with%2520Remix%2520for%2520dynamic%2520open%2520graph%2520images.%2520Fetch%2520fonts%2520from%2520Google%2520automatically.&date=2023-04-09&img="
+            img="/content/remix-og.png"
             tags="Remix"
             className="row-span-2"
           />
@@ -248,15 +118,12 @@ export default function Index() {
             tags="Remix"
           />
 
+          <HydrationErrorsCard />
+
           <FeaturedBlogItem
             title="Stream Progress Updates with Remix using Defer, Suspense, and Server Sent Events"
             slug="remix-defer-streaming-progress"
             img="/content/remix-defer-streaming-progress/cover.png"
-            tags="Remix"
-          />
-          <BlogCard
-            title="Solving hydration errors"
-            slug="remix-hydration-errors"
             tags="Remix"
           />
 
@@ -276,16 +143,7 @@ export default function Index() {
             slug="remix-form-toast"
             tags="Remix"
           />
-        </section>
 
-        <div className="mb-8 text-center">
-          <h2 className="relative mb-4 text-7xl font-bold ">UI Engineering</h2>
-          <p className="mx-auto max-w-sm text-xl font-medium text-gray-700">
-            Creating delightful user experiences with React and Tailwind
-          </p>
-        </div>
-
-        <section className="grid gap-8  sm:grid-cols-2">
           <BlogCard
             title="Animated page transitions with nested routes"
             slug="remix-animated-page-transitions"
@@ -347,5 +205,214 @@ export default function Index() {
         </div>
       </div>
     </div>
+  )
+}
+
+function WhereToHostRemixCard() {
+  return (
+    <article className="sm:col-span-2">
+      <Link
+        prefetch="intent"
+        to="/content/where-to-host-remix"
+        className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
+      >
+        <div className="p-8">
+          <h3
+            className="mb-4 text-2xl font-medium tracking-tight"
+            style={{ wordBreak: "break-word" }}
+          >
+            Where to host your Remix app
+          </h3>
+
+          <p className="text-gray-600">
+            Should you host your Remix app on a serverless provider like Vercel,
+            Fastly, Netlify, Cloudflare, or AWS Lambda? Or a long-lived server
+            like Fly, Render, Railway, or DigitalOcean? This guide will help you
+            choose the right hosting option for your app.
+          </p>
+        </div>
+
+        <div className="relative h-48">
+          <div
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at center, transparent 0, #fff 100%)",
+            }}
+            className="absolute inset-0 z-10 "
+          />
+          <ul>
+            {[
+              {
+                src: "/netlify.png",
+                alt: "placekitten",
+                style: {
+                  left: "5%",
+                  top: "70%",
+                  transform: `rotate(-10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                src: "/vercel-icon-dark.svg",
+                alt: "placekitten",
+                style: {
+                  left: "80%",
+                  top: "0%",
+                },
+              },
+              {
+                src: "/fastly.svg",
+                alt: "placekitten",
+                style: {
+                  left: "20%",
+                  top: "40%",
+                  transform: `rotate(0deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                src: "/cloudflare.svg",
+                alt: "placekitten",
+                style: {
+                  left: "55%",
+                  top: "25%",
+                  transform: `rotate(10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                src: "/aws.svg",
+                alt: "placekitten",
+                style: {
+                  left: "35%",
+                  top: "20%",
+                  transform: `rotate(-10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                src: "/fly.svg",
+                alt: "placekitten",
+                style: {
+                  left: "75%",
+                  top: "60%",
+                  transform: `rotate(30deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                src: "/digitalocean.svg",
+                alt: "placekitten",
+                style: {
+                  left: "45%",
+                  top: "50%",
+                  transform: `rotate(-20deg) translate(-50%, -50%)`,
+                },
+              },
+            ].map((image, index) => (
+              <li
+                key={index}
+                className="absolute h-16 w-16 transition-all group-hover:h-20 group-hover:w-20"
+                style={image.style}
+              >
+                <div>
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Link>
+    </article>
+  )
+}
+
+function HydrationErrorsCard() {
+  return (
+    <article className="sm:col-span-2">
+      <Link
+        prefetch="intent"
+        to="/content/where-to-host-remix"
+        className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
+      >
+        <div className="p-8">
+          <h3
+            className="mb-4 text-2xl font-medium tracking-tight"
+            style={{ wordBreak: "break-word" }}
+          >
+            Solve React hydration errors
+          </h3>
+
+          <p className="text-gray-600">
+            Hydration errors can be caused by dates, ad blockers, browser
+            extensions, invalid HTML, 3rd party scripts, CSS in JS libs,
+            character encoding, IDs, and more
+          </p>
+        </div>
+
+        <div className="relative h-48">
+          <div
+            style={{
+              backgroundImage:
+                "radial-gradient(circle at center, transparent 0, white 100%)",
+            }}
+            className="absolute inset-0 z-10 "
+          />
+          <ul>
+            {[
+              {
+                style: {
+                  left: "5%",
+                  top: "70%",
+                  transform: `rotate(-10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                style: {
+                  left: "20%",
+                  top: "40%",
+                  transform: `rotate(0deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                style: {
+                  left: "55%",
+                  top: "25%",
+                  transform: `rotate(10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                style: {
+                  left: "35%",
+                  top: "20%",
+                  transform: `rotate(-10deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                style: {
+                  left: "75%",
+                  top: "60%",
+                  transform: `rotate(30deg) translate(-50%, -50%)`,
+                },
+              },
+              {
+                style: {
+                  left: "45%",
+                  top: "50%",
+                  transform: `rotate(-20deg) translate(-50%, -50%)`,
+                },
+              },
+            ].map((image, index) => (
+              <li
+                key={index}
+                className="absolute h-16 w-16 transition-all group-hover:h-20 group-hover:w-20"
+                style={image.style}
+              >
+                <div className="text-5xl font-black">?</div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </Link>
+    </article>
   )
 }

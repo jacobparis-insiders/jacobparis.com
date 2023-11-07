@@ -1,10 +1,12 @@
 ---
-title: Solving hydration errors in Remix
+title: Solve React hydration errors in Remix/Next apps
 description: Hydration errors can be caused by dates, ad blockers, browser extensions, invalid HTML, 3rd party scripts, CSS in JS libs, character encoding, IDs, and more
 tags: Remix
-timestamp: "2023-05-28"
+timestamp: "2023-11-07"
 published: true
 ---
+
+Hydration errors affect every server-rendered React app. This is not a bug in Next.js or Remix, but a fundamental issue in the way React's server-side rendering works.
 
 People usually describe hydration errors as mismatches between the HTML that the server generates and what the browser generates, but that's not the whole story.
 
@@ -26,6 +28,7 @@ React suppresses errors in production, so these may come up as "Minified React E
 
 In development, you will see a marginally more helpful error message.
 
+- Text content does not match server-rendered HTML
 - Hydration failed because the initial UI does not match what was rendered on the server.
 - Warning: Expected server HTML to contain a matching `<head>` in `<html>`.
 
@@ -49,9 +52,13 @@ There are many online HTML diff tools, just google one and paste in the HTML fro
 
 Browser extensions often have permission to modify the live page content of any website, including your app. This can cause hydration errors if the extension modifies the HTML before React has a chance to compare it.
 
-**Try your app in an incognito/private browsing window with all extensions disabled.** If the error goes away, you know that an extension is causing the problem, and there's probably nothing you can do about it.
+**Try your app in an incognito/private browsing window with all extensions disabled.** If the error goes away, you know that an extension is causing the problem.
 
 There are also desktop level ad-blockers and security software that may cause similar issues. If you're running one of these, **try disabling it or testing on another device.** You may be able to add an exception in the tool for your website.
+
+If the extension is only modifying the head of your document and not the body, hydration errors caused by this are a bug in React 18 and have been solved in React 18.3 Canary. Next.js users will have this automatically, but Remix users could try updating to that version or newer to see if it fixes the issue.
+
+Alternatively, Remix users can use [remix-island](https://github.com/Xiphe/remix-island) to mount Remix to a specific div in the body, which will prevent changes to the head from causing hydration errors.
 
 ## Invalid HTML
 
@@ -63,21 +70,29 @@ Nested forms are prohibited in HTML, so if you have a form inside a form, the br
 
 When React hydrates, it will compare the HTML it generated with the HTML the browser is displaying. If the browser moved elements around, React will throw a hydration error.
 
-The solution here is to write valid HTML.
+The solution here is to write React code that outputs valid HTML.
+
+The [Remix Dev Tools](https://github.com/Code-Forge-Net/Remix-Dev-Tools) will now detect at development time whether you're outputting invalid HTML and warn you about it, with a clickable link to the offending line of code in your editor.
 
 ## Third party scripts or non-react packages
 
 Third party scripts may also modify the HTML on the page. This is especially common with analytics scripts like HotJar or Google Tag Manager (GTM). If you're using a third party script, **try removing it and see if the error goes away.**
 
-If this is the issue, you may be able to run the script after React has finished hydrating. For example, you can use `useEffect` to run the script after the first render.
+If this is the issue, you may be able to run the script after React has finished hydrating. For example, you can use `useEffect` to run the script after the first render, or use the [Remix Utils ExternalScripts utility](https://github.com/sergiodxa/remix-utils#external-scripts) to do this for you.
+
+The [next/script package](https://nextjs.org/docs/pages/building-your-application/optimizing/scripts) is the canonical solution for Next.js.
 
 ## CSS in JS libraries
 
-CSS in JS is a methodology for styling React apps that defines styles as a side effect of rendering. This means that the styles are not available when the server renders the page, and the HTML that the server sends to the client will not match the HTML that React generates.
+CSS in JS is a methodology for styling React apps that defines styles as a side effect of rendering.
+
+In order to get a stylesheet that contains all the styles for a page, React needs to fully render the page to see which components are used and what styles they need. If it tried to stream the HTML, the browser would start displaying the page before React had a chance to generate the stylesheet.
 
 Chakra, Emotion, and Material UI are popular CSS in JS libraries that have this issue.
 
-A common solution is to double-render the page on the server<SideNote> More in this in in the [Remix docs for CSS in JS](https://remix.run/docs/en/1.16.0/guides/styling#css-in-js-libraries)</SideNote>. The library can extract the styles it needs to generate from the first render and inject them into the second.
+A common solution is to double-render the page on the server<SideNote> More in this in in the [Remix docs for CSS in JS](https://remix.run/docs/en/main/styling/css-in-js)</SideNote>. After the first render, it can extract all the styles it needs, and then the second render can be streamed to the browser.
+
+If you aren't committed to CSS in JS, alternative styling solutions like [Tailwind](https://tailwindcss.com/) or [Vanilla Extract](https://vanilla-extract.style/) work much better with server rendering and will not cause hydration issues.
 
 ## Character encoding
 
@@ -108,7 +123,7 @@ When javascript tries to create a date, it will use the timezone of the machine 
 
 If you're trying to render a date, you'll get these hydration issues close to midnight every day when the server date becomes different than the client date.
 
-- The easiest solution is to format the date as a string on the server and send it to the client.
+- The easiest solution is to format the date as a string on the server and send it as regular text.
 - The client can [send timezone/locale information to the server](/content/remix-ssr-dates) and the server can use that to create a fake date that will match the client's timezone during hydration.
 - More solutions in the [rendering based on client data section](#rendering-based-on-client-data)
 
@@ -117,6 +132,8 @@ If you're trying to render a date, you'll get these hydration issues close to mi
 If you're using a non-idempotent function like `uuid` to generate a unique ID, you may get hydration errors. This is because the server and client will generate different IDs.
 
 You can either generate the ID on the server and send to the client, or pass a seed to the function so that the server and client generate the same ID.
+
+If the random value you're trying to generate is an ID or key for a specific component, React 18 includes a [useId hook](https://react.dev/reference/react/useId).
 
 ## Rendering based on client data
 

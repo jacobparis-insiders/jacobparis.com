@@ -1,7 +1,7 @@
 import type {
   LinksFunction,
-  LoaderFunction,
   MetaFunction,
+  LoaderFunctionArgs,
 } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
@@ -20,7 +20,6 @@ import isbot from "isbot"
 import tailwindStylesheetUrl from "~/styles/tailwind.css"
 import { ButtonLink } from "./components/ButtonLink.tsx"
 import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
-import { getServerTiming } from "./utils/timing.server.ts"
 
 export const links: LinksFunction = () => {
   return [
@@ -58,23 +57,16 @@ export const meta: MetaFunction = () => {
 
 export const shouldRevalidate = () => false
 
-export const loader: LoaderFunction = async ({ request }) => {
-  const { time, getServerTimingHeader } = getServerTiming()
-
+export async function loader({ request }: LoaderFunctionArgs) {
   const isBot = await isbot(request.headers.get("user-agent"))
 
-  return json(
-    {
-      isBot: isBot,
-    },
-    {
-      headers: getServerTimingHeader(),
-    },
-  )
+  return json({
+    isBot: isBot,
+  })
 }
 
 export default function App() {
-  const { isBot } = useLoaderData()
+  const { isBot } = useLoaderData<typeof loader>()
   const location = useLocation()
   const url = new URL(location.pathname, "https://www.jacobparis.com")
 
@@ -90,11 +82,11 @@ export default function App() {
           {`.bg-light {
           -webkit-backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
           backdrop-filter: blur(1.5rem) saturate(200%) contrast(50%) brightness(130%);
-          background-color: rgba(255, 255, 255, 0.5);
+          background-color: rgba(255, 255, 255, 0.2);
         }`}
         </style>
       </head>
-      <body className="h-full bg-white">
+      <body className="h-full bg-[#f5f5f5]">
         <Outlet />
         <ScrollRestoration />
         <LiveReload />

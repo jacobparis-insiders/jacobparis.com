@@ -18,14 +18,14 @@ export default function BlogCard({
       <Link
         prefetch="intent"
         to={`/content/${slug}`}
-        className={`group  flex h-full  flex-col gap-2 overflow-hidden rounded-lg ${
+        className={`group flex h-full  flex-col gap-2 overflow-hidden rounded-lg ${
           img
-            ? "bg-gray-800/5"
-            : "transition-colors duration-300 ease-out hover:bg-gray-800/5"
+            ? "bg-white"
+            : "transition-colors duration-300 ease-out hover:bg-white"
         }`}
       >
         {img ? (
-          <div className="relative h-48 overflow-hidden">
+          <div className="relative z-10 h-48 overflow-hidden">
             <div
               style={{ backgroundImage: `url(${img})` }}
               className="absolute inset-0 -z-10 bg-cover  bg-center transition-transform duration-300 ease-out group-hover:scale-[1.05]"
