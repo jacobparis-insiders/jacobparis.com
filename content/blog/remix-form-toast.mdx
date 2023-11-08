@@ -10,9 +10,15 @@ timestamp: "2023-04-06"
 
 Once nice UI affordance you can give your users is to show a confirmation message after they submit their form successfully. This is a great way to let them know their action was successful and that the page is loading.
 
-<div>
+- [Submitting forms on the same page](#submitting-forms-on-the-same-page)
+- [Use react-toast](#submitting-forms-across-pages)
+- [Use manual cookies](#or-roll-your-own-toast)
+- [Use a cookie session storage](#using-a-cookie-session-storage)
+- [Example toast component](#displaying-a-simple-toast-message)
+
+<div className="rounded-lg bg-white p-2 shadow-sm">
   <iframe
-    className="mx-auto max-w-full"
+    className="mx-auto max-w-full rounded"
     width="560"
     height="315"
     src="https://www.youtube.com/embed/3IUYtO6QbbU"
@@ -58,7 +64,55 @@ If you submit a form
 
 Then the `useActionData()` hook won't work. You'll need to store the confirmation message somewhere and read it when you want to show it.
 
-This is an excellent use-case for a cookie.
+The [remix-toast library](https://github.com/Code-Forge-Net/remix-toast) gives you some helpers that do this automatically for you.
+
+There is `redirectWithToast`, `redirectWithSuccess`, and similar variants for Error, Info, and Warning.
+
+```tsx
+export async function action() {
+  // handle form submission
+
+  return redirectWithToast("/", {
+    message: "Your form was submitted successfully",
+  })
+}
+```
+
+There are three routes that make sense for showing the toast notification.
+
+- The page you're redirecting to
+- A layout page that wraps the page you're redirecting to
+- The root layout route
+
+If you only need the toast messages in one place, prefer the former, but the root is a good place if you plan on using this pattern across your app.
+
+```tsx
+// root.tsx
+import { getToast } from "remix-toast"
+
+export async function loader() {
+  const { toast, headers } = getToast()
+
+  return json({ toast }, { headers })
+}
+
+export default function Root() {
+  const { toast } = useLoaderData()
+
+  return (
+    <div>
+      <Form />
+      {toast ? <Toast message={toast.message} /> : null}
+    </div>
+  )
+}
+```
+
+There are more examples on the [react-toast docs](https://github.com/Code-Forge-Net/remix-toast) for integrating with toast libraries like `react-toastify` or `sonner`
+
+## Or roll your own toast
+
+If you don't want to use a library, you can do this yourself.
 
 In the response of the action, add a `Set-Cookie` header with the message you want to show.
 
@@ -74,7 +128,7 @@ export async function action() {
 }
 ```
 
-Then, on the page you want to show the message, read the cookie and show the toast notification.
+Then, on the page you want to show the message, read the cookie and clear it.
 
 ```tsx
 export async function loader({
@@ -91,17 +145,6 @@ export async function loader({
         "Set-Cookie": `message=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT`,
       },
     },
-  )
-}
-
-export default function Example() {
-  const { message } = useLoaderData()
-
-  return (
-    <div>
-      <Form />
-      {message ? <Toast message={message} /> : null}
-    </div>
   )
 }
 ```
@@ -168,6 +211,8 @@ If you don't want to commit the session every time, there are ways to [set up yo
 
 ## Displaying a simple toast message
 
+I recommend using a library like [react-toastify](https://www.npmjs.com/package/react-toastify) or [sonner](https://sonner.emilkowal.ski/) for toasts, but you can build your own basic one.
+
 Here is a sample toast component using Tailwind that you can use to display the message. It will automatically hide itself after a few seconds.
 
 ```tsx
@@ -203,6 +248,8 @@ function Toast({
   )
 }
 ```
+
+And you can display in your page like this.
 
 ```tsx
 {

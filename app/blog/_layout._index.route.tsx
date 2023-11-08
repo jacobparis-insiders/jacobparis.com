@@ -6,6 +6,9 @@ import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import FeaturedBlogItem from "~/components/FeaturedBlogItem.tsx"
 import BlogCard from "~/components/BlogCard.tsx"
 import { MoultonMatrix } from "./MoultonMatrix.tsx"
+import { Button } from "#app/components/ui/button.tsx"
+import { Toaster, toast } from "sonner"
+import { useEffect } from "react"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -137,6 +140,8 @@ export default function Index() {
             slug="remix-form-autosave"
             tags="Remix"
           />
+
+          <ToastCard />
 
           <BlogCard
             title="Show toast notifications on form submit"
@@ -333,30 +338,14 @@ function HydrationErrorsCard() {
         prefetch="intent"
         to="/content/where-to-host-remix"
         className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
+        style={{
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundImage:
+            "url(https://images.pexels.com/photos/3497624/pexels-photo-3497624.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)",
+        }}
       >
-        <div className="p-8">
-          <h3
-            className="mb-4 text-2xl font-medium tracking-tight"
-            style={{ wordBreak: "break-word" }}
-          >
-            Solve React hydration errors
-          </h3>
-
-          <p className="text-gray-600">
-            Hydration errors can be caused by dates, ad blockers, browser
-            extensions, invalid HTML, 3rd party scripts, CSS in JS libs,
-            character encoding, IDs, and more
-          </p>
-        </div>
-
         <div className="relative h-48">
-          <div
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at center, transparent 0, white 100%)",
-            }}
-            className="absolute inset-0 z-10 "
-          />
           <ul>
             {[
               {
@@ -412,7 +401,87 @@ function HydrationErrorsCard() {
             ))}
           </ul>
         </div>
+        <div className="relative px-8 py-12">
+          <div className="gradient-blur absolute inset-0 rounded-md" />
+          <div className="relative z-10">
+            <h3
+              className="mb-4 text-2xl font-medium tracking-tight text-white"
+              style={{ wordBreak: "break-word" }}
+            >
+              Solve React hydration errors
+            </h3>
+
+            <p className="text-white opacity-60">
+              Hydration errors can be caused by dates, ad blockers, browser
+              extensions, invalid HTML, 3rd party scripts, CSS in JS libs,
+              character encoding, IDs, and more
+            </p>
+          </div>
+        </div>
       </Link>
+    </article>
+  )
+}
+function ToastCard() {
+  useEffect(() => {
+    const toastNames = [
+      'Created "New Project"',
+      "Successfully saved changes",
+      "Deleted 3 items",
+      "Copied to clipboard",
+      "Added to favorites",
+      "Removed from favorites",
+      "Someone else just bought this item",
+      "Added to cart",
+      "Removed from cart",
+      "Subscribed to readmoulton.com",
+    ]
+
+    const interval = setInterval(() => {
+      toast(sample(toastNames))
+    }, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  return (
+    <article className="sm:col-span-2">
+      <div className="group relative block w-full  rounded-lg border border-gray-100 bg-white">
+        <div className="relative h-48 [&_[data-sonner-toaster]]:!absolute">
+          <Button
+            onClick={() => toast("Clicked a button!")}
+            className="absolute left-4 top-4 z-10"
+          >
+            Create new toast
+          </Button>
+          <Toaster
+            expand={false}
+            toastOptions={{
+              duration: 9000,
+            }}
+          />
+        </div>
+        <Link
+          prefetch="intent"
+          to="/content/remix-form-toast"
+          className="relative block px-8 py-12"
+        >
+          <div className="gradient-blur absolute inset-0 rounded-md" />
+          <div className="relative z-10">
+            <h3
+              className="mb-4 text-2xl font-medium tracking-tight text-neutral-900"
+              style={{ wordBreak: "break-word" }}
+            >
+              Show toast notifications with Remix
+            </h3>
+
+            <p className="text-neutral-600">
+              Show the user their form submission was complete. For same-page
+              submissions, try the useActionData hook. For cross-page
+              submissions, use remix-toast or cookie session storage.
+            </p>
+          </div>
+        </Link>
+      </div>
     </article>
   )
 }
