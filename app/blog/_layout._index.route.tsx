@@ -144,12 +144,6 @@ export default function Index() {
           <ToastCard />
 
           <BlogCard
-            title="Show toast notifications on form submit"
-            slug="remix-form-toast"
-            tags="Remix"
-          />
-
-          <BlogCard
             title="Animated page transitions with nested routes"
             slug="remix-animated-page-transitions"
             tags="Remix, UI/UX"

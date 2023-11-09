@@ -39,6 +39,7 @@ export default {
       },
       animation: {
         appear: "appear 800ms",
+        disappear: "disappear 800ms forwards",
         fade: "fade 300ms ease-out",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
@@ -54,6 +55,18 @@ export default {
             height: "auto",
             width: "auto",
             opacity: "1",
+          },
+        },
+        disappear: {
+          "0%, 99%": {
+            height: "auto",
+            width: "auto",
+            opacity: "1",
+          },
+          "100%": {
+            height: "0",
+            width: "0",
+            opacity: "0",
           },
         },
         fade: {

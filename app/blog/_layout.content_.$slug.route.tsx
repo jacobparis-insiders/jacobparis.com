@@ -24,6 +24,9 @@ import {
   DateExamples,
   FileExamples,
   LocalStorageExamples,
+  ProgressiveDateExamples,
+  ProgressiveFileExamples,
+  ProgressiveLocalStorageExamples,
 } from "~/examples/remix-progressive-client-only/examples.tsx"
 import { getServerTiming } from "~/utils/timing.server.ts"
 
@@ -212,8 +215,11 @@ export default function Blog() {
               SideNote,
               SocialBannerSmall,
               LocalStorageExamples,
+              ProgressiveLocalStorageExamples,
               FileExamples,
+              ProgressiveFileExamples,
               DateExamples,
+              ProgressiveDateExamples,
               SubmenuExample,
               FilterExample,
               PaginationExample,

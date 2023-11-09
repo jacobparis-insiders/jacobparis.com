@@ -1,5 +1,5 @@
 ---
-title: Progressively enhanced client rendering to avoid SSR hydration issues in Remix.
+title: Avoid hydration errors with CSS and progressive enhancement
 description: React doesn't like mismatches between client and server rendering. Avoid it by rendering tricky content like dates only on the client. Fade it in for a smooth UI and to avoid layout shift.
 tags: Remix
 timestamp: "2023-05-25"
@@ -8,124 +8,28 @@ published: true
 
 For all the benefits of serverside rendering, there are also things it makes more difficult, like [showing the same date in the client and the server](/content/remix-ssr-dates).
 
-_Any time there's a mismatch between what the server can render and what the client can render, you're going to run into issues._
-
-Sites that handle this poorly end up with a flash of unstyled content (FOUC) or a flash of incorrect content (FOIC). You might get hydration errors and cause your site to bail on serverside rendering entirely.
+_Any time there's a mismatch between what the server can render and what the client can render, you're going to run into [hydration issues](/content/remix-hydration-errors)_ and your site might bail on serverside rendering entirely after a flash of unstyled/incorrect content.
 
 Some people try to solve this by only rendering certain elements on the client. That's a sure way to avoid the mismatch, but it also means that users without javascript will never see that content.
 
+There's no way of knowing whether javascript is eventually going to load or not
+
+- it might just be a slow connection
+- the connection could have failed or been blocked
+- the user might have disabled javascript<SideNote> This is the only form of javascript failure where the &lt;noscript&gt; tag will appear </SideNote>
+
 Users without javascript will get whatever version of the page is rendered on the server, so **if you want progressive enhancement, the server MUST render the content.**
 
-That said, **javascript is going to work for most users of most websites, so that's the case we'll want to optimize for**.<SideNote> You may have a different audience with different needs and make a different choice here..</SideNote> We'll want to make sure the site works without Javascript, but I'm ok making that experience a bit clunky if it means the site works well for the majority of users.
+Javascript solutions don't work here. Even if you prevent the hydration error when rendering a date<SideNote> There's a [neat trick by Unsplash](https://twitter.com/OliverJAsh/status/1718565186267742496) for this. </SideNote>, there will still be a flash of the wrong date before React is even downloaded.
 
-Since we MUST render the content on the server, but we don't want to show it to the user right away, we need to hide it somehow. Javascript solutions don't work here. Even if you tell React to hide it immediately, there will still be that flash of the server rendered page before React takes over.
+## A CSS Solution
 
-What we're left with is a CSS solution.
+So if javascript solutions are out of the question, what can we do?
 
-_I've built a custom wrapper component that hides its contents until the page loads. If JS is disabled, it will reveal them with a CSS animation. If not, you can customize the behavior by passing in a class name._
+1. We can server-render the content with a CSS animation that makes it invisible for 3 seconds or so, then appear suddenly.
+2. If Javascript loads at any point, we remove the animation class and the client-rendered content appears immediately, or with a nice fade-in.
 
-```tsx
-import { useHydrated } from "remix-utils"
-
-export function ProgressiveClientOnly({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode | (() => React.ReactNode)
-  className: string
-}) {
-  const isHydrated = useHydrated()
-
-  return (
-    <div
-      className={
-        // Create this class in your tailwind config
-        isHydrated ? className : "animate-appear"
-      }
-    >
-      {typeof children === "function"
-        ? children()
-        : children}
-    </div>
-  )
-}
-```
-
-The `animate-appear` class is a custom CSS animation that makes the element appear suddenly after a delay.
-
-```tsx
-module.exports = {
-  theme: {
-    extend: {
-      animation: {
-        appear: "appear 300ms",
-      },
-      keyframes: {
-        appear: {
-          "0%, 99%": {
-            height: "0",
-            width: "0",
-            opacity: "0",
-          },
-          "100%": {
-            height: "auto",
-            width: "auto",
-            opacity: "1",
-          },
-        },
-      },
-    },
-  },
-}
-```
-
-## An input with a default value from local storage
-
-Imagine you have a long form and you want to save the user's progress as they fill it out. Maybe the data is sensitive, or you want it to work offline, so you save to local storage while they're working on it.<SideNote> If you have the power, achieving this persistent UI by saving to the server will avoid this whole issue. </SideNote>
-
-_The server doesn't have access to local storage, so at the moment the page loads, that input is going to be empty._ You can immediately populate it with the value from local storage, but you're going to get the empty input for a split second.
-
-Refresh the page while looking at these inputs. The ones marked "progressive" are wrapped in the `ProgressiveClientOnly` component and set to fade in.
-
-<LocalStorageExamples />
-
-Without JS, the local storage value is never populated, so the user will have to fill out the form from scratch, even if there's many many inputs on the page. There's definitely value in trying to make this work for most users.
-
-But the default solution has a noticeable flash of an empty input before the text fills in. The slower the user's network connection is, and the longer your javascript bundle takes to load and parse, the longer that flash will be.
-
-_The progressive solution hides the flash by fading in the surrounding content at the same time as the input, so it's less jarring._
-
-Here's the code for the progressive version, that wraps all the content that should fade in together.
-
-```jsx
-<ProgressiveClientOnly className="animate-fade">
-  <label className="flex flex-col">
-    Progressive with JS
-    <input type="text" defaultValue={localStorageValue} />
-  </label>
-</ProgressiveClientOnly>
-```
-
-## A custom file input with a native fallback
-
-If you want your users to get a nice file drop zone that shows image thumbnails and lets them drag and drop files, _the only way JS-free users will still be able to use the app is if you show them a native file input._
-
-But native file inputs are ugly, so we don't want them to flash on the screen before our custom input takes over.
-
-We can use the `ProgressiveClientOnly` component, but rather than fading in the content, we hide it entirely. _As long as React loads before the `animate-appear` class has time to take effect, the content will never be visible._
-
-```jsx
-<FancyFileDropper />
-<ProgressiveClientOnly className="sr-only">
-  <input type="file" />
-</ProgressiveClientOnly>
-```
-
-<FileExamples />
-
-This example shows the effect much more prominently. The most common case of JS loading looks terrible without the progressive enhancement. On the other hand, the zero JS cases, which are less common, are still usable here.
-
-Many devs would avoid the flash by dropping the native input entirely and break the app for all users without javascript.
+I've built a custom `ProgressiveClientOnly` component that does this for you.
 
 ## A date that's different between server and client
 
@@ -134,6 +38,17 @@ Dates are a common source of mismatch between server and client. Probably the mo
 There is a whole world of complexity here if you want accurate dates across timezones, but for the sake of this example, let's assume you're just trying to show the user a date and you don't want it to visibly flash different values.
 
 Here we're assuming you have a date in your loader data that you want to display to the user. To help illustrate the conflict between server and client dates, we'll hardcode the server date to the first of January 2023 and use the client date as the current date.
+
+```tsx
+<label className="flex flex-col">
+  Regular
+  <input type="text" defaultValue={date} />
+</label>
+```
+
+<DateExamples />
+
+The zero JS case is fine here, since it just shows the server date, but most users are going to get the example on the right with the flash of the wrong date.
 
 _You can use the `ProgressiveClientOnly` component to display only the client-rendered date but fall back to the server-rendered date if the user has JS disabled._
 
@@ -146,8 +61,146 @@ _You can use the `ProgressiveClientOnly` component to display only the client-re
 </ProgressiveClientOnly>
 ```
 
-<DateExamples />
+<ProgressiveDateExamples />
 
-If you refresh the page, you'll see the default JS case is actually the worst here. The server date is shown for a split second before the client date takes over.
+Now if you refresh the page, you'll see each input only shows one date and there's no incorrect content.
 
-Both the progressive and the zero JS cases are better, since they just pick a date and stick with it. The zero JS case will lock to whatever the server date is, while the progressive case will lock to whatever the client date is.
+As a tradeoff, the content can't appear on first load, but you can usually hide that with a nice fade-in animation.<SideNote> There'd be nothing stopping you from using a fade in animation for the zero JS case instead of suddenly appearing either, but I'm less worried about that case. </SideNote>
+
+## An input with a default value from local storage
+
+Imagine you have a long form and you want to save the user's progress as they fill it out. Maybe the data is sensitive, or you want it to work offline, so you save to local storage while they're working on it.<SideNote> If you have the power, achieving this persistent UI by saving to the server will avoid this whole issue. </SideNote>
+
+_The server doesn't have access to local storage, so at the moment the page loads, that input is going to be empty._ You can immediately populate it with the value from local storage, but you're going to get the empty input for a split second.
+
+```jsx
+<label className="flex flex-col">
+  Regular
+  <input type="text" defaultValue={localStorageValue} />
+</label>
+```
+
+If javascript never loads, then the user will never see the value from local storage, but that's not a huge deal. They'll just have to fill out the form from scratch.
+
+The bigger issue is that most users will see the empty input for a split second before the value from local storage is populated.
+
+<LocalStorageExamples />
+
+_The progressive solution hides the flash by fading in the surrounding content at the same time as the input, so it's less jarring._
+
+```jsx
+<ProgressiveClientOnly className="animate-fade">
+  <label className="flex flex-col">
+    Progressive with JS
+    <input type="text" defaultValue={localStorageValue} />
+  </label>
+</ProgressiveClientOnly>
+```
+
+<ProgressiveLocalStorageExamples />
+
+## A custom file input with a native fallback
+
+If you want your users to get a nice file drop zone that shows image thumbnails and lets them drag and drop files, _the only way JS-free users will still be able to use the app is if you show them a native file input._
+
+We can try to use the [Remix Utils ClientOnly](https://github.com/sergiodxa/remix-utils#clientonly) component to render the fancy file input only on the client, but that's going to cause a flash of the native input before the client loads.
+
+```jsx
+<ClientOnly fallback={<input type="file" />}>
+  {() => <FancyFileDropper />}
+</ClientOnly>
+```
+
+<FileExamples />
+
+We can use the `ProgressiveClientOnly` component for this too.
+
+- The file input starts its reveal animation as hidden, and when javascript loads, we make it permanently hidden by giving it the sr-only class.
+- For the fancy picker, we want the reverse behavior. We start it as visible with `defaultShow={true}`, and then if JS loads and the animation is removed, we just leave it. If JS doesn't load, the animation will hide it.
+
+```jsx
+<ProgressiveClientOnly defaultShow={true}>
+  <FancyFileDropper />
+</ProgressiveClientOnly>
+<ProgressiveClientOnly className="sr-only">
+  <input type="file" />
+</ProgressiveClientOnly>
+```
+
+This example shows the effect much more prominently. The most common case of JS loading looks terrible without the progressive enhancement. On the other hand, the zero JS case, which are less common, are still usable here.
+
+Many devs would avoid the flash by dropping the native input entirely and break the app for all users without javascript.
+
+<ProgressiveFileExamples />
+
+## Code
+
+```tsx
+import { useHydrated } from "remix-utils/use-hydrated"
+
+export function ProgressiveClientOnly({
+  children,
+  className = "",
+  defaultShow = false,
+}: {
+  children: React.ReactNode | (() => React.ReactNode)
+  className?: string
+  defaultShow?: boolean
+}) {
+  const isHydrated = useHydrated()
+
+  return (
+    <div
+      className={
+        isHydrated
+          ? className
+          : defaultShow
+          ? // Create these animations in CSS or your tailwind config
+            "[animation:disappear_1000ms]"
+          : "[animation:appear_1000ms]"
+      }
+    >
+      {typeof children === "function"
+        ? children()
+        : children}
+    </div>
+  )
+}
+```
+
+The custom CSS animations for appearing/disappearing can be done in regular CSS or in your `tailwind.config.ts`.
+
+```tsx
+export default {
+  theme: {
+    extend: {
+      keyframes: {
+        appear: {
+          "0%, 99%": {
+            height: "0",
+            width: "0",
+            opacity: "0",
+          },
+          "100%": {
+            height: "auto",
+            width: "auto",
+            opacity: "1",
+          },
+          disappear: {
+            "0%, 99%": {
+              height: "auto",
+              width: "auto",
+              opacity: "1",
+            },
+            "100%": {
+              height: "0",
+              width: "0",
+              opacity: "0",
+            },
+          },
+        },
+      },
+    },
+  },
+}
+```
