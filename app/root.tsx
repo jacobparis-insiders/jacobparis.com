@@ -21,6 +21,8 @@ import tailwindStylesheetUrl from "~/styles/tailwind.css"
 import { ButtonLink } from "./components/ButtonLink.tsx"
 import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
 
+import { honeypot } from "./blog/honeypot.server.ts"
+import { HoneypotProvider } from "remix-utils/honeypot/react"
 export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: tailwindStylesheetUrl },
@@ -56,12 +58,12 @@ export const meta: MetaFunction = () => {
 }
 
 export const shouldRevalidate = () => false
-
 export async function loader({ request }: LoaderFunctionArgs) {
   const isBot = await isbot(request.headers.get("user-agent"))
 
   return json({
     isBot: isBot,
+    honeypot: honeypot.getInputProps(),
   })
 }
 
@@ -87,7 +89,9 @@ export default function App() {
         </style>
       </head>
       <body className="h-full bg-[#f5f5f5]">
-        <Outlet />
+        <HoneypotProvider>
+          <Outlet />
+        </HoneypotProvider>
         <ScrollRestoration />
         <LiveReload />
         {isBot ? null : <Scripts />}

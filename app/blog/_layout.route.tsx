@@ -1,5 +1,7 @@
 import { Outlet, useLocation } from "@remix-run/react"
 
+import { HoneypotInputs } from "remix-utils/honeypot/react"
+
 export default function Index() {
   const location = useLocation()
 
@@ -36,7 +38,7 @@ export default function Index() {
                       </span>
                     </div>
                   </div>
-                  <div className="prose prose-invert max-w-md space-y-5 opacity-80 sm:prose-lg">
+                  <div className="prose prose-invert sm:prose-lg max-w-md space-y-5 opacity-80">
                     <div>
                       <p>
                         Hey there! I'm a developer, designer, and digital nomad
@@ -76,6 +78,8 @@ export default function Index() {
                       method="post"
                       className="flex flex-col gap-4"
                     >
+                      <HoneypotInputs label="Please leave this field blank" />
+
                       <input
                         type="hidden"
                         name="url"

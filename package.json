@@ -56,6 +56,7 @@
     "cmdk": "^0.2.0",
     "compression": "^1.7.4",
     "cross-env": "^7.0.3",
+    "crypto-js": "^4.2.0",
     "esbuild-register": "3.3.3",
     "escape-goat": "^4.0.0",
     "execa": "^8.0.1",

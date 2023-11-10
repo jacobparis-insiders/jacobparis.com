@@ -4,4 +4,4 @@ node_modules
 /public/build
 .env
 cache.db
-**.ignored.js
+**.ignored**
