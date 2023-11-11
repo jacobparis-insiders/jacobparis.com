@@ -18,7 +18,7 @@ export function ProgressiveClientOnly({
           ? className
           : defaultShow
           ? // Appear or disappear if JS hasn't loaded in 800ms
-            "[animation:disappear_800ms]"
+            "[animation:disappear_800ms_forwards]"
           : "[animation:appear_800ms]"
       }
     >

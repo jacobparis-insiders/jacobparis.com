@@ -3,6 +3,26 @@ import { json } from "@remix-run/node"
 
 import crypto from "node:crypto"
 import { getRequiredEnvVar } from "~/utils/misc.ts"
+import { z } from "zod"
+
+const CloudflareResponseSchema = z
+  .object({
+    success: z.literal(true),
+    result: z.object({
+      uploadURL: z.string(),
+    }),
+  })
+  .or(
+    z.object({
+      success: z.literal(false),
+      errors: z.array(
+        z.object({
+          code: z.number(),
+          message: z.string(),
+        }),
+      ),
+    }),
+  )
 /**
  * Return a signed URL for Cloudflare Images.
  */
@@ -19,19 +39,26 @@ export async function action({ request }: ActionFunctionArgs) {
     body.append("metadata", metaString)
   }
 
-  const { result } = await fetch(
-    `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
+  const response = await CloudflareResponseSchema.parseAsync(
+    await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/images/v2/direct_upload`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+        },
+        body,
       },
-      body,
-    },
-  ).then((response) => response.json())
+    ).then((response) => response.json()),
+  )
+
+  if (!response.success) {
+    console.error(response.errors.map((error) => error.message).join("\n"))
+    throw new Error("Cloudflare Images API returned an error.")
+  }
 
   return json({
-    uploadUrl: result?.uploadURL as string,
+    uploadUrl: response.result.uploadURL as string,
   })
 }
 

@@ -1,14 +1,10 @@
 // http://localhost:3000/content/remix-image-uploads/example
 
-import { Transition } from "@headlessui/react"
-import { PaperAirplaneIcon, XCircleIcon } from "@heroicons/react/20/solid"
-import { PhotoIcon } from "@heroicons/react/24/outline"
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 import { Form, useActionData, useLoaderData } from "@remix-run/react"
-import { useEffect, useRef, useState } from "react"
+import { useRef, useState } from "react"
 import { useDropzone } from "react-dropzone-esm"
-import { useHydrated } from "remix-utils/use-hydrated"
 import invariant from "tiny-invariant"
 import { randomUuid } from "../crypto.ts"
 import { useResetCallback } from "../useResetCallback.tsx"
@@ -19,6 +15,9 @@ import {
 } from "./content.remix-image-uploads.example.cloudflare-images.route.ts"
 import db from "./db.server.ts"
 import { useFileURLs } from "./useFileUrls.ts"
+import { ImageWithPlaceholder } from "../ImageWithPlaceholder.tsx"
+import { Icon } from "#app/components/icon.tsx"
+import { FadeIn, FadeInUp } from "../FadeIn.tsx"
 
 export async function action({ params, request }: ActionFunctionArgs) {
   const formData = await request.formData()
@@ -31,12 +30,13 @@ export async function action({ params, request }: ActionFunctionArgs) {
 
   const body = formData.get("body")
 
-  // accept multiple already uploaded file URLs from formData and save it to the db
+  // These are files uploaded via the file input
+  // We don't support this because we want clients to upload directly to Cloudflare
   const filesToUpload = formData.getAll("file")
   for (const file of filesToUpload) {
     if (!file) continue
 
-    throw new Error("TODO: implement natural file uploads")
+    throw new Error("Direct file uploads are not supported")
   }
 
   const fileUrls = formData.getAll("fileUrl")
@@ -114,76 +114,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
   })
 }
 
-/**
- * @tutorial https://www.jacobparis.com/content/image-placeholders
- */
-function ImageWithPlaceholder({
-  src,
-  placeholderSrc,
-  onLoad,
-  ...props
-}: {
-  src: string
-  placeholderSrc?: string
-  onLoad?: () => void
-}) {
-  const [imgSrc, setImgSrc] = useState(placeholderSrc || src)
-
-  useEffect(() => {
-    const img = new Image()
-    img.src = src
-    img.onload = () => {
-      setImgSrc(src)
-      if (onLoad) {
-        onLoad()
-      }
-    }
-  }, [src, onLoad])
-
-  return <img src={imgSrc} alt="" {...props} />
-}
-
-function FileImage({
-  url,
-  name,
-  signedUrl,
-  pendingUrl,
-  onLoad = () => {},
-  onDelete = () => {},
-  ...props
-}) {
-  const [isHidden, setIsHidden] = useState(false)
-
-  if (isHidden) return null
-
-  return (
-    <div className="group relative">
-      <input type="hidden" name="fileUrl" value={url} />
-      <input type="hidden" name="fileName" value={name} />
-      <ImageWithPlaceholder
-        src={signedUrl}
-        placeholderSrc={pendingUrl}
-        onLoad={onLoad}
-        {...props}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          setIsHidden(true)
-          if (onDelete) {
-            onDelete()
-          }
-        }}
-        className="absolute -right-2 -top-2 hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
-      >
-        <XCircleIcon className="h-6 w-6" />
-      </button>
-    </div>
-  )
-}
 export default function Example() {
-  const isHydrated = useHydrated()
-
   const { draft, messages } = useLoaderData<typeof loader>()
   const actionData = useActionData<typeof action>()
 
@@ -201,13 +132,18 @@ export default function Example() {
     setErrorMessage("")
   })
 
-  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, inputRef } = useDropzone({
     onFileDialogOpen() {
       setErrorMessage("")
     },
 
     async onDrop(acceptedFiles) {
       try {
+        if (inputRef.current) {
+          // remove files from the real input
+          inputRef.current.value = ""
+        }
+
         const fileAlreadyExists = acceptedFiles.some((file) => {
           const currentFiles = [...draft.files, ...pendingFiles]
           return currentFiles.some((draftFile) => draftFile.name === file.name)
@@ -237,11 +173,11 @@ export default function Example() {
     <div className="mx-auto grid min-h-screen place-items-center">
       <div className="text-center">
         <FadeIn className="delay-0">
-          <h1 className="mb-6 text-3xl text-gray-800">This is your space</h1>
+          <h1 className="mb-6 text-3xl text-neutral-900">This is your space</h1>
         </FadeIn>
 
         <FadeIn className="delay-200">
-          <p className="mb-8 max-w-[40ch] text-lg text-gray-500">
+          <p className="mx-auto mb-8 max-w-[40ch] text-lg text-neutral-700">
             Drag images into the box below to upload them optimistically.
           </p>
         </FadeIn>
@@ -251,14 +187,14 @@ export default function Example() {
             {messages.map((message, i) => (
               <FadeInUp key={i}>
                 <div className="px-4 py-1">
-                  <div className="mb-2 text-gray-500">{message.body}</div>
+                  <div className="mb-2 text-neutral-700">{message.body}</div>
                   <div className="flex flex-wrap gap-2">
                     {message.files.map((file, i) => (
                       <div key={i} className="relative h-32 w-32">
                         <img
                           src={file.signedUrl || ""}
                           alt=""
-                          className="h-full w-full bg-gray-500 object-cover"
+                          className="h-full w-full bg-neutral-500 object-cover"
                         />
                       </div>
                     ))}
@@ -270,7 +206,7 @@ export default function Example() {
         </FadeIn>
 
         <FadeIn className="delay-300">
-          <div className="bg-light mx-auto mb-8  w-full max-w-lg   gap-8 overflow-hidden border border-gray-100 text-left sm:rounded-lg sm:shadow-xl">
+          <div className="mx-auto mb-8 w-full  max-w-lg gap-8   overflow-hidden border border-neutral-100 bg-white text-left sm:rounded-lg sm:shadow-xl">
             <div>
               <div>
                 <Form ref={formRef} method="POST">
@@ -278,7 +214,7 @@ export default function Example() {
 
                   <div
                     {...getRootProps({
-                      className: isDragActive ? "bg-gray-50" : "",
+                      className: isDragActive ? "bg-neutral-50" : "",
                     })}
                   >
                     <textarea
@@ -305,7 +241,7 @@ export default function Example() {
                         submitDraft()
                       }}
                       placeholder="Jot something down…"
-                      className="block w-[60ch] max-w-full resize-none border-none bg-transparent px-4 py-2 placeholder:text-gray-400 focus:shadow-none focus:outline-none focus:ring-0"
+                      className="block w-[60ch] max-w-full resize-none border-none bg-transparent px-4 py-2 placeholder:text-neutral-400 focus:shadow-none focus:outline-none focus:ring-0"
                     />
                   </div>
 
@@ -320,30 +256,33 @@ export default function Example() {
                           key={image.url}
                           url={image.url}
                           name={image.name}
-                          signedUrl={image.signedUrl}
-                          className="h-20 w-20 rounded-xl border border-gray-300"
-                          pendingUrl={
-                            pendingFile ? getFileUrl(pendingFile) : undefined
-                          }
-                          onLoad={() => {
-                            setPendingFiles((pendingFiles) => {
-                              return pendingFiles.filter(
-                                (file) => file.name !== image.name,
-                              )
-                            })
-                          }}
                           onDelete={() => {
                             submitDraft({
                               removeFileUrls: [image.url],
                             })
                           }}
-                        />
+                        >
+                          <ImageWithPlaceholder
+                            src={image.signedUrl}
+                            className="h-20 w-20 rounded-xl border border-neutral-100"
+                            placeholderSrc={
+                              pendingFile ? getFileUrl(pendingFile) : undefined
+                            }
+                            onLoad={() => {
+                              setPendingFiles((pendingFiles) => {
+                                return pendingFiles.filter(
+                                  (p) => p !== pendingFile,
+                                )
+                              })
+                            }}
+                          />
+                        </FileImage>
                       )
                     })}
 
                     {displayPendingFiles.map((file) => (
                       <div
-                        className="relative overflow-hidden rounded-xl border border-gray-300"
+                        className="relative overflow-hidden rounded-xl border border-neutral-300"
                         key={file.name}
                       >
                         <img
@@ -362,35 +301,35 @@ export default function Example() {
                   ) : null}
 
                   <div className="flex gap-x-2 px-2 py-1">
-                    <label
-                      htmlFor="image-input"
-                      onClick={open}
-                      className="cursor-pointer rounded p-1 hover:bg-gray-100"
-                    >
-                      <PhotoIcon className="h-5 w-5" />
-                    </label>
+                    <div>
+                      <label
+                        htmlFor="image-input"
+                        className="cursor-pointer rounded p-1 hover:bg-neutral-100"
+                      >
+                        <Icon name="image" className="h-5 w-5" />
+                      </label>
+
+                      <input
+                        {...getInputProps()}
+                        style={{ display: "block" }}
+                        key={draft.id}
+                        id="image-input"
+                        name="file"
+                        multiple
+                        type="file"
+                        className="sr-only"
+                      />
+                    </div>
 
                     <div className="flex-1" />
 
                     <button
                       type="submit"
-                      className="cursor-pointer rounded p-1 hover:bg-gray-100"
+                      className="cursor-pointer rounded p-1 hover:bg-neutral-100"
                     >
-                      <PaperAirplaneIcon className="h-5 w-5" />
+                      <Icon name="paper-plane" className="h-5 w-5" />
                     </button>
                   </div>
-
-                  <input
-                    {...getInputProps()}
-                    style={{ display: "block" }}
-                    key={draft.id}
-                    id="image-input"
-                    name="file"
-                    multiple
-                    type="file"
-                    // If JS is disabled, appear after 1 second, otherwise sr-only will be set and it will never appear
-                    className={isHydrated ? "sr-only" : "animate-appear"}
-                  />
                 </Form>
               </div>
             </div>
@@ -401,50 +340,39 @@ export default function Example() {
   )
 }
 
-export function FadeIn({
-  className = "",
-  show = true,
+function FileImage({
+  url,
+  name,
   children,
+  onDelete = () => {},
 }: {
-  className?: string
-  show?: boolean
+  url: string
+  name: string
   children: React.ReactNode
+  onDelete?: () => void
 }) {
-  // className="duration-0 transition-[opacity,transform] duration-[300ms,500ms]"
-  return (
-    <Transition
-      show={show}
-      appear
-      enter={`${className} transition-[opacity,transform] ease-out duration-[300ms,500ms]`}
-      enterFrom="opacity-0 -translate-y-1"
-      enterTo="opacity-100 translate-y-0"
-      leave="duration-0"
-    >
-      {children}
-    </Transition>
-  )
-}
+  const [isHidden, setIsHidden] = useState(false)
 
-export function FadeInUp({
-  className = "",
-  show = true,
-  children,
-}: {
-  className?: string
-  show?: boolean
-  children: React.ReactNode
-}) {
-  // className="duration-0 transition-[opacity,transform] duration-[300ms,500ms]"
+  if (isHidden) return null
+
   return (
-    <Transition
-      show={show}
-      appear
-      enter={`${className} transition-[opacity,transform] ease-out duration-[300ms,500ms]`}
-      enterFrom="opacity-0 translate-y-1"
-      enterTo="opacity-100 translate-y-0"
-      leave="duration-0"
-    >
+    <div className="group relative">
+      <input type="hidden" name="fileUrl" value={url} />
+      <input type="hidden" name="fileName" value={name} />
       {children}
-    </Transition>
+
+      <button
+        type="button"
+        onClick={() => {
+          setIsHidden(true)
+          if (onDelete) {
+            onDelete()
+          }
+        }}
+        className="absolute -right-2 -top-2 hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
+      >
+        <Icon name="cross-circled" className="h-6 w-6" />
+      </button>
+    </div>
   )
 }

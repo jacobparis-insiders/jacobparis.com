@@ -1,11 +1,11 @@
 // http://localhost:3000/content/remix-image-uploads/example
 
-import { Transition } from "@headlessui/react"
 import type { ActionFunctionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
 import { Form } from "@remix-run/react"
 import { randomUuid } from "../crypto.ts"
 import db from "./db.server.ts"
+import { FadeIn } from "../FadeIn.tsx"
 
 export async function action({ params, request }: ActionFunctionArgs) {
   const id = randomUuid()
@@ -48,26 +48,5 @@ export default function Example() {
         </FadeIn>
       </Form>
     </div>
-  )
-}
-
-export function FadeIn({
-  className = "",
-  children,
-}: {
-  className?: string
-  children: React.ReactNode
-}) {
-  // className="transition-[opacity,transform] duration-[300ms,500ms]"
-  return (
-    <Transition
-      show={true}
-      appear
-      enter={`${className} transition-[opacity,transform] ease-out duration-[300ms,500ms]`}
-      enterFrom="opacity-0 -translate-y-1"
-      enterTo="opacity-100 translate-y-0"
-    >
-      {children}
-    </Transition>
   )
 }

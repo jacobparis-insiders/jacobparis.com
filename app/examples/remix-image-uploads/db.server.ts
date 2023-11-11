@@ -1,3 +1,5 @@
+import { remember } from "@epic-web/remember"
+
 type Message = {
   id: string
   draftId: string
@@ -11,18 +13,12 @@ type File = {
   signedUrl: string | null
 }
 
-declare global {
-  var db__remixImageUploads: Record<
+export default remember("db__remixImageUploads", () => {
+  return {} as Record<
     string,
     {
       draft: Omit<Message, "draftId">
       messages: Array<Message>
     }
   >
-}
-
-if (!global.db__remixImageUploads) {
-  global.db__remixImageUploads = {}
-}
-
-export default global.db__remixImageUploads
+})

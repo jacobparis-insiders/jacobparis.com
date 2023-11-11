@@ -11,7 +11,7 @@ export function useFileURLs() {
     mapRef.current = map
 
     return () => {
-      for (let [file, url] of map) {
+      for (let [, url] of map) {
         URL.revokeObjectURL(url)
       }
       mapRef.current = null
