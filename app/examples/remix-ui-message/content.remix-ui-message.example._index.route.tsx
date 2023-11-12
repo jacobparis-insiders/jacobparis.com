@@ -16,6 +16,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
       body: "",
       files: [],
     },
+    messages: [],
   }
 
   return redirect(`/content/remix-image-uploads/example/${id}`)

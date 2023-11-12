@@ -1,8 +1,8 @@
 ---
-title: Uploading images in Remix with optimistic UI (like Slack)
+title: Upload images with pending UI
 description: Upload images to a third-party service in the background, then display them as thumbnails before the form is submitted. Use drafts for cross-device persistence.
 tags: Remix
-timestamp: "2023-05-17"
+timestamp: "2023-11-11"
 published: true
 ---
 
@@ -12,7 +12,7 @@ For one thing, they're big. Most of your form submissions are a few hundred byte
 
 If you're routing images through your own server, you become the middleman for all that traffic, for every one of of your users.
 
-So even if you're handling form submissions yourself, you're going to want to **use a third-party service for image uploads.**
+So even if you're handling form submissions yourself, you may want to **use a third-party service for image uploads.**
 
 Here's what the ideal workflow looks like
 
@@ -23,20 +23,7 @@ Here's what the ideal workflow looks like
 
 Watch this video to see what it looks like in action or [try it yourself](/content/remix-image-uploads/example)
 
-<div>
-  <iframe
-    className="mx-auto max-w-full"
-    width="560"
-    height="315"
-    src="https://www.youtube.com/embed/Y-k1XXRtplk"
-    title="YouTube video player"
-    frameBorder="0"
-    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-    allowFullScreen
-  />
-</div>
-
-> To access the source code, [subscribe to my mailing list for free](/emails/subscribe) and **I'll invite you to the repository**
+<YoutubeVideo videoId="Y-k1XXRtplk" />
 
 ## Selecting images to upload
 
@@ -55,12 +42,6 @@ Optimistic UI for image uploads requires [displaying image thumbnails for select
 
 Using a file input is important because it means every device that is capable of uploading files will use its native file picker. Mobile devices will use the camera roll, desktops will use the file explorer, etc.
 
-There are tricky parts to getting this right.
-
-If you're trying to build a progressively enhanced experience, you'll need to make sure that the file input is still accessible to users who aren't using javascript, either because they've disabled it, or it failed to load for one of many many possible reasons.
-
-Most users only want to see the fancy dropzone input, so you need to [hide the native file input unless they need it](/content/remix-hide-on-load).
-
 ## Uploading images in the background
 
 There are a lot of image upload services out there, and I won't get into a full comparison here because your needs will vary. But look for two key features
@@ -72,7 +53,7 @@ The first feature is important because it means you can **upload images directly
 
 The second feature is important because it means you can keep the images private, and **only allow access to them through your server**. If you let users get ahold of unsigned URLs for their images, they can easily use you as a free image host.
 
-I like to use [Cloudflare Images](https://www.cloudflare.com/products/cloudflare-images/) because it's what I have experience with, but there are many other options out there, like AWS S3.
+I like to use [Cloudflare Images](https://www.cloudflare.com/products/cloudflare-images/), but there are many other options out there, like AWS S3.
 
 ## Displaying uploaded image thumbnails
 
@@ -95,7 +76,7 @@ The uploaded image URLs also **need to be represented as hidden form inputs** so
 
 The user needs to be able to delete the images they've selected. If there's no persistence at all, that should be as simple as hiding the image thumbnail and removing the corresponding hidden input. The uploaded URL will be forgotten in the cloud until it expires.
 
-If you're persisting the form to a draft in your database, you'll need to** send a mutation to delete them from the draft** as well.
+If you're persisting the form to a draft in your database, you'll need to **send a mutation to delete them from the draft** as well.
 
 Optimistic UI for this feature means you **hide the image the moment they click the delete button** and let the server catch up when it updates.
 
@@ -105,4 +86,4 @@ Sometimes users will delete multiple images, one after another, before the serve
 
 I've [put together an example](/content/remix-image-uploads/example) that demonstrates all of this. I'm using Cloudflare Images for hosting but, as mentioned above, you can swap that out for whatever you want.
 
-The source code for the example is contained in this repository, which all [subscribers to my mailing list](/emails/subscribe) have access to. If you're a subscriber, you can [view the source code here](https://github.com/jacobparis-insiders/jacobparis.com/tree/main/app/examples/remix-image-uploads)
+You can [view the source code here](https://github.com/jacobparis-insiders/jacobparis.com/tree/main/app/examples/remix-image-uploads)

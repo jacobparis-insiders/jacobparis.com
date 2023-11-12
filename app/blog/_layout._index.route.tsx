@@ -8,7 +8,9 @@ import BlogCard from "~/components/BlogCard.tsx"
 import { MoultonMatrix } from "./MoultonMatrix.tsx"
 import { Button } from "#app/components/ui/button.tsx"
 import { Toaster, toast } from "sonner"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { Icon } from "#app/components/icon.tsx"
+import { FakeUpload } from "#app/examples/remix-image-uploads/content.remix-image-uploads.example.fake.route.tsx"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -170,6 +172,9 @@ export default function Index() {
             slug="remix-crud-ui"
             tags="Remix"
           />
+
+          <ImageUploadsCard />
+
           <BlogCard
             title="Uploading images with optimistic UI (like Slack)"
             slug="remix-image-uploads"
@@ -416,6 +421,7 @@ function HydrationErrorsCard() {
     </article>
   )
 }
+
 function ToastCard() {
   useEffect(() => {
     const toastNames = [
@@ -477,5 +483,98 @@ function ToastCard() {
         </Link>
       </div>
     </article>
+  )
+}
+
+function ImageUploadsCard() {
+  return (
+    <article className="">
+      <div className="relative block w-full  rounded-lg border border-gray-100 bg-white">
+        <div className="p-2">
+          <FakeUpload />
+        </div>
+
+        <Link
+          prefetch="intent"
+          to="/content/remix-image-uploads"
+          className="relative block px-8 py-4 pb-12"
+        >
+          <div className="gradient-blur absolute inset-0 rounded-md" />
+          <div className="relative z-10">
+            <h3
+              className="mb-4 text-2xl font-medium tracking-tight text-neutral-900"
+              style={{ wordBreak: "break-word" }}
+            >
+              Upload images with pending UI
+            </h3>
+
+            <p className="text-neutral-600">
+              Upload images to a third-party service in the background, then
+              display them as thumbnails before the form is submitted. Use
+              drafts for cross-device persistence.
+            </p>
+          </div>
+        </Link>
+      </div>
+    </article>
+  )
+}
+
+function FileImage({
+  src,
+  alt,
+  onDelete = () => {},
+}: {
+  src: string
+  alt: string
+  onDelete?: () => void
+}) {
+  const [createdAt] = useState(() => Date.now())
+  const [fakeLoadingTime] = useState(
+    () => createdAt + 2000 + Math.random() * 3000,
+  )
+
+  const [isUploading, setIsUploading] = useState(
+    () => Date.now() > fakeLoadingTime,
+  )
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setIsUploading(true)
+    }, fakeLoadingTime - Date.now())
+
+    return () => clearTimeout(timeout)
+  }, [fakeLoadingTime])
+
+  const [isHidden, setIsHidden] = useState(false)
+
+  if (isHidden) return null
+
+  return (
+    <div className="group relative">
+      <div className="h-20 w-20 overflow-hidden rounded-xl border border-neutral-100">
+        <img
+          src={src}
+          alt={alt}
+          className="h-full w-full object-cover"
+          style={{
+            opacity: isUploading ? 1 : 0.5,
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setIsHidden(true)
+          if (onDelete) {
+            onDelete()
+          }
+        }}
+        className="absolute -right-2 -top-2 hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
+      >
+        <Icon name="cross-circled" className="h-6 w-6" />
+      </button>
+    </div>
   )
 }

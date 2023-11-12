@@ -1,7 +1,8 @@
 import { remember } from "@epic-web/remember"
 
-type Draft = {
+type Message = {
   id: string
+  draftId: string
   body: string
   files: Array<File>
 }
@@ -16,7 +17,8 @@ export default remember("db__remixImageUploads", () => {
   return {} as Record<
     string,
     {
-      draft: Draft
+      draft: Omit<Message, "draftId">
+      messages: Array<Message>
     }
   >
 })

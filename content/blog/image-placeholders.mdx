@@ -38,10 +38,10 @@ If we have a placeholder image already loaded, we can use React to show it until
 function ImageWithPlaceholder({
   src,
   placeholderSrc,
-  onLoadComplete,
+  onLoad,
   ...props
 }: {
-  onLoadComplete?: () => void
+  onLoad?: () => void
   placeholderSrc?: string
 } & DetailedHTMLProps<
   ImgHTMLAttributes<HTMLImageElement>,
@@ -51,18 +51,24 @@ function ImageWithPlaceholder({
     placeholderSrc || src,
   )
 
+  // Store the onLoad prop in a ref to stop new Image() from re-running
+  const onLoadRef = useRef(onLoad)
   useEffect(() => {
-    if (!src) return
+    onLoadRef.current = onLoad
+  }, [onLoad])
 
+  useEffect(() => {
     const img = new Image()
-    img.src = src
-    img.onload = function () {
+
+    img.onload = () => {
       setImgSrc(src)
-      if (onLoadComplete) {
-        onLoadComplete()
+      if (onLoadRef.current) {
+        onLoadRef.current()
       }
     }
-  }, [src, onLoadComplete])
+
+    img.src = src
+  }, [src])
 
   return <img src={imgSrc} {...props} />
 }

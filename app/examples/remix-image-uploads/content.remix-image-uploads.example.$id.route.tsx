@@ -1,12 +1,10 @@
 // http://localhost:3000/content/remix-image-uploads/example
 
-import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
+import type { LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
-import { Form, useActionData, useLoaderData } from "@remix-run/react"
+import { Form, useLoaderData } from "@remix-run/react"
 import { useRef, useState } from "react"
 import { useDropzone } from "react-dropzone-esm"
-import invariant from "tiny-invariant"
-import { randomUuid } from "../crypto.ts"
 import { useResetCallback } from "../useResetCallback.tsx"
 import { useDraftSubmit } from "./content.remix-image-uploads.example.$id.draft.route.ts"
 import {
@@ -17,60 +15,8 @@ import db from "./db.server.ts"
 import { useFileURLs } from "./useFileUrls.ts"
 import { ImageWithPlaceholder } from "../ImageWithPlaceholder.tsx"
 import { Icon } from "#app/components/icon.tsx"
-import { FadeIn, FadeInUp } from "../FadeIn.tsx"
-
-export async function action({ params, request }: ActionFunctionArgs) {
-  const formData = await request.formData()
-
-  const id = params.id as string
-
-  if (!(id in db)) {
-    throw redirect("/content/remix-image-uploads/example")
-  }
-
-  const body = formData.get("body")
-
-  // These are files uploaded via the file input
-  // We don't support this because we want clients to upload directly to Cloudflare
-  const filesToUpload = formData.getAll("file")
-  for (const file of filesToUpload) {
-    if (!file) continue
-
-    throw new Error("Direct file uploads are not supported")
-  }
-
-  const fileUrls = formData.getAll("fileUrl")
-  const fileNames = formData.getAll("fileName")
-
-  const draftId = formData.get("draftId")
-  invariant(draftId, "Draft ID is required")
-
-  // check recent message, if draftId matches, we've already sent this message
-  const recentMessage = db[id].messages[db[id].messages.length - 1]
-  if (recentMessage?.draftId !== draftId) {
-    db[id].messages.push({
-      draftId: draftId.toString() || "",
-      id: randomUuid(),
-      body: body ? body.toString() : "",
-      files: fileUrls.map((url, index) => ({
-        url: url.toString(),
-        name: fileNames[index]?.toString() || "",
-        signedUrl: null,
-      })),
-    })
-  }
-
-  db[id].draft = {
-    id: randomUuid(),
-    body: "",
-    files: [],
-  }
-
-  return json({
-    success: true,
-    nonce: randomUuid(),
-  })
-}
+import { FadeIn } from "../FadeIn.tsx"
+import { flushSync } from "react-dom"
 
 export async function loader({ params }: LoaderFunctionArgs) {
   const id = params.id as string
@@ -87,20 +33,6 @@ export async function loader({ params }: LoaderFunctionArgs) {
       url: file.url,
       name: file.name,
       signedUrl: await generateSignedUrl(file.url),
-      optimisticallyHidden: false,
-    })),
-  )
-
-  const messages = await Promise.all(
-    doc.messages.map(async (message) => ({
-      body: message.body,
-      files: await Promise.all(
-        message.files.map(async (file) => ({
-          url: file.url,
-          name: file.name,
-          signedUrl: await generateSignedUrl(file.url),
-        })),
-      ),
     })),
   )
 
@@ -110,13 +42,11 @@ export async function loader({ params }: LoaderFunctionArgs) {
       body: doc.draft.body,
       files: draftFiles,
     },
-    messages: messages,
   })
 }
 
 export default function Example() {
-  const { draft, messages } = useLoaderData<typeof loader>()
-  const actionData = useActionData<typeof action>()
+  const { draft } = useLoaderData<typeof loader>()
 
   const formRef = useRef<HTMLFormElement>(null)
   const submitDraft = useDraftSubmit(formRef)
@@ -130,6 +60,10 @@ export default function Example() {
 
   useResetCallback(draft.files, () => {
     setErrorMessage("")
+
+    // It might seem intuitive to clear the pending files when we do this
+    // but we don't actually want to clear the pending file until the real one has loaded on screen
+    // Otherwise it'll go blank for a second and that's not a great experience
   })
 
   const { getRootProps, getInputProps, isDragActive, inputRef } = useDropzone({
@@ -173,40 +107,17 @@ export default function Example() {
     <div className="mx-auto grid min-h-screen place-items-center">
       <div className="text-center">
         <FadeIn className="delay-0">
-          <h1 className="mb-6 text-3xl text-neutral-900">This is your space</h1>
+          <h1 className="mb-6 text-3xl text-neutral-900">Upload images</h1>
         </FadeIn>
 
         <FadeIn className="delay-200">
-          <p className="mx-auto mb-8 max-w-[40ch] text-lg text-neutral-700">
+          <p className="mx-auto mb-8 max-w-[40ch] text-lg text-neutral-700 [text-wrap:pretty]">
             Drag images into the box below to upload them optimistically.
           </p>
         </FadeIn>
 
         <FadeIn className="delay-300">
-          <div className="mx-auto w-full max-w-lg text-left">
-            {messages.map((message, i) => (
-              <FadeInUp key={i}>
-                <div className="px-4 py-1">
-                  <div className="mb-2 text-neutral-700">{message.body}</div>
-                  <div className="flex flex-wrap gap-2">
-                    {message.files.map((file, i) => (
-                      <div key={i} className="relative h-32 w-32">
-                        <img
-                          src={file.signedUrl || ""}
-                          alt=""
-                          className="h-full w-full bg-neutral-500 object-cover"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </FadeInUp>
-            ))}
-          </div>
-        </FadeIn>
-
-        <FadeIn className="delay-300">
-          <div className="mx-auto mb-8 w-full  max-w-lg gap-8   overflow-hidden border border-neutral-100 bg-white text-left sm:rounded-lg sm:shadow-xl">
+          <div className="mx-auto mb-8 w-full max-w-lg gap-8 overflow-hidden border border-neutral-100 bg-white p-2 text-left sm:rounded-lg sm:shadow-xl">
             <div>
               <div>
                 <Form ref={formRef} method="POST">
@@ -217,35 +128,26 @@ export default function Example() {
                       className: isDragActive ? "bg-neutral-50" : "",
                     })}
                   >
-                    <textarea
-                      aria-label="Message"
-                      name="body"
-                      data-key={draft.id}
-                      key={draft.id}
-                      autoFocus
-                      rows={2}
-                      defaultValue={actionData ? "" : draft.body}
-                      onKeyDown={(e) => {
-                        // Submit on enter unless shift is pressed
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault()
-                          e.currentTarget.form?.requestSubmit()
-                        }
-                      }}
-                      onChange={() => {
-                        submitDraft({
-                          debounceTimeout: 1000,
-                        })
-                      }}
-                      onBlur={() => {
-                        submitDraft()
-                      }}
-                      placeholder="Jot something down…"
-                      className="block w-[60ch] max-w-full resize-none border-none bg-transparent px-4 py-2 placeholder:text-neutral-400 focus:shadow-none focus:outline-none focus:ring-0"
-                    />
+                    <label htmlFor="image-input" className="block">
+                      <div className="grid cursor-pointer place-items-center rounded-md border-2 border-dashed px-4 py-12 text-neutral-500 transition-colors hover:border-neutral-400 hover:bg-neutral-50 hover:text-neutral-800">
+                        <Icon name="image" className="h-8 w-8" />
+                        <span> Drop images here </span>
+                      </div>
+
+                      <input
+                        {...getInputProps()}
+                        style={{ display: "block" }}
+                        key={draft.id}
+                        id="image-input"
+                        name="file"
+                        multiple
+                        type="file"
+                        className="sr-only"
+                      />
+                    </label>
                   </div>
 
-                  <div className="flex flex-row flex-wrap gap-4 px-2 py-1">
+                  <div className="flex flex-row flex-wrap gap-2">
                     {draft.files.map((image) => {
                       const pendingFile = pendingFiles.find(
                         (file) => file.name === image.name,
@@ -253,22 +155,33 @@ export default function Example() {
 
                       return (
                         <FileImage
-                          key={image.url}
+                          key={image.name}
                           url={image.url}
                           name={image.name}
                           onDelete={() => {
+                            // We remove it from the pending files in the onLoad below
+                            // But if they delete it before it loads we need to remove it here
+                            // Otherwise they'll see the pending image for a second
+                            setPendingFiles((pendingFiles) => {
+                              return pendingFiles.filter(
+                                (p) => p !== pendingFile,
+                              )
+                            })
+
                             submitDraft({
                               removeFileUrls: [image.url],
                             })
                           }}
                         >
                           <ImageWithPlaceholder
+                            key={image.name}
                             src={image.signedUrl}
-                            className="h-20 w-20 rounded-xl border border-neutral-100"
+                            className="mt-2 h-20 w-20 rounded-lg border-2 border-white ring-neutral-400 ring-offset-1 group-hover:ring-2"
                             placeholderSrc={
                               pendingFile ? getFileUrl(pendingFile) : undefined
                             }
                             onLoad={() => {
+                              console.log("loaded", pendingFile)
                               setPendingFiles((pendingFiles) => {
                                 return pendingFiles.filter(
                                   (p) => p !== pendingFile,
@@ -282,13 +195,13 @@ export default function Example() {
 
                     {displayPendingFiles.map((file) => (
                       <div
-                        className="relative overflow-hidden rounded-xl border border-neutral-300"
+                        className="relative mt-2 h-20 w-20 overflow-hidden rounded-lg border border-neutral-100"
                         key={file.name}
                       >
                         <img
                           src={getFileUrl(file)}
                           alt="Uploaded file"
-                          className="h-20 w-20 opacity-50"
+                          className="opacity-50"
                         />
                       </div>
                     ))}
@@ -299,37 +212,6 @@ export default function Example() {
                       {errorMessage}
                     </p>
                   ) : null}
-
-                  <div className="flex gap-x-2 px-2 py-1">
-                    <div>
-                      <label
-                        htmlFor="image-input"
-                        className="cursor-pointer rounded p-1 hover:bg-neutral-100"
-                      >
-                        <Icon name="image" className="h-5 w-5" />
-                      </label>
-
-                      <input
-                        {...getInputProps()}
-                        style={{ display: "block" }}
-                        key={draft.id}
-                        id="image-input"
-                        name="file"
-                        multiple
-                        type="file"
-                        className="sr-only"
-                      />
-                    </div>
-
-                    <div className="flex-1" />
-
-                    <button
-                      type="submit"
-                      className="cursor-pointer rounded p-1 hover:bg-neutral-100"
-                    >
-                      <Icon name="paper-plane" className="h-5 w-5" />
-                    </button>
-                  </div>
                 </Form>
               </div>
             </div>
@@ -349,6 +231,7 @@ function FileImage({
   url: string
   name: string
   children: React.ReactNode
+  className?: string
   onDelete?: () => void
 }) {
   const [isHidden, setIsHidden] = useState(false)
@@ -360,18 +243,21 @@ function FileImage({
       <input type="hidden" name="fileUrl" value={url} />
       <input type="hidden" name="fileName" value={name} />
       {children}
-
+      {/* // if you delete an image it falls back to the placeholder image */}
       <button
         type="button"
         onClick={() => {
-          setIsHidden(true)
+          flushSync(() => {
+            setIsHidden(true)
+          })
+
           if (onDelete) {
             onDelete()
           }
         }}
-        className="absolute -right-2 -top-2 hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
+        className="absolute -right-[0.625rem] -top-[0.125rem] hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
       >
-        <Icon name="cross-circled" className="h-6 w-6" />
+        <Icon name="cross-circled" className="block h-6 w-6" />
       </button>
     </div>
   )
