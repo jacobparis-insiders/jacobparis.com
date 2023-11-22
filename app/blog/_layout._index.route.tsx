@@ -117,12 +117,6 @@ export default function Index() {
             className="row-span-2"
           />
 
-          <BlogCard
-            title="Where to host your Remix app in 2023"
-            slug="where-to-host-remix"
-            tags="Remix"
-          />
-
           <HydrationErrorsCard />
 
           <FeaturedBlogItem
@@ -175,11 +169,6 @@ export default function Index() {
 
           <ImageUploadsCard />
 
-          <BlogCard
-            title="Uploading images with optimistic UI (like Slack)"
-            slug="remix-image-uploads"
-            tags="Remix"
-          />
           <BlogCard
             title="Progressively enhanced client rendering"
             slug="remix-progressive-client-only"
@@ -335,7 +324,7 @@ function HydrationErrorsCard() {
     <article className="sm:col-span-2">
       <Link
         prefetch="intent"
-        to="/content/where-to-host-remix"
+        to="/content/remix-hydration-errors"
         className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
         style={{
           backgroundSize: "cover",
@@ -517,64 +506,5 @@ function ImageUploadsCard() {
         </Link>
       </div>
     </article>
-  )
-}
-
-function FileImage({
-  src,
-  alt,
-  onDelete = () => {},
-}: {
-  src: string
-  alt: string
-  onDelete?: () => void
-}) {
-  const [createdAt] = useState(() => Date.now())
-  const [fakeLoadingTime] = useState(
-    () => createdAt + 2000 + Math.random() * 3000,
-  )
-
-  const [isUploading, setIsUploading] = useState(
-    () => Date.now() > fakeLoadingTime,
-  )
-
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setIsUploading(true)
-    }, fakeLoadingTime - Date.now())
-
-    return () => clearTimeout(timeout)
-  }, [fakeLoadingTime])
-
-  const [isHidden, setIsHidden] = useState(false)
-
-  if (isHidden) return null
-
-  return (
-    <div className="group relative">
-      <div className="h-20 w-20 overflow-hidden rounded-xl border border-neutral-100">
-        <img
-          src={src}
-          alt={alt}
-          className="h-full w-full object-cover"
-          style={{
-            opacity: isUploading ? 1 : 0.5,
-          }}
-        />
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setIsHidden(true)
-          if (onDelete) {
-            onDelete()
-          }
-        }}
-        className="absolute -right-2 -top-2 hidden rounded-full bg-white text-black/50 hover:block hover:text-black group-hover:block"
-      >
-        <Icon name="cross-circled" className="h-6 w-6" />
-      </button>
-    </div>
   )
 }
