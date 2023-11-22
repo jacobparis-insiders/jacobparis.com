@@ -3,7 +3,7 @@ title: Server-side pagination with Remix
 description: Use query parameters to implement server-side pagination with Remix. Create a rolling pagination component that shows the current page along with a few pages before and after it, like Google Search.
 tags: Remix
 published: true
-timestamp: "2023-10-08"
+timestamp: "2023-11-22"
 ---
 
 Developers often implement client-side pagination as a half-measure to avoid the complexity of server-side pagination.
@@ -32,7 +32,9 @@ Read the query parameters from the request URL in your loader, and use them to g
 Depending on your database adapter, this part will look different, but there's usually a first-class way to do this like Prisma's `{ take, skip }` options or SQL's `LIMIT` and `OFFSET` clauses.
 
 ```ts
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
   const url = new URL(request.url)
   const $top = Number(url.searchParams.get("$top")) || 10
   const $skip = Number(url.searchParams.get("$skip")) || 0
@@ -47,6 +49,17 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 ```
 
+## Use links instead of a form
+
+When I first wrote this article, I used a form with a submit button for each page, for a few reasons
+
+- It's easy to disable the previous and next buttons when you're at the beginning or end of the pagination
+- Including the existing query parameters is easy with hidden inputs
+- Search crawlers won't follow the links and pollute your SEO profile
+- Screen readers won't list each page as a navigation point
+
+But after some feedback from the community, I've changed my mind. The SEO concerns are solvable, and being able to use `prefetch` on the links makes for a really fast UI that's hard to match otherwise.
+
 ## Create a pagination component
 
 Let's create a rolling pagination component that shows the current page along with a few pages before and after it, like Google Search.<SideNote> Google has been embracing infinite scrolling lately, so this example may not age well.</SideNote>
@@ -55,13 +68,42 @@ Let's create a rolling pagination component that shows the current page along wi
 
 There are a few things to note about this implementation
 
-- When the first page is selected, the previous page button is disabled and it shows 6 pages to the right of the current page
-- When the last page is selected, the next page button is disabled and it shows 6 pages to the left of the current page
+- When the first page is selected, it shows 6 pages to the right of the current page
+- When the last page is selected, it shows 6 pages to the left of the current page
 - When the current page is in the middle, it shows 3 pages to the left and 3 pages to the right
 
-Since components can independently access the URL parameters, we don't need any callbacks or state management to make this work. Each button will just be a submit button in a form that sets the `$skip` parameter to the right value.
+Since components can independently access the URL parameters, we don't need any callbacks or state management to make this work. Each button will just be a link that includes the current parameters and the appropriate `$skip` value.
 
-The one value we do need to pass to the component is the total number of items, so it can calculate the total number of pages.
+To construct this link, make a new function that modifies the current search params and returns a url string<SideNote> If you want to return `newSearchParams.toString()` that's ok, but it'll encode $ as %24, which isn't really necessary for modern browsers..</SideNote>
+
+```ts
+function setSearchParamsString(
+  searchParams: URLSearchParams,
+  changes: Record<string, string | number | undefined>,
+) {
+  const newSearchParams = new URLSearchParams(searchParams)
+
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === undefined) {
+      newSearchParams.delete(key)
+      continue
+    }
+
+    newSearchParams.set(key, String(value))
+  }
+
+  // Print string manually to avoid over-encoding the URL
+  // Browsers are ok with $ nowadays
+  // optional: return newSearchParams.toString()
+  return Array.from(newSearchParams.entries())
+    .map(([key, value]) =>
+      value ? `${key}=${encodeURIComponent(value)}` : key,
+    )
+    .join("&")
+}
+```
+
+And then create the pagination bar component, passing in the total number of items so it can calculate the total number of pages.
 
 ```tsx
 export function PaginationBar({
@@ -105,183 +147,155 @@ export function PaginationBar({
     }
   }
 
-  const existingParams = Array.from(
-    searchParams.entries(),
-  ).filter(([key]) => {
-    return key !== "$skip" && key !== "$top"
-  })
-
   return (
-    <Form
-      method="GET"
-      className="flex items-center gap-1"
-      preventScrollReset
-    >
-      <>
-        {[["$top", String($top)], ...existingParams].map(
-          ([key, value]) => {
-            return (
-              <input
-                key={key}
-                type="hidden"
-                name={key}
-                value={value}
-              />
-            )
-          },
-        )}
-      </>
-
-      <button
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value="0"
-        disabled={!canPageBackwards}
-        aria-label="First page"
-      >
-        <Icon name="double-arrow-left" />
-      </button>
-
-      <button
-        variant="outline"
+    <div className="flex items-center gap-1">
+      <Button
         size="xs"
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={Math.max($skip - $top, 0)}
+        variant="outline"
+        asChild
         disabled={!canPageBackwards}
-        aria-label="Previous page"
       >
-        <Icon name="arrow-left" />
-      </button>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: 0,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> First page</span>
+          <Icon name="double-arrow-left" />
+        </Link>
+      </Button>
+
+      <Button
+        size="xs"
+        variant="outline"
+        asChild
+        disabled={!canPageBackwards}
+      >
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: Math.max($skip - $top, 0),
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Previous page</span>
+          <Icon name="arrow-left" />
+        </Link>
+      </Button>
 
       {pageNumbers.map((pageNumber) => {
         const pageSkip = (pageNumber - 1) * $top
         const isCurrentPage = pageNumber === currentPage
-        const isValidPage =
-          pageSkip >= 0 && pageSkip < total
 
         if (isCurrentPage) {
           return (
-            <button
-              type="submit"
-              name="$skip"
-              className="min-w-[2rem] bg-neutral-200 text-black"
+            <Button
+              size="xs"
+              variant="ghost"
               key={`${pageNumber}-active`}
-              value={pageSkip}
-              aria-label={`Page ${pageNumber}`}
-              disabled={!isValidPage}
+              className="grid min-w-[2rem] place-items-center bg-neutral-200 text-sm text-black"
             >
-              {pageNumber}
-            </button>
+              <div>
+                <span className="sr-only">
+                  Page {pageNumber}
+                </span>
+                <span>{pageNumber}</span>
+              </div>
+            </Button>
           )
         } else {
           return (
-            <button
-              type="submit"
-              className="min-w-[2rem] font-normal text-neutral-600"
-              name="$skip"
+            <Button
+              size="xs"
+              variant="ghost"
+              asChild
               key={pageNumber}
-              value={pageSkip}
-              aria-label={`Page ${pageNumber}`}
-              disabled={!isValidPage}
             >
-              {pageNumber}
-            </button>
+              <Link
+                to={{
+                  search: setSearchParamsString(
+                    searchParams,
+                    {
+                      $skip: pageSkip,
+                    },
+                  ),
+                }}
+                preventScrollReset
+                prefetch="intent"
+                className="min-w-[2rem] font-normal text-neutral-600"
+              >
+                {pageNumber}
+              </Link>
+            </Button>
           )
         }
       })}
 
-      <button
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={Math.min($skip + $top, total - $top + 1)}
+      <Button
+        size="xs"
+        variant="outline"
+        asChild
         disabled={!canPageForwards}
-        aria-label="Next page"
       >
-        <Icon name="arrow-right" />
-      </button>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: $skip + $top,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Next page</span>
+          <Icon name="arrow-right" />
+        </Link>
+      </Button>
 
-      <button
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={(totalPages - 1) * $top}
+      <Button
+        size="xs"
+        variant="outline"
+        asChild
         disabled={!canPageForwards}
-        aria-label="Last page"
       >
-        <Icon name="double-arrow-right" />
-      </button>
-    </Form>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: (totalPages - 1) * $top,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Last page</span>
+          <Icon name="double-arrow-right" />
+        </Link>
+      </Button>
+    </div>
   )
 }
 ```
 
-## Don't overwrite other query parameters
-
-The URL is a very convenient bit of global state for this, but it comes with the same caveats that all global state solutions share: they are global.
-
-Other parts of the app may rely on their own query params, and when we create a pagination component that sets the `$skip` parameter, we don't want to overwrite the other query parameters.
-
-To solve this, we can use the `useSearchParams` hook to get the existing query parameters, and create hidden inputs for each of them. This way, when the form is submitted, the existing query parameters will be included in the request.
-
-If there's no `$top` parameter, I like to also add that to the form so it's always sent along. As long as the loader code gives a reasonable default, you technically don't need to do that, but then you have two places where you need to remember to update the default page size.
-
-```tsx
-const [searchParams] = useSearchParams()
-
-const existingParams = Array.from(
-  searchParams.entries(),
-).filter(([key]) => {
-  return key !== "$skip" && key !== "$top"
-})
-
-return (
-  <Form method="GET" className="flex items-center gap-1">
-    <>
-      {[["$top", String($top)], ...existingParams].map(
-        ([key, value]) => {
-          return (
-            <input
-              key={key}
-              type="hidden"
-              name={key}
-              value={value}
-            />
-          )
-        },
-      )}
-    </>
-    {/* ... */}
-  </Form>
-)
-```
-
-## Use submit buttons instead of links
-
-Links might seem like a natural fit here, and using links wouldn't be wrong, but there are a few reasons why I prefer to use forms for this.
-
-First, there's no way to actually disable a link in HTML. When the user is at either end of the pagination, we want to disable the previous and next buttons, so you'd be stuck replacing them with a non-interactive element to indicate that they're disabled.
-
-Each link would need a constructed URL with all the existing query parameters on the page, plus the appropriate `$skip` value. When a screen reader user visits the page, every one of those links would be listed as navigation points, which would be very noisy.
-
-Search crawlers may also follow the links and index them, which could pollute your SEO profile with a bunch of duplicate pages or a divided pagerank.
-
-Using a form means you can add a hidden input for any existing query parameters once and it will be included no matter which submit button is clicked.
-
 ## Add labels to the buttons
 
-There are a few icon buttons here with arrows instead of text, so make sure you add accessible labels to them so screen reader users know what they do.
+There are a few icon links here with arrows instead of text, so make sure you add accessible labels to them so screen reader users know what they do.
 
 A simple `aria-label` attribute handles most cases, though some experts recommend using visually hidden text instead for better compatibility across devices.
 
 ```tsx
-<button type="submit">
+<Link>
   <Icon name="arrow-left" />
   <span className="sr-only">Previous page</span>
-</button>
+</Link>
 ```
 
 ## Live demo

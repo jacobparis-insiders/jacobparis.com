@@ -1,6 +1,30 @@
-import { Form, useSearchParams } from "@remix-run/react"
+import { Link, useSearchParams } from "@remix-run/react"
 import { Icon } from "~/components/icon.tsx"
 import { Button } from "~/components/ui/button.tsx"
+
+function setSearchParamsString(
+  searchParams: URLSearchParams,
+  changes: Record<string, string | number | undefined>,
+) {
+  const newSearchParams = new URLSearchParams(searchParams)
+
+  for (const [key, value] of Object.entries(changes)) {
+    if (value === undefined) {
+      newSearchParams.delete(key)
+      continue
+    }
+
+    newSearchParams.set(key, String(value))
+  }
+
+  // Print string manually to avoid over-encoding the URL
+  // Browsers are ok with $ nowadays
+  return Array.from(newSearchParams.entries())
+    .map(([key, value]) =>
+      value ? `${key}=${encodeURIComponent(value)}` : key,
+    )
+    .join("&")
+}
 
 export function PaginationBar({ total }: { total: number }) {
   const [searchParams] = useSearchParams()
@@ -39,109 +63,109 @@ export function PaginationBar({ total }: { total: number }) {
     }
   }
 
-  const existingParams = Array.from(searchParams.entries()).filter(([key]) => {
-    return key !== "$skip" && key !== "$top"
-  })
-
   return (
-    <Form method="GET" className="flex items-center gap-1" preventScrollReset>
-      <>
-        {[["$top", String($top)], ...existingParams].map(([key, value]) => {
-          return <input key={key} type="hidden" name={key} value={value} />
-        })}
-      </>
-
-      <Button
-        variant="outline"
-        size="xs"
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value="0"
-        disabled={!canPageBackwards}
-        aria-label="First page"
-      >
-        <Icon name="double-arrow-left" />
+    <div className="flex items-center gap-1">
+      <Button size="xs" variant="outline" asChild disabled={!canPageBackwards}>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: 0,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> First page</span>
+          <Icon name="double-arrow-left" />
+        </Link>
       </Button>
 
-      <Button
-        variant="outline"
-        size="xs"
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={Math.max($skip - $top, 0)}
-        disabled={!canPageBackwards}
-        aria-label="Previous page"
-      >
-        <Icon name="arrow-left" />
+      <Button size="xs" variant="outline" asChild disabled={!canPageBackwards}>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: Math.max($skip - $top, 0),
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Previous page</span>
+          <Icon name="arrow-left" />
+        </Link>
       </Button>
 
       {pageNumbers.map((pageNumber) => {
         const pageSkip = (pageNumber - 1) * $top
         const isCurrentPage = pageNumber === currentPage
-        const isValidPage = pageSkip >= 0 && pageSkip < total
 
         if (isCurrentPage) {
           return (
             <Button
-              variant="ghost"
               size="xs"
-              type="submit"
-              name="$skip"
-              className="min-w-[2rem] bg-neutral-200 text-black"
+              variant="ghost"
               key={`${pageNumber}-active`}
-              value={pageSkip}
-              aria-label={`Page ${pageNumber}`}
-              disabled={!isValidPage}
+              className="grid min-w-[2rem] place-items-center bg-neutral-200 text-sm text-black"
             >
-              {pageNumber}
+              <div>
+                <span className="sr-only">Page {pageNumber}</span>
+                <span>{pageNumber}</span>
+              </div>
             </Button>
           )
         } else {
           return (
-            <Button
-              variant="ghost"
-              size="xs"
-              type="submit"
-              className="min-w-[2rem] font-normal text-neutral-600"
-              name="$skip"
-              key={pageNumber}
-              value={pageSkip}
-              aria-label={`Page ${pageNumber}`}
-              disabled={!isValidPage}
-            >
-              {pageNumber}
+            <Button size="xs" variant="ghost" asChild key={pageNumber}>
+              <Link
+                to={{
+                  search: setSearchParamsString(searchParams, {
+                    $skip: pageSkip,
+                  }),
+                }}
+                preventScrollReset
+                prefetch="intent"
+                className="min-w-[2rem] font-normal text-neutral-600"
+              >
+                {pageNumber}
+              </Link>
             </Button>
           )
         }
       })}
 
-      <Button
-        variant="outline"
-        size="xs"
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={Math.min($skip + $top, total - $top + 1)}
-        disabled={!canPageForwards}
-        aria-label="Next page"
-      >
-        <Icon name="arrow-right" />
+      <Button size="xs" variant="outline" asChild disabled={!canPageForwards}>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: $skip + $top,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Next page</span>
+          <Icon name="arrow-right" />
+        </Link>
       </Button>
 
-      <Button
-        variant="outline"
-        size="xs"
-        type="submit"
-        name="$skip"
-        className="text-neutral-600"
-        value={(totalPages - 1) * $top}
-        disabled={!canPageForwards}
-        aria-label="Last page"
-      >
-        <Icon name="double-arrow-right" />
+      <Button size="xs" variant="outline" asChild disabled={!canPageForwards}>
+        <Link
+          to={{
+            search: setSearchParamsString(searchParams, {
+              $skip: (totalPages - 1) * $top,
+            }),
+          }}
+          preventScrollReset
+          prefetch="intent"
+          className="text-neutral-600"
+        >
+          <span className="sr-only"> Last page</span>
+          <Icon name="double-arrow-right" />
+        </Link>
       </Button>
-    </Form>
+    </div>
   )
 }
