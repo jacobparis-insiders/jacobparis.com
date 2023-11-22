@@ -106,6 +106,7 @@
   "devDependencies": {
     "@remix-run/dev": "2.1.0",
     "@remix-run/eslint-config": "2.1.0",
+    "@sly-cli/sly": "^1.4.10",
     "@types/bcryptjs": "^2.4.2",
     "@types/better-sqlite3": "^7.6.6",
     "@types/compression": "^1.7.2",
