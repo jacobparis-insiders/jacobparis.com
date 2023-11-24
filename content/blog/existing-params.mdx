@@ -1,0 +1,53 @@
+---
+title: Submit a form without overwriting existing parameters
+description: Serialize existing parameters to hidden fields in a form. Exclude parameters that should be overwritten.
+tags: Basics
+published: true
+timestamp: "2023-11-24"
+---
+
+When you submit a GET form, the form data is serialized to a query string and appended to the URL, where the server will be able to read the data.
+
+If there were any existing parameters in the URL, they will be overwritten. If you have a one form per page system, that makes sense because you'll want to make sure you're always using up-to-date values.
+
+But if you have multiple forms on a page, you'll want to make sure that you're not overwriting the values of other forms.
+
+You can solve this by looping through the existing parameters in the URL and print them out as hidden fields in the form. That way, when the form is submitted, the existing parameters will be preserved.
+
+```tsx
+export function ExistingParams({
+  exclude,
+}: {
+  exclude?: Array<string | undefined>
+}) {
+  const [searchParams] = useSearchParams()
+  const existingParams = Array.from(
+    searchParams.entries(),
+  ).filter(([key]) => !exclude?.includes(key))
+
+  return (
+    <>
+      {existingParams.map(([key, value]) => {
+        return (
+          <input
+            key={key}
+            type="hidden"
+            name={key}
+            value={value}
+          />
+        )
+      })}
+    </>
+  )
+}
+```
+
+Any parameters that should be excluded can be passed in as an array of strings. Most forms will want to exclude their own parameters so there's no duplication, but you can also use this to clear specific parameters, like resetting the page number when you submit a search form.
+
+```tsx
+<form method="GET">
+  <ExistingParams exclude={["q", "page"]} />
+  <input type="text" name="q" />
+  <button type="submit">Search</button>
+</form>
+```
