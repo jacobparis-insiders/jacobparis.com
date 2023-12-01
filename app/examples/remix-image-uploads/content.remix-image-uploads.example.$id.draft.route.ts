@@ -5,7 +5,7 @@ import { json, redirect } from "@remix-run/node"
 
 import { useParams } from "@remix-run/react"
 import { useCallback, useRef } from "react"
-import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import { useDebounceFetcher } from "remix-utils/use-debounce-fetcher"
 import db from "./db.server.ts"
 
 /**
@@ -135,7 +135,7 @@ export function useDraftSubmit(formRef: React.RefObject<HTMLFormElement>) {
         }
       }
 
-      fetcher.debounceSubmit(body, {
+      fetcher.submit(body, {
         method: "POST",
         action,
         debounceTimeout: options.debounceTimeout,

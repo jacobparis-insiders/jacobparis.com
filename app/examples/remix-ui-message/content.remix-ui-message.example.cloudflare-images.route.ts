@@ -67,7 +67,7 @@ async function getUploadUrl(meta: { name: string }) {
   body.append("meta", JSON.stringify(meta))
 
   const { uploadUrl } = await fetch(
-    `/content/remix-image-uploads/example/cloudflare-images`,
+    `/content/remix-ui-message/example/cloudflare-images`,
     {
       method: "POST",
       body,

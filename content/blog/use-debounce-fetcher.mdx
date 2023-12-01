@@ -6,6 +6,12 @@ timestamp: "2023-05-16"
 published: true
 ---
 
+<div className="rounded-md bg-white px-4 py-2 text-neutral-700 shadow-sm ">
+  This useDebounceFetcher hook has been moved to [Remix
+  Utils](https://github.com/sergiodxa/remix-utils#use-debounce-fetcher).
+  I recommend you use that instead of this snippet.
+</div>
+
 If you try to submit a form with Remix's useFetcher twice in a row, only one of the submissions will go through.
 
 This is part of Remix's built-in protection against double form submissions and stale data.
@@ -18,9 +24,7 @@ That takes care of the client, but many of those requests are still going to hit
 
 If you know most of them are going to be cancelled anyway, you can save your server some work by debouncing the request on the client.
 
-Using a [custom fetcher hook](/content/remix-rpc-pattern#the-next-step-is-custom-fetcher-hooks), you can add a debounceSubmit function that will only send the last request in a series of rapid-fire requests.
-
-> Jump straight to [the final hook](#the-final-hook) if you're ready to copy/paste.
+Using a [custom fetcher hook](/content/remix-rpc-pattern#the-next-step-is-custom-fetcher-hooks), you can add a debounced submit function that will only send the last request in a series of rapid-fire requests.
 
 We can implement a debounce by replacing an actual function call with a timeout that triggers it later. If the function is called again before the timeout is up, we cancel the timeout and start a new one.
 
@@ -29,11 +33,7 @@ This is what the hook looks like to use
 ```ts
 const fetcher = useDebounceFetcher()
 
-// works just like normal
-fetcher.submit(form, {})
-
-// this is the new addition
-fetcher.debounceSubmit(form, {
+fetcher.submit(form, {
   // the rest of the fetcher options still work
   // this is the only new option here
   debounceTimeout: 1000,
@@ -97,6 +97,7 @@ First we'll check if there's already a timeout running. If there is, we'll cance
 Then, start the new timeout that will trigger the actual fetcher.submit call later.
 
 ```ts
+const originalSubmit = fetcher.submit
 fetcher.debounceSubmit = (target, argOptions) => {
   if (timeoutRef.current) {
     clearTimeout(timeoutRef.current)
@@ -133,6 +134,10 @@ return fetcher as Required<typeof fetcher, "debounceSubmit">
 One last thing: `useFetcher` is actually a generic function that can take a type argument. It's a good idea to make our custom hook support this as well, and we can just pass it down everywhere useFetcher is called. Look for `<T>` in the final example to see where this has happened.
 
 ## The final hook
+
+I recommend using the [Remix Utils](https://github.com/sergiodxa/remix-utils#use-debounce-fetcher) implementation of this hook so you get subscribed to updates and bug fixes.
+
+The main difference between that one and this one is that it modifies the `.submit()` function instead of adding a `.debounceSubmit()` function.
 
 Here is a complete useDebounceFetcher hook you can copy/paste into your app.
 

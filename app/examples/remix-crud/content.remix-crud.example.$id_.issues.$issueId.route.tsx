@@ -4,7 +4,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 import { useActionData, useFetcher, useLoaderData } from "@remix-run/react"
 import invariant from "tiny-invariant"
-import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import { useDebounceFetcher } from "remix-utils/use-debounce-fetcher"
 import { LastUpdated } from "./LastUpdated.tsx"
 import db from "./db.server.ts"
 
@@ -89,7 +89,7 @@ export default function Example() {
               const form = e.currentTarget.form
               if (!form?.title) return
 
-              titleFetcher.debounceSubmit(form, {
+              titleFetcher.submit(form, {
                 replace: true,
                 debounceTimeout: 500,
               })
@@ -98,7 +98,7 @@ export default function Example() {
               const form = e.currentTarget.form
               if (!form?.title) return
 
-              titleFetcher.debounceSubmit(form, {
+              titleFetcher.submit(form, {
                 replace: true,
               })
             }}
@@ -112,13 +112,13 @@ export default function Example() {
             rows={8}
             defaultValue={issue.description}
             onChange={(e) => {
-              descriptionFetcher.debounceSubmit(e.currentTarget.form, {
+              descriptionFetcher.submit(e.currentTarget.form, {
                 replace: true,
                 debounceTimeout: 500,
               })
             }}
             onBlur={(e) => {
-              descriptionFetcher.debounceSubmit(e.currentTarget.form, {
+              descriptionFetcher.submit(e.currentTarget.form, {
                 replace: true,
               })
             }}

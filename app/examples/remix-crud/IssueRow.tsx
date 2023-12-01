@@ -12,7 +12,7 @@ export function IssueRow(item: { id: number; title: string; date: string }) {
     <li className="group relative hover:bg-gray-50">
       <Link
         prefetch="intent"
-        to={`iåssues/${item.id}`}
+        to={`issues/${item.id}`}
         className="flex items-center gap-x-4 px-4 py-3 text-sm text-gray-600"
       >
         <span className="min-w-[4rem]">{idString}</span>{" "}

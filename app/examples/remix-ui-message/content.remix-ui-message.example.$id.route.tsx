@@ -1,4 +1,4 @@
-// http://localhost:3000/content/remix-image-uploads/example
+// http://localhost:3000/content/remix-ui-message/example
 
 import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
@@ -25,7 +25,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/content/remix-image-uploads/example")
+    throw redirect("/content/remix-ui-message/example")
   }
 
   const body = formData.get("body")
@@ -77,7 +77,7 @@ export async function loader({ params }: LoaderFunctionArgs) {
 
   if (!(id in db)) {
     console.info(`No session ${id}, redirecting`)
-    throw redirect("/content/remix-image-uploads/example")
+    throw redirect("/content/remix-ui-message/example")
   }
 
   const doc = db[id]

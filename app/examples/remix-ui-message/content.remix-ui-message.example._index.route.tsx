@@ -1,4 +1,4 @@
-// http://localhost:3000/content/remix-image-uploads/example
+// http://localhost:3000/content/remix-ui-message/example
 
 import type { ActionFunctionArgs } from "@remix-run/node"
 import { redirect } from "@remix-run/node"
@@ -19,7 +19,7 @@ export async function action({ params, request }: ActionFunctionArgs) {
     messages: [],
   }
 
-  return redirect(`/content/remix-image-uploads/example/${id}`)
+  return redirect(`/content/remix-ui-message/example/${id}`)
 }
 
 export default function Example() {

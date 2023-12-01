@@ -1,11 +1,11 @@
-// http://localhost:3000/content/remix-image-uploads/example
+// http://localhost:3000/content/remix-ui-message/example
 
 import type { ActionFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 
 import { useParams } from "@remix-run/react"
 import { useCallback, useRef } from "react"
-import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import { useDebounceFetcher } from "remix-utils/use-debounce-fetcher"
 import db from "./db.server.ts"
 
 /**
@@ -17,7 +17,7 @@ export async function action({ request, params }: ActionFunctionArgs) {
   const id = params.id as string
 
   if (!(id in db)) {
-    throw redirect("/content/remix-image-uploads/example")
+    throw redirect("/content/remix-ui-message/example")
   }
 
   const draft = db[id].draft
@@ -89,7 +89,7 @@ export function useDraftSubmit(formRef: React.RefObject<HTMLFormElement>) {
   const fetcher = useDebounceFetcher()
   const deletedFiles = useRef<string[]>([])
 
-  const action = `/content/remix-image-uploads/example/${params.id}/draft`
+  const action = `/content/remix-ui-message/example/${params.id}/draft`
 
   const submit = useCallback(
     (options: DraftSubmitOptions = {}) => {
@@ -135,7 +135,7 @@ export function useDraftSubmit(formRef: React.RefObject<HTMLFormElement>) {
         }
       }
 
-      fetcher.debounceSubmit(body, {
+      fetcher.submit(body, {
         method: "POST",
         action,
         debounceTimeout: options.debounceTimeout,

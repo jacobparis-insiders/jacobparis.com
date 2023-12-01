@@ -6,7 +6,7 @@ import type { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node"
 import { json, redirect } from "@remix-run/node"
 import { useActionData, useLoaderData } from "@remix-run/react"
 import { z } from "zod"
-import { useDebounceFetcher } from "../useDebounceFetcher.ts"
+import { useDebounceFetcher } from "remix-utils/use-debounce-fetcher"
 import db from "./db.server.ts"
 
 const schema = z.object({
@@ -62,7 +62,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
       className="block w-96 rounded border border-gray-300 px-4 py-3 focus:ring-1 focus:ring-indigo-600"
       {...props}
       onChange={(event) => {
-        fetcher.debounceSubmit(event.currentTarget.form, {
+        fetcher.submit(event.currentTarget.form, {
           replace: true,
           debounceTimeout: 500,
         })
@@ -70,7 +70,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
         props.onChange?.(event)
       }}
       onBlur={(event) => {
-        fetcher.debounceSubmit(event.currentTarget.form, {
+        fetcher.submit(event.currentTarget.form, {
           replace: true,
         })
 
