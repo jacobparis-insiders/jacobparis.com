@@ -1,7 +1,7 @@
 import nodepath from "path"
 import fs from "fs-extra"
-import type { MockedRequest, RestHandler } from "msw"
-import { rest } from "msw"
+import type { HttpHandler } from "msw"
+import { HttpResponse, http } from "msw"
 
 async function isDirectory(d: string) {
   try {
@@ -24,17 +24,18 @@ type GHContentsDescription = {
   sha: string
   type: "dir" | "file"
 }
+/** This is an MSW v1 file and we are upgrading it to v2 */
 
-export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
-  rest.get(
+export const GitHubMocks: Array<HttpHandler> = [
+  http.get(
     "https://api.github.com/repos/:owner/:repo/contents/:path",
-    async (req, res, ctx) => {
-      const { owner, repo } = req.params
+    async (info) => {
+      const { repo, owner } = info.params
 
-      if (typeof req.params.path !== "string") {
+      if (typeof info.params.path !== "string") {
         throw new Error("Path should be a string")
       }
-      const path = decodeURIComponent(req.params.path).trim()
+      const path = decodeURIComponent(info.params.path).trim()
 
       if (`${owner}/${repo}` !== process.env.GITHUB_REPOSITORY) {
         throw new Error(
@@ -47,24 +48,17 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
       const isLocalFile = await isFile(localPath)
 
       if (!isLocalDir && !isLocalFile) {
-        return res(
-          ctx.status(200),
-          // return an empty array when there are no blogs inside content/blogs
-          ctx.json([]),
-        )
+        return HttpResponse.json([])
       }
 
       if (isLocalFile) {
         const file = fs.readFileSync(localPath, { encoding: "utf-8" })
         const encoding = "base64"
 
-        return res(
-          ctx.status(200),
-          ctx.json({
-            content: Buffer.from(file, "utf-8").toString(encoding),
-            encoding,
-          }),
-        )
+        return HttpResponse.json({
+          content: Buffer.from(file, "utf-8").toString(encoding),
+          encoding,
+        })
       }
 
       const dirList = await fs.readdir(localPath)
@@ -85,18 +79,18 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
         }),
       )
 
-      return res(ctx.status(200), ctx.json(dirContent))
+      return HttpResponse.json(dirContent)
     },
   ),
-  rest.get(
+  http.get(
     "https://api.github.com/repos/:owner/:repo/git/blobs/:sha",
-    async (req, res, ctx) => {
-      const { repo, owner } = req.params
+    async (info) => {
+      const { repo, owner } = info.params
 
-      if (typeof req.params.sha !== "string") {
+      if (typeof info.params.sha !== "string") {
         throw new Error("sha should be a string")
       }
-      const sha = decodeURIComponent(req.params.sha).trim()
+      const sha = decodeURIComponent(info.params.sha).trim()
 
       if (`${owner}/${repo}` !== process.env.GITHUB_REPOSITORY) {
         throw new Error(
@@ -112,25 +106,22 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
       const content = fs.readFileSync(fullPath, { encoding: "utf-8" })
       const encoding = "base64"
 
-      return res(
-        ctx.status(200),
-        ctx.json({
-          sha,
-          content: Buffer.from(content, "utf-8").toString(encoding),
-          encoding,
-        }),
-      )
+      return HttpResponse.json({
+        sha,
+        content: Buffer.from(content, "utf-8").toString(encoding),
+        encoding,
+      })
     },
   ),
-  rest.get(
+  http.get(
     "https://api.github.com/repos/:owner/:repo/contents/:path*",
-    async (req, res, ctx) => {
-      const { owner, repo } = req.params
+    async (info) => {
+      const { owner, repo } = info.params
 
-      if (typeof req.params.path !== "string") {
+      if (typeof info.params.path !== "string") {
         throw new Error("Path should be a string")
       }
-      const path = decodeURIComponent(req.params.path).trim()
+      const path = decodeURIComponent(info.params.path).trim()
 
       if (
         owner !== process.env.GH_OWNER ||
@@ -146,14 +137,11 @@ export const GitHubMocks: Array<RestHandler<MockedRequest>> = [
       const content = fs.readFileSync(fullPath, { encoding: "utf-8" })
       const encoding = "base64"
 
-      return res(
-        ctx.status(200),
-        ctx.json({
-          sha: path,
-          content: Buffer.from(content, "utf-8").toString(encoding),
-          encoding,
-        }),
-      )
+      return HttpResponse.json({
+        sha: path,
+        content: Buffer.from(content, "utf-8").toString(encoding),
+        encoding,
+      })
     },
   ),
 ]
