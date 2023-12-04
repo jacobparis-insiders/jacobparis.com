@@ -17,6 +17,7 @@ import { ButtonLink } from "~/components/ButtonLink.tsx"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import { getContentList } from "./content.server.ts"
 import { getServerTiming } from "#app/utils/timing.server.ts"
+import invariant from "tiny-invariant"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -37,9 +38,9 @@ export const handle = {
       { route: `content`, priority: 0.7 },
 
       ...content
-        .filter((page) => page.frontmatter.published)
+        .filter((page) => page?.frontmatter.published)
         .map((page) => {
-          return { route: `content/${page.frontmatter.slug}`, priority: 0.7 }
+          return { route: `content/${page?.frontmatter.slug}`, priority: 0.7 }
         }),
     ]
   },
@@ -55,8 +56,8 @@ async function getContentListData() {
       const compiledMdx = await cachified({
         key: `mdx:${slug}`,
         cache,
-        ttl: 1000 * 60 * 60,
-        forceFresh: false,
+        // add random jitter to avoid thundering herd
+        ttl: 1000 * 60 * 60 * 6 + Math.random() * 1000 * 60 * 60 * 2,
         async getFreshValue({ background }) {
           const file = await downloadFileBySha(content.sha)
 
@@ -70,7 +71,7 @@ async function getContentListData() {
             },
           ).then((compiled) => {
             if (!compiled) {
-              throw new Error("No compiled")
+              return null
             }
 
             compiled.frontmatter.slug = slug
@@ -98,7 +99,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
   const content = await time("contentList", () => getContentListData())
 
   const blogList = content
-    .map((c) => c.frontmatter)
+    .filter((c) => c?.frontmatter.published)
+    .map((c) => {
+      invariant(c)
+      return c.frontmatter
+    })
     .sort((a, b) => {
       if (!a.timestamp) return 1
       if (!b.timestamp) return -1

@@ -106,7 +106,7 @@ async function queuedCompileMdx(
   }
 
   if (!result.frontmatter.title) {
-    throw new Error("MDX file must have a title")
+    return null
   }
 
   return z
