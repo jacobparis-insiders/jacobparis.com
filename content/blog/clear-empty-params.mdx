@@ -1,0 +1,37 @@
+---
+title: Remove empty query parameters from URLs
+description: Create a clearEmptyParams function that removes empty query parameters from URLs by throwing a response.
+tags: Remix
+published: true
+timestamp: "2023-12-11"
+---
+
+While working with HTML forms, you'll often end up with query parameters in the URL that don't have a value. For example, if you have a form with a search input and the user submits the form without entering anything, you'll end up with a URL like `?search=`
+
+If your app doesn't have a use-case for empty query parameters, you can remove them from the URL by calling a function that throws a redirect response.<SideNote>Throwing the redirect is helpful because you don't have to worry about the return value of the function.</SideNote>
+
+```ts
+async function clearEmptyParams(url: URL) {
+  let shouldRedirect = false
+  for (const [key, value] of url.searchParams.entries()) {
+    if (value === "") {
+      url.searchParams.delete(key)
+      shouldRedirect = true
+    }
+  }
+  if (shouldRedirect) {
+    throw redirect(url.toString())
+  }
+}
+```
+
+You can then call this function in your loader function on any route that uses GET forms.
+
+```ts
+export async function loader({ request }: LoaderFunctionArgs) {
+	const url = new URL(request.url)
+	await clearEmptyParams(url)
+
+  …
+}
+```
