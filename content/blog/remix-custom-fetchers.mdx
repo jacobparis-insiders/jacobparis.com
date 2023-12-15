@@ -1,0 +1,199 @@
+---
+title: Build custom fetchers with Remix
+description: The useFetcher hook is the most powerful tool in the Remix toolbox. Submit data in one component, and display the status of the request in another. Turn fetchers into custom hooks that you can use anywhere in your app.
+tags: Remix
+published: true
+timestamp: "2023-12-15"
+---
+
+Remix's useFetcher hook is beyond doubt the most powerful tool in the Remix toolbox. Fetchers can
+
+- submit data (either JSON or a form) to a server
+- track the state of the request (idle, loading, or submitting)
+- read the response from the server (type safe)
+- automatically cancel duplicate submissions
+- automatically resolve out-of-order responses
+
+They also have a persistent identity. By adding a key to the fetcher, you can identify and access it from anywhere in your app.
+
+- With the plural `useFetchers` hook, you get an array of all active fetchers in your entire application.
+- With the singular `useFetcher` hook, you get (or create) the fetcher with the given key.
+
+So you can submit data with a fetcher in one component, and display the whole status of the request in another component, just by using the same fetcher key.
+
+This makes it really easy to turn fetchers into custom hooks that you can use anywhere in your app.
+
+```tsx
+export function useCustomFetcher() {
+  return useFetcher({
+    key: "custom-fetcher",
+  })
+}
+```
+
+All instances of the `customFetcher` will share the same state, so you can use it in multiple components and they will all be in sync.
+
+- `fetcher.state` is the current state of the request (idle, loading, or submitting)
+- `fetcher.json` is the request body (if it was JSON)
+- `fetcher.formData` is the request body (if it was a form)
+- `fetcher.data` is the response body
+
+```tsx
+const fetcher = useCustomFetcher()
+
+if (fetcher.state === "idle") {
+  return (
+    <button onClick={() => fetcher.submit({ foo: "bar" })}>
+      Submit
+    </button>
+  )
+}
+
+if (fetcher.state === "submitting") {
+  return (
+    <button disabled>
+      Submitting {fetcher.json.foo} {/* Will print "bar" */}
+    </button>
+  )
+}
+```
+
+## Custom submit function
+
+While the base fetcher allows you to submit any data to any endpoint, you can build on top of it to create a custom fetcher that is tailored to your needs.
+
+Here we'll modify the base fetcher to only accept a specific payload type, and to only submit to a specific endpoint.<SideNote> If you're going to copy/paste one of these, this is the one I recommend. </SideNote>
+
+```tsx
+function useCustomFetcher() {
+	type BaseFetcherType = ReturnType<typeof useFetcher<typeof action>>
+
+  // ! Make any changes to the payload type here
+	type Payload = any
+
+	const fetcher = useFetcher({
+		key: 'custom-fetcher',
+	}) as Omit<BaseFetcherType, 'submit' | 'json'> & {
+		// ! Make any changes to the submit function () here
+		submit: (payload: Payload) => void
+		json?: Payload
+
+    // ! Make any changes to the load function here
+    load: () => void
+	}
+
+	// We clone the original submit to avoid a recursive loop
+	const originalSubmit = fetcher.submit as BaseFetcherType['submit']
+	fetcher.submit = useCallback(
+		(payload: Payload) => {
+			return originalSubmit(payload, {
+					method: 'POST',
+					action: '/custom-endpoint',
+					encType: 'application/json',
+				})
+		},
+		[originalSubmit],
+	)
+
+  const originalLoad = fetcher.load as BaseFetcherType['load']
+  fetcher.load = useCallback(() => {
+      return originalLoad('/custom-endpoint')
+  }, [originalLoad])
+
+	return fetcher
+}
+```
+
+There are a few typescript tricks going on here, so let's break it down.
+
+- `ReturnType<typeof useFetcher<typeof action>>` is the type of the base fetcher, before any of our modifications, and with the action function as the response type (so we can get type safety on the response).
+- `Omit<BaseFetcherType, 'submit' | 'json'>` is a trick to override the submit function and json property of the base fetcher. If we don't omit them before adding our own, Typescript will complain that our new types don't match the old ones.
+- `fetcher.submit as BaseFetcherType['submit']` ensures the originalSubmit function isn't typed as our new custom submit function
+
+## Editing many items
+
+An easy use-case is a custom fetcher for editing many items at once. Using the pattern above, we can set the payload type and the submission endpoint.
+
+Instead of needing to specify the action, method, and encType every time we submit, we can just call `bulkEditFetcher.submit({ items, changeset })`
+
+```tsx
+export function useBulkEditFetcher() {
+	type BaseFetcherType = ReturnType<typeof useFetcher<typeof action>>
+
+	type Payload = {
+		items: Array<number>
+		changeset: { priority: string }
+	}
+
+	const fetcher = useFetcher<typeof action>({
+		key: 'bulk-edit-items',
+	}) as Omit<BaseFetcherType, 'submit' | 'json'> & {
+		submit: (payload: Payload) => void
+		json?: Payload
+	}
+
+	// Clone the original submit to avoid a recursive loop
+	const originalSubmit = fetcher.submit as BaseFetcherType['submit']
+
+	fetcher.submit = useCallback(
+		(payload: Payload) => {
+			return originalSubmit(
+				payload,
+				{
+					method: 'POST',
+					action: '/items',
+					encType: 'application/json',
+				},
+			)
+		},
+		[originalSubmit],
+	)
+
+	return fetcher
+}
+```
+
+## Debounce the submission
+
+<div className="rounded-md bg-white px-4 py-2 text-neutral-700 shadow-sm ">
+  This useDebounceFetcher hook has been moved to [Remix
+  Utils](https://github.com/sergiodxa/remix-utils#use-debounce-fetcher).
+  I recommend you use that instead of this snippet.
+</div>
+
+Using the same pattern as above, we can modify the base fetcher to debounce the submission. In this case we don't care about the payload type, so we can reuse the base fetcher's payload type<SideNote> The Parameters utility is built into typescript and extracts the parameters from a function type. </SideNote>, but we do need to add a debounce timeout option to the submit function.
+
+```tsx
+function useDebounceFetcher() {
+	type BaseFetcherType = ReturnType<typeof useFetcher<typeof action>>
+
+	type DebouncePayload = Parameters<BaseFetcherType['submit']>[0]
+  type SubmitOptions = Parameters<BaseFetcherType['submit']>[1]
+
+	const fetcher = useFetcher({
+		key: 'custom-fetcher',
+	}) as Omit<BaseFetcherType, 'submit' | 'json'> & {
+		submit: (target: DebouncePayload, options?: SubmitOptions & { debounceTimeout?: number }) => void
+		json?: DebouncePayload
+	}
+
+	// We clone the original submit to avoid a recursive loop
+	const originalSubmit = fetcher.submit as BaseFetcherType['submit']
+
+	fetcher.submit = useCallback(
+    (target, { debounceTimeout = 0, ...options } = {}) => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (!debounceTimeout || debounceTimeout <= 0) {
+        return originalSubmit(target, options)
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        originalSubmit(target, options)
+      }, debounceTimeout)
+    },
+    [originalSubmit],
+  )
+
+	return fetcher
+}
+```
