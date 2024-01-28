@@ -43,7 +43,7 @@ In this article, we will build a script that compiles a folder of svg icons into
 
 Create a folder called `svg-icons` in the root of your project and add some SVGs.
 
-You can use my [Sly CLI tool to download icons](https://sly-cli.fly.dev/) from the command line. This command will add the camera and card-stack icons from Radix UI to the `svg-icons` folder.
+You can use [Sly CLI to download icons](https://sly-cli.fly.dev/) from the command line. This command will add the camera and card-stack icons from Radix UI to the `svg-icons` folder.
 
 ```bash
 npx @sly-cli/sly add @radix-ui/icons camera card-stack
@@ -211,41 +211,6 @@ You can use the component like this
 
 We can improve the developer experience of the Icon by providing a list of all available icons to the type of the `name` attribute. That will allow your editor to autocomplete the icon names, and throw errors if you try to use an icon that doesn't exist.
 
-But if the user hasn't run `npm run build:icons` yet, the Icon component will fail to find the generated types because they haven't been generated yet.
-
-So before we generate the types, let's handle the case where icons have not been generated yet.
-
-Create a new file `names.ts` in `app/components/icons` with the contents
-
-```sh
-export type IconName = string
-```
-
-Commit the file and push it to your repo. Next, we want to make sure any changes to this file are ignored by git.
-
-Simply adding it to the .gitignore isn't enough because we've already committed it once, so git will still track changes to it.
-
-We can use the skip worktree command to tell git to ignore changes to a file that has already been committed. In your terminal, run
-
-```bash
-git update-index --skip-worktree app/components/ui/icons/names.ts
-```
-
-Update the Icon component to use the new type
-
-```tsx
-import { type IconName } from "~/app/components/icons/names.ts"
-
-// and update the Icon component type to use it
-SVGProps<SVGSVGElement> & {
-  name: IconName
-}
-```
-
-## Generate types for the Icon component
-
-> A previous version of this section recommended using a JSON file and inferring the type from it. After much feedback, this section has been revised.
-
 We can generate the type automatically by reading the list of files in the `svg-icons` folder and using the filename as the key.
 
 Go back to the `build-icons.ts` file and continue the script from right after the `generateSvgSprite` function.
@@ -306,6 +271,17 @@ If you're using [Sly CLI](https://sly-cli.fly.dev/), set the postinstall script 
       "transformers": ["transform-icon.ts"]
     }
   ]
+}
+```
+
+Update the Icon component to use the new type
+
+```tsx
+import { type IconName } from "~/app/components/icons/names.ts"
+
+// and update the Icon component type to use it
+SVGProps<SVGSVGElement> & {
+  name: IconName
 }
 ```
 

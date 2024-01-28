@@ -1,0 +1,82 @@
+---
+title: Use svg sprite icons with Sly and svg-icons-cli
+description: How to use svg sprite icons in a React app. Use Sly CLI to download icons from the command line. Use svg-icons-cli to build the icons into a type-safe spritesheet.
+tags: Guide
+published: true
+timestamp: "2024-01-28"
+---
+
+For more information about SVG Spritesheets and what these tools are doing under the hood, check out [Use SVG Icons in React](/content/svg-icons)
+
+In this article, we will use two CLI tools together to create a system for using SVG icons in a React app.
+
+- [svg-icons-cli](https://github.com/alexanderson1993/svg-icons-cli) is a tool that compiles a folder of svg icons into a single svg spritesheet and generates a React component that displays a specific icon by name with full type safe autocomplete for the available icons.
+- [Sly CLI](https://sly-cli.fly.dev/) is a tool that adds icons, components, and utilities to your project as source code, so you can customize them to fit your needs. We will use Sly to download SVG icons and configure it to run the svg-icons-cli script automatically.
+
+## Prerequisites
+
+Install Sly and svg-icons-cli as dev dependencies
+
+```bash
+npm install --save-dev @sly-cli/sly svg-icons-cli
+```
+
+## Create an Icon component with SVG Icons CLI
+
+Creating an icon component that works with spritesheets is very simple, and at its core is just a single `<use>` element that references a path to the spritesheet and the id/name of the icon you want to display.
+
+```html
+<svg>
+  <use href={`${href}#${name}`}>
+</svg>
+```
+
+You can copy/paste the [simple icon component used in the Sly website](https://github.com/jacobparis-insiders/sly/blob/main/site/app/components/icon.tsx) or use `svg-icons-cli` to generate a more advanced component with helper styles for different icon sizes and text.
+
+```bash
+npx svg-icons-cli init -o ./components -t ./components/icons
+```
+
+## Generate a spritesheet with svg-icons-cli
+
+Add a `build:icons` script to your package.json file that calls the `svg-icons-cli`'s build command
+
+```json
+{
+  "scripts": {
+    "build:icons": "icons build -i ./svg-icons -o ./app/components/icons"
+  }
+}
+```
+
+## Add icons to your app with Sly
+
+The first time you try to add an icon with Sly, it will walk you through configuring the tool.
+
+- Set the output directory to the same directory you used for the `svg-icons-cli` output (in this example, `./app/components/icons`)
+- When it asks for a postinstall script, enter `npm run build:icons`
+
+Sly will add the icons to the right folder and immediately run the build script to generate both the spritesheet and the types for the icon component.
+
+```bash
+npx sly add @radix-ui/icons camera card-stack
+```
+
+To browse all the available Radix icons, run `npx sly add @radix-ui/icons`, or just `npx sly add` to see which other libraries are available.
+
+## Use the Icon component
+
+Import the icon component into your project and use it to display an icon. The name prop should provide autocomplete for all the available icons and error on icons that don't exist.
+
+```tsx
+import { Icon } from "./components/icon"
+
+export function App() {
+  return (
+    <div>
+      <Icon name="camera" className="h-6 w-6" />
+      <Icon name="card-stack" />
+    </div>
+  )
+}
+```
