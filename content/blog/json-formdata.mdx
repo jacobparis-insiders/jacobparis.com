@@ -1,0 +1,87 @@
+Forms are the preferred method for most client/server interaction in standard web applications. They support progressive enhancement and will work the moment the HTML displays in the browser, long before the javascript bundle has time to make it across the network.
+
+But forms can be a bit clunky to work with especially if you try to use them everywhere. Consider "delete selected items" button
+
+```ts
+<Form method="POST">
+  {selectedItems.map(item => <input type="hidden" name="id", value={item.id} />)}
+
+  <Button type="submit" name="intent" value="delete"> Delete </Button>
+</Form>
+```
+
+In order for the form submission to know which item IDs it's going to delete, they all need to be present in the DOM. If your app is capable of deleting a thousand items at once, that's a lot of extra hidden elements on the page. In exchange, this form works before javascript loads, as long as `selectedItems` is persistent.
+
+But if selected items _isn't_ persistent, and then the user must wait for javascript to load to select an item, then there's no benefit to using a form here.
+
+So we can replace the form with a button's onClick handler, and construct the FormData inside it
+
+```ts
+<Button
+  type="button"
+  onClick={(event) => {
+    const form = new FormData()
+    form.set("intent", "delete")
+    for (const item of selectedItems) {
+      form.append("id", item.id)
+    }
+
+    submit(form)
+  }}
+>
+  Delete
+</Button>
+```
+
+This will work, but it's somewhat more verbose than the equivalent JSON submission that you might feel more familiar with
+
+```ts
+<Button
+  type="button"
+  onClick={(event) => {
+    submit(
+      {
+        intent: "delete",
+        id: selectedItems.map((item) => item.id),
+      },
+      {
+        type: "application/json",
+      },
+    )
+  }}
+>
+  Delete
+</Button>
+```
+
+The only problem with the JSON approach is that if you already have the action set up to handle form data, you're going to get an error "Could not parse content as FormData."
+
+```ts
+export function action ({ request }: ActionFunctionArgs) {
+  const formData = await request.formData() // Errors when you send JSON
+```
+
+```ts
+export function action ({ request }: ActionFunctionArgs) {
+  const jsonData = await request.json() // Errors when you send Form Data
+```
+
+## Solution
+
+You can check whether the body will be form data or json based on the content type header, and then parse with the correct method based on that
+
+```ts
+function parseRequest(request: Request) {
+  const type = request.headers.get("content-type")
+
+  if (type === "application/json") {
+    return request.json()
+  }
+
+  return request.formData()
+}
+```
+
+This doesn't work super well in typescript though. The inferred type is `Promise<unknown>` and if you have to manually check types afterward to figure out if you're dealing with FormData or an object, this helper isn't very useful.
+
+Every time I parse a request I want to check its body against a schema to make sure it's both valid and that I get well-typed variables to work with in the action. Since Conform's parse function normalizes formData into an object, adding that feature to this function will skip the whole type issue outright.

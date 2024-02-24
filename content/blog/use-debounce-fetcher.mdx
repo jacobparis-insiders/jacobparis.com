@@ -6,12 +6,6 @@ timestamp: "2023-05-16"
 published: true
 ---
 
-<div className="rounded-md bg-white px-4 py-2 text-neutral-700 shadow-sm ">
-  This useDebounceFetcher hook has been moved to [Remix
-  Utils](https://github.com/sergiodxa/remix-utils#use-debounce-fetcher).
-  I recommend you use that instead of this snippet.
-</div>
-
 If you try to submit a form with Remix's useFetcher twice in a row, only one of the submissions will go through.
 
 This is part of Remix's built-in protection against double form submissions and stale data.
@@ -66,6 +60,7 @@ To keep Typescript happy, we need to tell it that the fetcher we're returning ma
 The debounceSubmit function will be identical in type to the regular submit function, except with an extra debounceTimeout option.
 
 ```ts
+type BaseFetcherType = ReturnType<typeof useFetcher>
 // Remix uses this internally but does not export it, so we can't steal theirs
 type SubmitTarget =
   | HTMLFormElement
@@ -83,10 +78,16 @@ type DebounceSubmitFunction = (
   argOptions?: SubmitOptions & { debounceTimeout?: number },
 ) => void
 
-const fetcher = useFetcher() as ReturnType<
-  typeof useFetcher
+const fetcher = useFetcher() as Omit<
+  BaseFetcherType,
+  "submit"
 > & {
-  debounceSubmit?: DebounceSubmitFunction
+  submit: (
+    target: SubmitTarget,
+    argOptions?: SubmitOptions & {
+      debounceTimeout?: number
+    },
+  ) => void
 }
 ```
 
@@ -97,38 +98,23 @@ First we'll check if there's already a timeout running. If there is, we'll cance
 Then, start the new timeout that will trigger the actual fetcher.submit call later.
 
 ```ts
-const originalSubmit = fetcher.submit
-fetcher.debounceSubmit = (target, argOptions) => {
-  if (timeoutRef.current) {
-    clearTimeout(timeoutRef.current)
-  }
+// We clone the original submit to avoid a recursive loop
+const originalSubmit =
+  fetcher.submit as BaseFetcherType["submit"]
 
-  const { debounceTimeout = 0, ...options } =
-    argOptions || {}
+fetcher.submit = useCallback(
+  (target, { debounceTimeout = 0, ...options } = {}) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    if (!debounceTimeout || debounceTimeout <= 0) {
+      return originalSubmit(target, options)
+    }
 
-  if (debounceTimeout && debounceTimeout > 0) {
     timeoutRef.current = setTimeout(() => {
-      fetcher.submit(target, options)
+      originalSubmit(target, options)
     }, debounceTimeout)
-  } else {
-    fetcher.submit(target, options)
-  }
-}
-```
-
-The last step is to return the fetcher. Even though we've just explicitly assigned a debounceSubmit function to it, Typescript won't narrow the type
-
-We originally set it to `DebounceSubmitFunction | undefined` and now we've just proven in code that it's no longer undefined.
-
-The easiest way to fix this is to assert the property is required when we return the fetcher.
-
-```ts
-// This is a utility function that makes certain properties of a type required
-type Required<Type, Key extends keyof Type> = Type & {
-  [Property in Key]-?: Type[Property]
-}
-
-return fetcher as Required<typeof fetcher, "debounceSubmit">
+  },
+  [originalSubmit],
+)
 ```
 
 One last thing: `useFetcher` is actually a generic function that can take a type argument. It's a good idea to make our custom hook support this as well, and we can just pass it down everywhere useFetcher is called. Look for `<T>` in the final example to see where this has happened.

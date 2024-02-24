@@ -89,9 +89,9 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
 export async function loader({ params, request }: LoaderFunctionArgs) {
   const { getHeaderField, serverTimings } = getServerTiming()
 
-  if (process.env.NODE_ENV === "development") {
-    await import("#app/refresh.ignored.js")
-  }
+  // if (process.env.NODE_ENV === "development") {
+  //   await import("#app/refresh.ignored.js")
+  // }
 
   const slug = params.slug
   invariant(typeof slug === "string", "Slug should be a string, and defined")

@@ -165,6 +165,16 @@ Using the same pattern as above, we can modify the base fetcher to debounce the 
 
 ```tsx
 function useDebounceFetcher() {
+  let timeoutRef = useRef<NodeJS.Timeout | undefined>();
+
+	useEffect(() => {
+		// no initialize step required since timeoutRef defaults undefined
+		let timeout = timeoutRef.current;
+		return () => {
+			if (timeout) clearTimeout(timeout);
+		};
+	}, [timeoutRef]);
+
 	type BaseFetcherType = ReturnType<typeof useFetcher<typeof action>>
 
 	type DebouncePayload = Parameters<BaseFetcherType['submit']>[0]

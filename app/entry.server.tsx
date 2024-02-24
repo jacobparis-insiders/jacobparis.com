@@ -5,7 +5,7 @@ import minimatch from "minimatch"
 import { renderToPipeableStream } from "react-dom/server"
 import { PassThrough } from "stream"
 import redirects from "./redirects.server.ts"
-import "./refresh.ignored"
+// import "./refresh.ignored"
 import { getSitemapXml } from "./sitemap.server.ts"
 import { server } from "#/mocks/index.ts"
 const ABORT_DELAY = 10 * 60 * 1000

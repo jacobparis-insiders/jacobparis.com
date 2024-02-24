@@ -12,6 +12,7 @@ chokidar.watch(watchPath).on("change", (changePath) => {
   console.log("🛠 content changed", relativeChangePath)
 
   setTimeout(() => {
-    fs.writeFileSync(refreshPath, `// ${new Date()}`)
+    console.log("writing to refresh path")
+    fs.writeFileSync(refreshPath, `//`)
   }, 250)
 })

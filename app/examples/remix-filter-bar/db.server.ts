@@ -273,10 +273,9 @@ function getRandomValue<T>(array: ReadonlyArray<T>) {
   return array[Math.floor(Math.random() * array.length)]
 }
 
-function getRandomDate(
-  start: Date = new Date(2020, 0, 1),
-  end: Date = new Date(),
-) {
+function getRandomDate(start: Date = new Date(2020, 0, 1)) {
+  const end = new Date()
+
   return new Date(
     start.getTime() + Math.random() * (end.getTime() - start.getTime()),
   ).toISOString()

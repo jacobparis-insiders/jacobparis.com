@@ -8,7 +8,7 @@ import BlogCard from "~/components/BlogCard.tsx"
 import { MoultonMatrix } from "./MoultonMatrix.tsx"
 import { Button } from "#app/components/ui/button.tsx"
 import { Toaster, toast } from "sonner"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { Icon } from "#app/components/icon.tsx"
 import { FakeUpload } from "#app/examples/remix-image-uploads/content.remix-image-uploads.example.fake.route.tsx"
 
@@ -89,6 +89,34 @@ export default function Index() {
 
             <MoultonMatrix />
           </div>
+        </div>
+
+        <div className="relative mt-8 block w-full overflow-hidden rounded-lg bg-white text-neutral-900 ">
+          <Link
+            prefetch="intent"
+            to="https://sly-cli.fly.dev/"
+            className="group block p-8"
+          >
+            <div>
+              <h1 className="inline text-7xl font-bold text-neutral-800 drop-shadow-2xl md:text-8xl">
+                Add code, not dependencies
+              </h1>
+            </div>
+
+            <div className="mt-8">
+              <span className="group inline-flex items-center gap-x-2 rounded-3xl bg-neutral-800 px-8 py-3 text-lg font-bold text-white duration-75 hover:scale-[102%]">
+                Check out Sly
+                <Icon
+                  name="arrow-right"
+                  className="h-6 w-6 duration-150 group-hover:rotate-6 group-hover:scale-110"
+                />
+              </span>
+            </div>
+
+            <p className="mt-8 max-w-prose text-xl text-neutral-600">
+              Sly is a CLI tool to add components, icons, and utilities as code
+            </p>
+          </Link>
         </div>
 
         <section className="mb-16 mt-8 grid  gap-8 sm:grid-cols-2">
