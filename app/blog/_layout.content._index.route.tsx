@@ -46,7 +46,7 @@ export const handle = {
   },
 }
 
-async function getContentListData() {
+export async function getContentListData() {
   const contentList = await getContentList()
 
   return Promise.all(
@@ -91,14 +91,11 @@ async function getContentListData() {
     }),
   ).then((content) => content.filter((c) => c !== null))
 }
-export async function loader({ request }: LoaderFunctionArgs) {
-  const { time, getServerTimingHeader } = getServerTiming()
-  const url = new URL(request.url)
-  const tag = url.searchParams.get("tag")
 
-  const content = await time("contentList", () => getContentListData())
-
-  const blogList = content
+export function getBlogList(
+  content: Awaited<ReturnType<typeof getContentListData>>,
+) {
+  return content
     .filter((c) => c?.frontmatter.published)
     .map((c) => {
       invariant(c)
@@ -127,6 +124,16 @@ export async function loader({ request }: LoaderFunctionArgs) {
           })
         : null,
     }))
+}
+
+export async function loader({ request }: LoaderFunctionArgs) {
+  const { time, getServerTimingHeader } = getServerTiming()
+  const url = new URL(request.url)
+  const tag = url.searchParams.get("tag")
+
+  const content = await time("contentList", () => getContentListData())
+
+  const blogList = getBlogList(content)
 
   const tags = new Set<string>()
   for (const blog of blogList) {
