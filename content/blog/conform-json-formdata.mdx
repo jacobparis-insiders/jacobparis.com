@@ -1,0 +1,211 @@
+---
+title: Handling both JSON and FormData in Remix
+description: How to handle both JSON and FormData requests in a Remix app
+tags: Remix
+published: true
+timestamp: "2024-02-12"
+---
+
+Forms are the preferred method for most client/server interaction in standard web applications. They support progressive enhancement and will work the moment the HTML displays in the browser, long before the javascript bundle has time to make it across the network.
+
+But forms can be a bit clunky to work with especially if you try to use them everywhere. Consider this "delete selected items" button
+
+```ts
+<Form method="POST">
+  {selectedItems.map(item => <input type="hidden" name="id", value={item.id} />)}
+
+  <Button type="submit" name="intent" value="delete"> Delete </Button>
+</Form>
+```
+
+In order for the form submission to know which item IDs it's going to delete, they all need to be present in the DOM. If your app is capable of deleting a thousand items at once, that's a lot of extra hidden elements on the page. In exchange, this form works before javascript loads, as long as `selectedItems` is persistent.
+
+But if selected items _isn't_ persistent, and then the user must wait for javascript to load to select an item, then there's no benefit to using a form here.
+
+So we can replace the form with a button's onClick handler, and construct the FormData inside it
+
+```ts
+<Button
+  type="button"
+  onClick={(event) => {
+    const form = new FormData()
+    form.set("intent", "delete")
+    for (const item of selectedItems) {
+      form.append("id", item.id)
+    }
+
+    submit(form)
+  }}
+>
+  Delete
+</Button>
+```
+
+This will work, but it's somewhat more verbose than the equivalent JSON submission that you might feel more familiar with
+
+```ts
+<Button
+  type="button"
+  onClick={(event) => {
+    submit(
+      {
+        intent: "delete",
+        id: selectedItems.map((item) => item.id),
+      },
+      {
+        type: "application/json",
+      },
+    )
+  }}
+>
+  Delete
+</Button>
+```
+
+The only problem with the JSON approach is that if you already have the action set up to handle form data, you're going to get an error "Could not parse content as FormData."
+
+```ts
+export function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData() // Errors when you send JSON
+}
+```
+
+```ts
+export function action({ request }: ActionFunctionArgs) {
+  const jsonData = await request.json() // Errors when you send Form Data
+}
+```
+
+## Parse JSON and FormData requests
+
+You can check whether the body will be form data or json based on the content type header, and then parse with the correct method based on that
+
+```ts
+function parseRequest(request: Request) {
+  const type = request.headers.get("content-type")
+
+  if (type === "application/json") {
+    return request.json()
+  }
+
+  return request.formData()
+}
+```
+
+This doesn't work super well in typescript though. The inferred type is `Promise<unknown>` and if you have to manually check types afterward to figure out if you're dealing with FormData or an object, this helper isn't very useful.
+
+Every time I parse a request I want to check its body against a schema to make sure it's both valid and that I get well-typed variables to work with in the action. Since Conform's parse function normalizes formData into an object, adding that feature to this function will skip the whole type issue outright.
+
+This function uses Conform's `parseWithZod` function if it's form data, and returns the same output shape as `parseWithZod` if it's JSON.
+
+```ts
+export async function parseRequest<ZodSchema>(
+	request: Request,
+	{ schema }: { schema: z.ZodType<ZodSchema> },
+) {
+	const type = request.headers.get('content-type')
+
+	if (type === 'application/json') {
+		const payload = (await request.json()) as Record<string, unknown>
+		const value = await schema.safeParseAsync(payload)
+
+		if (value.success) {
+			return {
+				status: 'success',
+				payload,
+				value: value.data,
+				reply: () => ({
+					status: 'success',
+					initialValue: payload,
+					value: value.data,
+				}),
+			} satisfies Submission<ZodSchema>
+		} else {
+			return {
+				status: 'error',
+				payload,
+				error: value.error.errors.reduce(
+					(result, e) => {
+						result[String(e.path)] = [e.message]
+						return result
+					},
+					{} as Record<string, Array<string>>,
+				),
+				reply: () => ({
+					status: 'error',
+					initialValue: payload,
+					error: value.error.errors.reduce(
+						(result, e) => {
+							result[String(e.path)] = [e.message]
+							return result
+						},
+						{} as Record<string, Array<string>>,
+					),
+				}),
+			} as Submission<ZodSchema>
+		}
+	}
+
+	const formData = await request.formData()
+	return parseWithZod(formData, { schema })
+}
+```
+
+## Parse JSON and FormData fetchers
+
+Remix uses fetchers to handle the request/response lifecycle, so while your form is submitting, you can read every pending request in your app with `useFetchers()`.
+
+The fetchers have either a `fetcher.json` or `fetcher.formData` property that contains the request body, so if you want to be able to freely send either of them, you can make another helper function to parse the fetcher body.
+
+```ts
+import { z } from "zod"
+import type { useFetchers } from "@remix-run/react"
+import { parseWithZod } from "@conform-to/zod"
+
+export function parseFetcher<ZodSchema>(
+  fetcher: ReturnType<typeof useFetchers>[number],
+  { schema }: { schema: z.Schema<ZodSchema> },
+) {
+  if (fetcher.json) {
+    const submission = schema.safeParse(fetcher.json)
+
+    if (submission.success) {
+      return {
+        status: "success",
+        value: submission.data,
+      }
+    } else {
+      return {
+        status: "error",
+        error: submission.error.errors.reduce(
+          (result, error) => {
+            result[String(error.path)] = [error.message]
+            return result
+          },
+          {} as Record<string, Array<string>>,
+        ),
+      }
+    }
+  }
+
+  if (fetcher.formData) {
+    const submission = parseWithZod(fetcher.formData, {
+      schema,
+    })
+
+    if (submission.status === "success") {
+      return {
+        status: "success",
+        value: submission.value,
+      }
+    } else {
+      return {
+        status: "error",
+        error: submission.error,
+      }
+    }
+  }
+
+  throw new Error("Couldn't parse fetcher")
+}
+```
