@@ -1,8 +1,5 @@
 import { Feed } from "feed"
-import {
-  getContentListData,
-  getBlogList,
-} from "./_layout.content._index.route.tsx"
+import { getContentListData, getBlogList } from "./get-content-list.ts"
 
 const baseUrl = "https://www.jacobparis.com"
 
