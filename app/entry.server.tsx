@@ -7,8 +7,13 @@ import { PassThrough } from "stream"
 import redirects from "./redirects.server.ts"
 import "./refresh.ignored"
 import { getSitemapXml } from "./sitemap.server.ts"
-
+import { server } from "#/mocks/index.ts"
 const ABORT_DELAY = 10 * 60 * 1000
+
+if (process.env.NODE_ENV === "development") {
+  server.listen({ onUnhandledRequest: "warn" })
+  console.info("MSW initialised")
+}
 
 export default async function handleRequest(
   request: Request,
