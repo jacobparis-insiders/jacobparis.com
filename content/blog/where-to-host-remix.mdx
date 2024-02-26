@@ -40,14 +40,14 @@ Because of the ephemeral nature of these functions, the first request to a funct
 All of these platforms also support static hosting, such as with Remix SPA mode.
 
 |                         | Vercel              | Fastly   | Netlify       | Cloudflare    | SST                   |
-| ----------------------- | ------------------- | -------- | ------------- | ------------- | --------------------- | --- |
+| ----------------------- | ------------------- | -------- | ------------- | ------------- | --------------------- |
 | **Runtime**             | Node/V8 (per route) | WASM     | Node/V8       | V8            | Node                  |
 | **Remix Vite**          | No                  | Yes      | Yes           | Yes           | No                    |
 | **Git-based deploys**   | Yes                 | No       | Yes           | Yes           | with Seed             |
 | **Deploy previews**     | Yes                 | No       | Yes           | Yes           | with Seed             |
 | **Websockets**          | No                  | Yes      | No            | Yes           | Yes                   |
 | **Bundle size**         | 50MB                | 100MB    | 50MB          | 25MB          | 50MB                  |
-| **Request body size**   | 4.5MB               | No limit | 3MB (edge ♾️) | 100MB         | 6MB                   |     |
+| **Request body size**   | 4.5MB               | No limit | 3MB (edge ♾️) | 100MB         | 6MB                   |
 | **Image CDN**           | Yes                 | Yes      | Yes           | Yes           | Yes                   |
 | **Colocated databases** | Postgres, KV, Blob  | KV       | Blob          | SQL, KV, Blob | Everything AWS offers |
 | **SPA Mode**            | Yes                 | Yes      | Yes           | Yes           | Yes                   |
