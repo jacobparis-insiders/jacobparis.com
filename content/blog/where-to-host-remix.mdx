@@ -42,9 +42,9 @@ Because of the ephemeral nature of these functions, the first request to a funct
 | **Deploy previews**     | Yes                 | No       | Yes     | Yes           | with Seed             |
 | **Websockets**          | No                  | Yes      | No      | Yes           | Yes                   |
 | **Bundle size**         | 50MB                | 100MB    | 50MB    | 25MB          | 50MB                  |
-| **Request body size**   | 4.5MB               | No limit | 3MB     | 100MB         | 6MB                   |
-| **Server-sent events**  | No                  | Yes      | No      | Yes           | Yes                   |
-| **Colocated databases** | Postgres, KV, Blob  | KV       | No      | SQL, KV, Blob | Everything AWS offers |
+| **Request body size**   | 4.5MB               | No limit | 3MB (edge ♾️)      | 100MB         | 6MB                   |
+| **Server-sent events**  | No                  | Yes      | Yes      | Yes           | Yes                   |
+| **Colocated databases** | Postgres, KV, Blob  | KV       | Blob      | SQL, KV, Blob | Everything AWS offers |
 
 - [Issue for Vercel Vite support](https://github.com/vercel/vercel/pull/11031)
 - [Issue for SST Vite support](https://github.com/sst/sst/pull/3650)
@@ -105,15 +105,12 @@ With built-in git-based deployments, every time you push to your git repo, Netli
 
 Netlify supports both Node (Netlify functions) and V8 (Netlify Edge Functions) runtimes as separate targets, so your entire app will run on one or the other.
 
+On node, you can [choose which region your functions are deployed to](https://www.netlify.com/blog/netlify-functions-region-selection/), but you can’t deploy to multiple regions at once. Edge functions are always multi-region.
+
 Netlify supports powerful fine-grained cache control in a few ways
 
 - [`Cache-Tag` headers](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) which can be used to invalidate specific pages or assets
 - [`Netlify-Vary` header](https://www.netlify.com/blog/netlify-cache-key-variations/), which can vary cache policies on specific headers, like device type, or specific cookie values, like user sessions or A/B tests.
-
-You can [choose which region your functions are deployed to](https://www.netlify.com/blog/netlify-functions-region-selection/), but you can't deploy to multiple regions at once.
-
-- The maximum request body size with Netlify is 3MB, which can be problematic for direct file uploads.
-- Does not support websockets
 
 ## Cloudflare
 
