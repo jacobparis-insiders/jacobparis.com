@@ -22,6 +22,9 @@ Remix supports many different hosting options. This guide will help you choose t
   - [Render](#render)
   - [Railway](#railway)
   - [DigitalOcean](#digitalocean-app-platform)
+- Other hosts
+  - [GitHub Pages](#github-pages)
+  - [PartyKit](#partykit)
 
 ## Serverless Functions
 
@@ -34,17 +37,20 @@ Serverless functions are a form of managed hosting where application code is sta
 
 Because of the ephemeral nature of these functions, the first request to a function may cause a `cold-start` and take several seconds to respond.
 
-|                         | Vercel              | Fastly   | Netlify | Cloudflare    | SST                   |
-| ----------------------- | ------------------- | -------- | ------- | ------------- | --------------------- |
-| **Runtime**             | Node/V8 (per route) | WASM     | Node/V8 | V8            | Node                  |
-| **Remix Vite**          | No                  | Yes      | Yes     | Yes           | No                    |
-| **Git-based deploys**   | Yes                 | No       | Yes     | Yes           | with Seed             |
-| **Deploy previews**     | Yes                 | No       | Yes     | Yes           | with Seed             |
-| **Websockets**          | No                  | Yes      | No      | Yes           | Yes                   |
-| **Bundle size**         | 50MB                | 100MB    | 50MB    | 25MB          | 50MB                  |
-| **Request body size**   | 4.5MB               | No limit | 3MB (edge ♾️)      | 100MB         | 6MB                   |
-| **Server-sent events**  | No                  | Yes      | Yes      | Yes           | Yes                   |
-| **Colocated databases** | Postgres, KV, Blob  | KV       | Blob      | SQL, KV, Blob | Everything AWS offers |
+All of these platforms also support static hosting, such as with Remix SPA mode.
+
+|                         | Vercel              | Fastly   | Netlify       | Cloudflare    | SST                   |
+| ----------------------- | ------------------- | -------- | ------------- | ------------- | --------------------- | --- |
+| **Runtime**             | Node/V8 (per route) | WASM     | Node/V8       | V8            | Node                  |
+| **Remix Vite**          | No                  | Yes      | Yes           | Yes           | No                    |
+| **Git-based deploys**   | Yes                 | No       | Yes           | Yes           | with Seed             |
+| **Deploy previews**     | Yes                 | No       | Yes           | Yes           | with Seed             |
+| **Websockets**          | No                  | Yes      | No            | Yes           | Yes                   |
+| **Bundle size**         | 50MB                | 100MB    | 50MB          | 25MB          | 50MB                  |
+| **Request body size**   | 4.5MB               | No limit | 3MB (edge ♾️) | 100MB         | 6MB                   |     |
+| **Image CDN**           | Yes                 | Yes      | Yes           | Yes           | Yes                   |
+| **Colocated databases** | Postgres, KV, Blob  | KV       | Blob          | SQL, KV, Blob | Everything AWS offers |
+| **SPA Mode**            | Yes                 | Yes      | Yes           | Yes           | Yes                   |
 
 - [Issue for Vercel Vite support](https://github.com/vercel/vercel/pull/11031)
 - [Issue for SST Vite support](https://github.com/sst/sst/pull/3650)
@@ -69,7 +75,7 @@ A more traditonal approach to application hosting is to run your application on 
 
 ## Vercel
 
-Vercel is a serverless hosting platform for web apps.
+[Vercel](https://vercel.com/home) is a serverless hosting platform for web apps.
 
 They support git-based deployments, and deploy previews for every branch and pull request, as well as some fancy collaboration tools built on top.
 
@@ -81,9 +87,11 @@ As Vercel splits each endpoint into its own function, the 50MB limit for each fu
 - Full cache-control support, including `stale-while-revalidate` and `stale-if-error`, as well as the `s-maxage` property.<SideNote> The `s-maxage` property controls the CDN cache, while the `max-age` property controls the client's browser cache. </SideNote>
 - The maximum request body size with Vercel is 4.5MB, which can be problematic for direct file uploads.
 
+Vercel supports several colocated databases, including [Vercel Postgres](https://vercel.com/storage/postgres), [Vercel KV](https://vercel.com/storage/kv), and [Vercel Blob](https://vercel.com/storage/blob).
+
 ## Fastly
 
-Fastly is a powerful CDN and hosting platform and the hosting provider of choice for the Remix + React Router docs.
+[Fastly](https://www.fastly.com/) is a powerful CDN and hosting platform and the hosting provider of choice for the Remix + React Router docs.
 
 Fastly supports Remix with their [Compute@Edge](https://developer.fastly.com/learning/compute/frameworks#remix) platform. This is a serverless platform that runs on the edge, compiling Typescript down to WebAssembly.<SideNote> Rather than V8, like most edge functions, or Node, like everything else. </SideNote>
 
@@ -97,9 +105,11 @@ Fastly has support for websockets, which is not common for serverless platforms.
 - Fastly supports a 100MB compiled bundle size limit, measured after compilation to WASM and after all compiler optimizations have been applied.
 - No git based deployments, but easy to deploy in GitHub Actions
 
+[Fastly supports colocated KV storage](https://www.fastly.com/blog/introducing-object-store-enabling-powerful-applications-at-the-edge) deployed alongside your app.
+
 ## Netlify
 
-Netlify is the original JAMStack hosting platform that has grown from a simple static site host to a full-featured serverless platform.
+[Netlify](https://www.netlify.com/) is the original JAMStack hosting platform that has grown from a simple static site host to a full-featured serverless platform.
 
 With built-in git-based deployments, every time you push to your git repo, Netlify will build and deploy your app. You can also use deploy previews to test your app before merging a pull request.
 
@@ -107,14 +117,18 @@ Netlify supports both Node (Netlify functions) and V8 (Netlify Edge Functions) r
 
 On node, you can [choose which region your functions are deployed to](https://www.netlify.com/blog/netlify-functions-region-selection/), but you can’t deploy to multiple regions at once. Edge functions are always multi-region.
 
+Edge functions also allow [server-sent events on Netlify](https://edge-functions-examples.netlify.app/example/server-sent-events)
+
 Netlify supports powerful fine-grained cache control in a few ways
 
 - [`Cache-Tag` headers](https://www.netlify.com/blog/cache-tags-and-purge-api-on-netlify/) which can be used to invalidate specific pages or assets
 - [`Netlify-Vary` header](https://www.netlify.com/blog/netlify-cache-key-variations/), which can vary cache policies on specific headers, like device type, or specific cookie values, like user sessions or A/B tests.
 
+They also support [Blob Storage](https://docs.netlify.com/blobs/overview/) for colocated file storage.
+
 ## Cloudflare
 
-Cloudflare Pages is a hosting service, like Netlify or Vercel, but built on Cloudflare's network. You get a git based deploy workflow and preview deployments for different branches.
+[Cloudflare Pages](https://pages.cloudflare.com/) is a hosting service, like Netlify or Vercel, but built on Cloudflare's network. You get a git based deploy workflow and preview deployments for different branches.
 
 Static content is hosted from Cloudflare's CDN and the rest of the Remix app is compiled into a single cloudflare worker on the edge.<SideNote> Vercel's edge functions are built on top of Cloudflare workers. </SideNote> which uses the V8 runtime, so they aren't compatible with many node modules.
 
@@ -129,7 +143,7 @@ Websockets also work on Cloudflare, which is not common for serverless platforms
 
 ## SST
 
-SST is a framework for building serverless applications on AWS. It's built on top of AWS CDK, which is a framework for building cloud infrastructure.
+[SST](https://sst.dev/) is a framework for building serverless applications on AWS. It's built on top of AWS CDK, which is a framework for building cloud infrastructure.
 
 They support Remix via the [RemixSite construct](https://docs.sst.dev/constructs/RemixSite) which will deploy your app to AWS Lambda or AWS Lambda@Edge<SideNote> Not to be confused with edge functions, these are regular node lambda functions that will proxy between AWS regions, so users connect to the closest AWS region instead of just the one you're deployed to. </SideNote> and using Cloudfront as a CDN.
 
@@ -138,7 +152,7 @@ They support Remix via the [RemixSite construct](https://docs.sst.dev/constructs
 
 ## Fly.io
 
-Fly.io is a managed container platform that runs on the edge.<SideNote> Not serverless functions, but serverless virtual machines. </SideNote>
+[Fly.io](https://fly.io/) is a managed container platform that runs on the edge.<SideNote> Not serverless functions, but serverless virtual machines. </SideNote>
 
 One of Fly's biggest advantages is its multi-region support. You can deploy your app to any of Fly's 20+ regions, and Fly will automatically replicate your app to every region you deploy to. This means that your app will be closer to your users, and will be more resilient to outages.
 
@@ -157,7 +171,7 @@ Fly offers a CDN for serving static assets, but does not offer APIs to programma
 
 ## Render
 
-Render is a managed hosting platform that supports Remix without needing Docker, though you still have the ability to package your app as a Docker image if you have special dependencies you want to install.
+[Render](https://render.com/) is a managed hosting platform that supports Remix without needing Docker, though you still have the ability to package your app as a Docker image if you have special dependencies you want to install.
 
 Render supports git based deployments, so you just need to push code to your git repo and Render will deploy it. They also support preview environments for their Team plans.
 
@@ -169,7 +183,7 @@ Their built in databases are Postgres and Redis, though nothing stops you from s
 
 ## Railway
 
-Railway is a managed container hosting platform. If you don't supply your own Dockerfile, Railway will let you deploy without it.
+[Railway](https://railway.app/) is a managed container hosting platform. If you don't supply your own Dockerfile, Railway will let you deploy without it.
 
 Railway supports git based deployments, so you just need to push code to your git repo and Railway will deploy it. They also support preview environments for their Team plans.
 
@@ -180,10 +194,22 @@ For databases, Railway has built-in support for Postgres, MySQL, Redis, and Mong
 
 ## DigitalOcean App Platform
 
-DigitalOcean App Platform is a managed container hosting platform. If you don't supply your own Dockerfile, DigitalOcean will let you deploy without it.
+[DigitalOcean App Platform](https://www.digitalocean.com/products/app-platform) is a managed container hosting platform. If you don't supply your own Dockerfile, DigitalOcean will let you deploy without it.
 
 DigitalOcean supports git-based deployments and also offers a Github action for more advanced deployment workflows.
 
 Postgres, MySQL, Redis, and MongoDB databases can be deployed from the DigitalOcean web console alongside your application.
 
 - No automatic preview environments or built-in staging environments
+
+## GitHub Pages
+
+[Remix v2.5 introduces SPA mode](https://remix.run/docs/en/main/future/spa-mode), which allows you to export your app as a static bundle of HTML, CSS, and JS files.<SideNote>These can be hosted on any of the serverless platforms, which is usually preferable because you get all the other benefits like preview environments, and the ability to easily upgrade to a server if you need it.</SideNote>
+
+[GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/creating-a-github-pages-site) is an official GitHub feature that allows you to set up a public website for your GitHub repository.
+
+You can either build your site locally and commit the bundle with the static assets you want to host, or you can use a GitHub action to build your app and push the static assets to the `gh-pages` branch.
+
+## PartyKit
+
+[PartyKit](https://www.partykit.io/) is a framework for building collaborative apps on Cloudflare infrastructure. [PartyKit's Remix starter](https://docs.partykit.io/examples/starter-kits/remix-starter/) uses a custom server that allows your Remix app and your websocket server to be deployed to Cloudflare together.
