@@ -1,0 +1,213 @@
+---
+title: Add Drizzle ORM to Remix Vite with Cloudflare D1
+description: Drizzle is a typescript ORM for type-safe database access and automatic migrations. Add it to your Remix app to get started with Cloudflare D1.
+tags: Remix
+timestamp: "2024-02-29"
+published: true
+---
+
+[Drizzle](https://orm.drizzle.team/) <SideNote> Not to be confused with Drizzle the discontinued MySQL database management system </SideNote> is a typescript ORM for interacting with relational databases. It gives you type-safe reads and writes, plus automatic migration handling.
+
+Drizzle works with many different databases, and can be configured to work with [Cloudflare's distributed SQLite database, D1](https://developers.cloudflare.com/d1/).
+
+In this guide, we'll implement this [example of Drizzle and D1 to a Remix Vite app running on Cloudflare](https://github.com/jacobparis/remix-cloudflare-drizzle).
+
+Start with the remix cloudflare vite template:
+
+```bash
+npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+```
+
+In addition to Drizzle, we will also need to install [Drizzle Kit](https://www.npmjs.com/package/drizzle-kit), which is a CLI migration tool, and any SQLite driver, such as [better-sqlite3](https://www.npmjs.com/package/better-sqlite3).
+
+```bash
+npm i drizzle
+npm i --save-dev drizzle-kit
+```
+
+## Write your schema
+
+The schema is where you define your tables and columns. Drizzle uses typescript to infer types from your schema, so you get type-safe reads and writes.
+
+Create a new file `app/drizzle/schema.server.ts` and write a basic schema to get started.<SideNote> You can read more about the schema syntax in the [Drizzle docs](https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/sqlite-core/README.md)</SideNote>
+
+```ts
+import {
+  sqliteTable,
+  text,
+  integer,
+} from "drizzle-orm/sqlite-core"
+
+export const resources = sqliteTable("resources", {
+  id: integer("id").primaryKey(),
+  title: text("title").notNull(),
+  href: text("href").notNull(),
+})
+```
+
+To power typescript's type inference and autocomplete, we need to generate types based on our schema. That's what the `drizzle-kit` CLI tool was for.
+
+Go to your `package.json`, add a `db:migrations` script to run the migrations:
+
+```json
+{
+  "scripts": {
+    "drizzle:update": "drizzle-kit generate:sqlite --out ./app/drizzle/migrations --schema ./app/drizzle/schema.server.ts"
+  }
+}
+```
+
+Run `npm run drizzle:update` and you should see a migrations directory in your `app/drizzle` folder. This will be committed to your repo.
+
+## Set up a D1 database
+
+If you haven't already, you'll need to set up a D1 databases.
+
+Create a new database named "db""
+
+```sh
+npx wrangler d1 create db
+```
+
+Paste the command output in `wrangler.toml`:
+
+```toml
+[[d1_databases]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "db"
+database_id = "ccccccvktlfkrjvvrngbckuvtrrkugtu"
+# Also add this field
+migrations_dir="./app/drizzle/migrations"
+```
+
+Adding the migration field tells Cloudflare to use the Drizzle migrations when setting up the database.
+
+We need to tell typescript that this database exists, so run the following command to generate an interface in `worker.configuration.d.ts`
+
+```sh
+npx wrangler types
+```
+
+which will look something like this:
+
+```ts
+interface Env {
+  DB: D1Database
+}
+```
+
+The remix-cloudflare-vite template currently comes with a load-context.ts file that has an empty Env interface. You'll need to delete this to get the generated one to work.
+
+```diff
+- interface Env {}
+```
+
+## Read and write documents
+
+Drizzle should be fully set up now. Let's try it out!
+
+In one of your routes
+
+- add an action that inserts a new item into the database
+- add a loader that reads all the items from the database and returns them as JSON
+- add a form that submits to the action
+
+You can access the handle to the database from `context.cloudflare.env.DB` in your action and loader functions.
+
+```tsx
+// http://localhost:5173/
+
+import {
+  json,
+  type MetaFunction,
+} from "@remix-run/cloudflare"
+import type {
+  LoaderFunctionArgs,
+  ActionFunctionArgs,
+} from "@remix-run/node"
+import { Form, useLoaderData } from "@remix-run/react"
+import { drizzle } from "drizzle-orm/d1"
+import { resources } from "~/drizzle/schema.server"
+
+export async function action({
+  request,
+  context,
+}: ActionFunctionArgs) {
+  const formData = await request.formData()
+
+  const title = formData.get("title") as string
+  const href = formData.get("href") as string
+
+  const db = drizzle(context.cloudflare.env.DB)
+  await db
+    .insert(resources)
+    .values({ title, href })
+    .execute()
+
+  return json(
+    { message: "Resource added" },
+    { status: 201 },
+  )
+}
+
+export async function loader({
+  context,
+}: LoaderFunctionArgs) {
+  const db = drizzle(context.cloudflare.env.DB)
+
+  const resourceList = await db
+    .select({
+      id: resources.id,
+      title: resources.title,
+      href: resources.href,
+    })
+    .from(resources)
+    .orderBy(resources.id)
+
+  return json({
+    resourceList,
+  })
+}
+
+export default function Index() {
+  const { resourceList } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      <h1>
+        Welcome to Remix (with Drizzle, Vite and Cloudflare
+        D1)
+      </h1>
+
+      <ul>
+        {resourceList.map((resource) => (
+          <li key={resource.id}>
+            <a
+              target="_blank"
+              href={resource.href}
+              rel="noreferrer"
+            >
+              {resource.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+
+      <Form method="POST">
+        <div>
+          <label>
+            Title:{" "}
+            <input type="text" name="title" required />
+          </label>
+        </div>
+        <div>
+          <label>
+            URL: <input type="url" name="href" required />
+          </label>
+        </div>
+        <button type="submit">Add Resource</button>
+      </Form>
+    </div>
+  )
+}
+```
