@@ -9,7 +9,7 @@ timestamp: "2023-10-31"
 
 Remix supports many different hosting options. This guide will help you choose the right one for your app.
 
-> Last updated on Feb 25 2024. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it.
+> Last updated on Mar 02 2024. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it, or [submit a PR to the article](https://github.com/jacobparis-insiders/jacobparis.com/blob/main/content/blog/where-to-host-remix.mdx). Links to data sources are appreciated.
 
 - [Serverless functions](#serverless-functions)
   - [Vercel](#vercel)
@@ -42,7 +42,7 @@ All of these platforms also support static hosting, such as with Remix SPA mode.
 |                         | Vercel              | Fastly   | Netlify       | Cloudflare    | SST                   |
 | ----------------------- | ------------------- | -------- | ------------- | ------------- | --------------------- |
 | **Runtime**             | Node/V8 (per route) | WASM     | Node/V8       | V8            | Node                  |
-| **Remix Vite**          | No                  | Yes      | Yes           | Yes           | No                    |
+| **Remix Vite**          | Yes                 | Yes      | Yes           | Yes           | No                    |
 | **Git-based deploys**   | Yes                 | No       | Yes           | Yes           | with Seed             |
 | **Deploy previews**     | Yes                 | No       | Yes           | Yes           | with Seed             |
 | **Websockets**          | No                  | Yes      | No            | Yes           | Yes                   |
@@ -52,7 +52,6 @@ All of these platforms also support static hosting, such as with Remix SPA mode.
 | **Colocated databases** | Postgres, KV, Blob  | KV       | Blob          | SQL, KV, Blob | Everything AWS offers |
 | **SPA Mode**            | Yes                 | Yes      | Yes           | Yes           | Yes                   |
 
-- [Issue for Vercel Vite support](https://github.com/vercel/vercel/pull/11031)
 - [Issue for SST Vite support](https://github.com/sst/sst/pull/3650)
 
 ## Long-lived servers
