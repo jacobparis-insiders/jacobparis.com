@@ -21,7 +21,7 @@ npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
 In addition to Drizzle, we will also need to install [Drizzle Kit](https://www.npmjs.com/package/drizzle-kit), which is a CLI migration tool, and any SQLite driver, such as [better-sqlite3](https://www.npmjs.com/package/better-sqlite3).
 
 ```bash
-npm i drizzle
+npm i drizzle-orm
 npm i --save-dev drizzle-kit
 ```
 
@@ -127,7 +127,7 @@ import type {
 } from "@remix-run/node"
 import { Form, useLoaderData } from "@remix-run/react"
 import { drizzle } from "drizzle-orm/d1"
-import { resources } from "~/drizzle/schema.server"
+import { resources } from "#app/drizzle/schema.server"
 
 export async function action({
   request,

@@ -2,20 +2,18 @@
 title: Add Drizzle ORM to Remix with SQLite and Fly.io
 description: Drizzle is a typescript ORM for type-safe database access and automatic migrations. Add it to your Remix app to get started with SQLite.
 tags: Remix
-timestamp: "2023-06-08"
+timestamp: "2024-03-12"
 published: true
 ---
 
 [Drizzle](https://orm.drizzle.team/) <SideNote> Not to be confused with Drizzle the discontinued MySQL database management system </SideNote> is a typescript ORM for interacting with relational databases. It gives you type-safe reads and writes, plus automatic migration handling.
-
-In the Remix ecosystem, Prisma is the the most popular way to interact with databases, but Drizzle is a fun new alternative.
 
 In this guide we'll add Drizzle to a Remix app and set it up to use SQLite.
 
 In addition to Drizzle, we will also need to install [Drizzle Kit](https://www.npmjs.com/package/drizzle-kit), which is a CLI migration tool, and any SQLite driver, such as [better-sqlite3](https://www.npmjs.com/package/better-sqlite3).
 
 ```bash
-npm i drizzle better-sqlite3
+npm i drizzle-orm better-sqlite3
 npm i --save-dev drizzle-kit @types/better-sqlite3
 ```
 
@@ -49,7 +47,7 @@ void migrate(db, {
 There are two main things happening here:
 
 - We're exporting a `db` instance of Drizzle, which will be the primary way we use this across our app
-- When this file loads (on server startup), we're running any pending migrations.
+- When this file loads (on server startup), we're [running any pending migrations](https://orm.drizzle.team/kit-docs/overview#running-migrations).
 
 ## Environment variables
 
@@ -69,6 +67,7 @@ The schema is where you define your tables and columns.
 Create a new file `app/drizzle/schema.server.ts` and write a basic schema to get started.<SideNote> You can read more about the schema syntax in the [Drizzle docs](https://github.com/drizzle-team/drizzle-orm/blob/main/drizzle-orm/src/sqlite-core/README.md)</SideNote>
 
 ```ts
+import { sql } from "drizzle-orm"
 import {
   sqliteTable,
   text,
@@ -81,10 +80,10 @@ export const items = sqliteTable("items", {
   description: text("description"),
   createdAt: text("createdAt")
     .notNull()
-    .default(`datetime("now")`),
+    .default(sql`CURRENT_TIMESTAMP`),
   updatedAt: text("updatedAt")
     .notNull()
-    .default(`datetime("now")`),
+    .default(sql`CURRENT_TIMESTAMP`),
 })
 ```
 
@@ -113,8 +112,9 @@ In one of your routes
 - add a form that submits to the action
 
 ```tsx
-import { db } from "~/drizzle/config.server.ts"
-import { items } from "~/drizzle/schema.server.ts"
+import { db } from "#app/drizzle/config.server.ts"
+import { items } from "#app/drizzle/schema.server.ts"
+import { json, Form } from "@remix-run/react"
 
 export async function action({
   request,
