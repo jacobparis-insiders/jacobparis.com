@@ -152,7 +152,6 @@ Websockets also work on Cloudflare, which is not common for serverless platforms
 
 They support Remix via the [RemixSite construct](https://docs.sst.dev/constructs/RemixSite) which will deploy your app to AWS Lambda or AWS Lambda@Edge<SideNote> Not to be confused with edge functions, these are regular node lambda functions that will proxy between AWS regions, so users connect to the closest AWS region instead of just the one you're deployed to. </SideNote> and using Cloudfront as a CDN.
 
-- Currently does NOT support streaming, which means Remix Defer won't work, because of [a bug in AWS Lambda that causes the responses to be buffered before being sent to the client](https://twitter.com/thdxr/status/1772351862521430474?s=20).
 - Git based deploys are not included, but you can easily set up your own with a Github Action or by using [Seed, the deployment infrastucture tool](https://seed.run/docs/adding-a-cdk-app) that is built by the SST team.
 - Preview and staging environments are created via the SST CLI, which you can do in a Github Action.
 
