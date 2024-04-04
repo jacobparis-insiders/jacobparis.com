@@ -9,7 +9,7 @@ timestamp: "2023-10-31"
 
 Remix supports many different hosting options. This guide will help you choose the right one for your app.
 
-> Last updated on Mar 02 2024. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it, or [submit a PR to the article](https://github.com/jacobparis-insiders/jacobparis.com/blob/main/content/blog/where-to-host-remix.mdx). Links to data sources are appreciated.
+> Last updated on Apr 04 2024. Is any of this out of date? Please [yell at me on Twitter](https://twitter.com/jacobmparis) and I will fix it, or [submit a PR to the article](https://github.com/jacobparis-insiders/jacobparis.com/blob/main/content/blog/where-to-host-remix.mdx). Links to data sources are appreciated.
 
 - [Serverless functions](#serverless-functions)
   - [Vercel](#vercel)
@@ -25,6 +25,14 @@ Remix supports many different hosting options. This guide will help you choose t
 - Other hosts
   - [GitHub Pages](#github-pages)
   - [PartyKit](#partykit)
+
+## Recommendations
+
+This guide is not meant to sway you toward any one provider, just to give you the information you need to make an informed decision.
+
+That said, I do believe that the best architecture for most people is to run Remix in a managed container on a long-lived server, using the backend-for-frontend pattern within the app, and occasionally calling serverless functions for workloads that demand it.
+
+You should highly prefer keeping your app server and database as close to each other as possible. This might be the single most important performance factor. Hosting your app on Vercel and having each loader and action call an API server hosted somewhere else is going to throttle your app's performance punitively.
 
 ## Serverless Functions
 
@@ -140,10 +148,11 @@ Websockets also work on Cloudflare, which is not common for serverless platforms
 
 ## SST
 
-[SST](https://sst.dev/) is a framework for building serverless applications on AWS. It's built on top of AWS CDK, which is a framework for building cloud infrastructure.
+[SST](https://sst.dev/) is an infrastructure-as-code framework for building serverless applications on AWS.
 
 They support Remix via the [RemixSite construct](https://docs.sst.dev/constructs/RemixSite) which will deploy your app to AWS Lambda or AWS Lambda@Edge<SideNote> Not to be confused with edge functions, these are regular node lambda functions that will proxy between AWS regions, so users connect to the closest AWS region instead of just the one you're deployed to. </SideNote> and using Cloudfront as a CDN.
 
+- Currently does NOT support streaming, which means Remix Defer won't work, because of [a bug in AWS Lambda that causes the responses to be buffered before being sent to the client](https://twitter.com/thdxr/status/1772351862521430474?s=20).
 - Git based deploys are not included, but you can easily set up your own with a Github Action or by using [Seed, the deployment infrastucture tool](https://seed.run/docs/adding-a-cdk-app) that is built by the SST team.
 - Preview and staging environments are created via the SST CLI, which you can do in a Github Action.
 
@@ -207,6 +216,9 @@ Postgres, MySQL, Redis, and MongoDB databases can be deployed from the DigitalOc
 
 You can either build your site locally and commit the bundle with the static assets you want to host, or you can use a GitHub action to build your app and push the static assets to the `gh-pages` branch.
 
-## PartyKit
+## Other hosts
 
-[PartyKit](https://www.partykit.io/) is a framework for building collaborative apps on Cloudflare infrastructure. [PartyKit's Remix starter](https://docs.partykit.io/examples/starter-kits/remix-starter/) uses a custom server that allows your Remix app and your websocket server to be deployed to Cloudflare together.
+- [PartyKit](https://www.partykit.io/) is a framework for building collaborative apps on Cloudflare infrastructure. [PartyKit's Remix starter](https://docs.partykit.io/examples/starter-kits/remix-starter/) uses a custom server that allows your Remix app and your websocket server to be deployed to Cloudflare together.
+- [AWS Fargate](https://aws.amazon.com/fargate/) is a managed container platform that allows you to run your app in a container on AWS. This is the equivalent to Fly/Render/Railway but running directly in AWS.
+- [Arc](https://arc.codes/docs/en/get-started/quickstart) is a serverless framework that allows you to deploy your app to AWS Lambda.
+- [Remix Adapter for Azure Functions](https://github.com/scandinavianairlines/remix-azure-functions)
