@@ -157,55 +157,63 @@ Remix uses fetchers to handle the request/response lifecycle, so while your form
 
 The fetchers have either a `fetcher.json` or `fetcher.formData` property that contains the request body, so if you want to be able to freely send either of them, you can make another helper function to parse the fetcher body.
 
+You can use this hook to get all the fetchers that match a particular zod schema
+
+```ts
+const CreateItemSchema = z.object({
+  intent: z.literal("create"),
+  id: z.number(),
+  title: z.string(),
+})
+
+const EditItemSchema = z.object({
+  intent: z.literal("edit"),
+  id: z.number(),
+  changeset: z.object({
+    title: z.string().optional(),
+  }),
+})
+
+const pendingIssues = useFetchersBySchema({
+  schema: CreateItemSchema,
+})
+const editedIssues = useFetchersBySchema({
+  schema: EditItemSchema,
+})
+```
+
 ```ts
 import { z } from "zod"
 import type { useFetchers } from "@remix-run/react"
 import { parseWithZod } from "@conform-to/zod"
 
-export function parseFetcher<ZodSchema>(
-  fetcher: ReturnType<typeof useFetchers>[number],
-  { schema }: { schema: z.Schema<ZodSchema> },
-) {
-  if (fetcher.json) {
-    const submission = schema.safeParse(fetcher.json)
+function useFetchersBySchema<T>({
+  schema,
+}: {
+  schema: z.ZodType<T>
+}) {
+  const fetchers = useFetchers()
 
-    if (submission.success) {
-      return {
-        status: "success",
-        value: submission.data,
+  return fetchers
+    .map((fetcher) => {
+      if (fetcher.json) {
+        const submission = schema.safeParse(fetcher.json)
+        if (submission.success) {
+          return submission.data
+        }
       }
-    } else {
-      return {
-        status: "error",
-        error: submission.error.errors.reduce(
-          (result, error) => {
-            result[String(error.path)] = [error.message]
-            return result
-          },
-          {} as Record<string, Array<string>>,
-        ),
-      }
-    }
-  }
 
-  if (fetcher.formData) {
-    const submission = parseWithZod(fetcher.formData, {
-      schema,
+      if (fetcher.formData) {
+        const submission = parseWithZod(fetcher.formData, {
+          schema,
+        })
+        if (submission.status === "success") {
+          return submission.value
+        }
+      }
+
+      return null
     })
-
-    if (submission.status === "success") {
-      return {
-        status: "success",
-        value: submission.value,
-      }
-    } else {
-      return {
-        status: "error",
-        error: submission.error,
-      }
-    }
-  }
-
-  throw new Error("Couldn't parse fetcher")
+    .filter(Boolean) as Array<T>
 }
 ```
