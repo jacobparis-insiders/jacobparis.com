@@ -1,0 +1,53 @@
+---
+title: Set up PostgreSQL on Fly
+description: Fly is a managed container platform with first class support for Postgres databases. Create a database. Allocate an IP address. Get a connection string.
+tags: Remix
+timestamp: "2024-04-19"
+published: true
+---
+
+[Fly](https://fly.io) is a managed container platform with first class support for Postgres databases.
+
+By the end of this article you'll have a deployed database and a connection string you can pass to your app.
+
+## Getting started
+
+Use the [Fly CLI](https://fly.io/docs/hands-on/install-flyctl/) to create a new postgres database.
+
+```bash
+fly postgres create
+```
+
+Choose whichever settings you want. When choosing a region, your top concern should be keeping your database as close as possible to your server.
+
+Fly will output a connection string, which you can use to connect to your database from other Fly apps. Note that it ends in `.flycast` – this will not be valid outside of Fly.
+
+Save the connection string to your app's `.env` file
+
+```bash
+DATABASE_URL="postgres://postgres:asdfasdfasdfasdf@app-name-1234.flycast:5432"
+```
+
+## Make it accessible outside of Fly
+
+If you want to access the database from outside of Fly, you'll need to allocate an IP address for it.
+
+```bash
+fly ips allocate-v6 --app app-name-1234
+```
+
+Then update your connection string to use the public `.fly.dev` domain instead of `.flycast`.
+
+```bash
+DATABASE_URL="postgres://postgres:asdfasdfasdfasdf@app-name-1234.fly.dev:5432"
+```
+
+## Connect to your database
+
+You should now be able to connect to the database using the connection string. If you have [psql](https://stackoverflow.com/questions/44654216/correct-way-to-install-psql-without-full-postgres-on-macos) installed, you can run the following command:
+
+```bash
+psql "postgres://postgres:asdfasdfasdfasdf@app-name-1234.fly.dev:5432"
+```
+
+If you enter a new terminal session inside the database, then you've connected successfully and your database is ready to use.
