@@ -1,0 +1,139 @@
+---
+title: Deploy a new Remix app to Cloudflare Pages
+description: Cloudflare doesn't use Node.js. Use wrangler as your dev server. Use .dev.vars instead of .env. Make sure you set up wrangler.toml correctly.
+tags: Remix
+timestamp: "2024-04-18"
+img: content/cloudflare-remix/cover.png
+published: true
+---
+
+Pages is a hosting service, like Netlify or Vercel, but built on Cloudflare's network. You get a git based deploy workflow and preview deployments for different branches.
+
+Your app code is compiled into a Cloudflare Worker, which runs your app on [workerd](https://github.com/cloudflare/workerd), which is a distinct runtime that is not the same as Node.js.
+
+When choosing to deploy your Remix app on Cloudflare, you are choosing to give up the ubiquity of the Node ecosystem and the flexibility of long running servers. In exchange, you get incredibly fast servers deployed to a worldwide mesh network.
+
+## Getting started
+
+The easiest way to get started is to use Remix's official Cloudflare Pages template.
+
+```bash
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
+```
+
+You can deploy either via the command line `npm run deploy` or through your Cloudflare dashboard by linking it to your project's repository.
+
+## Use wrangler as a dev server
+
+If you plan on making use of any of Cloudflare's infrastructure, such as Durable Objects or their D1 database, you'll need to use [wrangler](https://github.com/cloudflare/workers-sdk/blob/main/packages/wrangler/README.md) as a dev server instead of the default Remix one.
+
+Some libraries, such as [postgres](https://www.npmjs.com/package/postgres), will use Cloudflare internals when deployed and will also require you to use wrangler.
+
+If you don't use wrangler, you may get an error like the following:
+
+> Only URLs with a scheme in: file and data are supported by the default ESM loader. Received protocol 'cloudflare:'
+
+Update your package.json dev script to
+
+```json
+{
+  "scripts": {
+    "dev": "remix vite:build && wrangler pages dev ./build/client"
+  }
+}
+```
+
+If you aren't using such infrastructure and aren't getting any errors, then using the default `"dev": "remix vite:dev"` server is ok and probably a nicer experience.
+
+## Environment variables
+
+Instead of a `.env` file, Cloudflare requires you to set your local dev environment variables in a `.dev.vars` file, which is otherwise identical.
+
+If you need to read environment variables from that file, you can use the [dotenv](https://github.com/motdotla/dotenv) package.
+
+```ts
+import { configDotenv } from "dotenv"
+
+configDotenv({
+  path: ".dev.vars",
+})
+
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "Missing environment variable: DATABASE_URL",
+  )
+}
+```
+
+When you deploy, check your dashboard to make sure your environment variables are set in both production and preview environments.
+
+![dashboard](/content/remix-cloudflare-pages/2024-04-19-00-06-57.png)
+
+## Set up wrangler.toml
+
+The `wrangler.toml` file is where you configure your project. This was originally only for Cloudflare Workers projects, but now can also be used for Pages projects.
+
+Because of this history, if you don't have a `pages_build_output_dir` key, Pages will assume it's for a worker project and ignore it entirely.
+
+Unless you are certain you aren't going to need the Node.js compatibility APIs, add the flag as show below. This fixes errors like "no such module 'node:events', 'node:stream', 'node:url', etc"
+
+```toml
+# Cloudflare pages requires a top level name attribute
+name = "remix-cloudflare-drizzle-pg"
+
+# Cloudflare Pages will ignore wrangler.toml without this line
+pages_build_output_dir = "./build/client"
+
+# Fixes "no such module 'node:events'"
+compatibility_flags = [ "nodejs_compat" ]
+
+# Fixes "compatibility_flags cannot be specified without a compatibility_date"
+compatibility_date = "2024-04-18"
+```
+
+If you configure any of these and they don't seem to have an effect once deployed, read your build logs closely to see if it detects an issue. If it does, it will quietly move on and continue to deploy without taking into account the config file.
+
+Then go to `Workers & Pages` -> `Settings` -> `Functions` and make sure both your compatibility date and compatibility flags are set correctly in both preview and production environments.
+
+![dashboard](/content/remix-cloudflare-pages/2024-04-19-00-20-56.png)
+
+## Optional: Set up a D1 database
+
+[D1](https://developers.cloudflare.com/d1/) is Cloudflare's distributed SQLite database engine. I have a full guide on setting up [Remix with Drizzle and D1](/content/remix-drizzle-cloudflare) if you want to use Drizzle.
+
+Create a new database named "db""
+
+```sh
+npx wrangler d1 create db
+```
+
+Paste the command output in `wrangler.toml`:
+
+```toml
+[[d1_databases]]
+binding = "DB" # i.e. available in your Worker on env.DB
+database_name = "db"
+database_id = "ccccccvktlfkrjvvrngbckuvtrrkugtu"
+```
+
+We need to tell typescript that this database exists, so run the following command to generate an interface in `worker.configuration.d.ts`
+
+```sh
+npx wrangler types
+```
+
+which will look something like this:
+
+```ts
+interface Env {
+  DB: D1Database
+}
+```
+
+The remix-cloudflare template currently comes with a load-context.ts file that has an empty Env interface. You'll need to delete this to get the generated one to work.
+
+```diff
+- interface Env {}
+```
+
+You may need to restart the Typescript server to pick up the changes. In VS Code, open the command pallette with `CMD Shift P` and run `Typescript: Restart TS Server`.

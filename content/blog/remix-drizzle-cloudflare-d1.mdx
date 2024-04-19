@@ -15,7 +15,7 @@ In this guide, we'll implement this [example of Drizzle and D1 to a Remix Vite a
 Start with the remix cloudflare vite template:
 
 ```bash
-npx create-remix@latest --template remix-run/remix/templates/vite-cloudflare
+npx create-remix@latest --template remix-run/remix/templates/cloudflare
 ```
 
 In addition to Drizzle, we will also need to install [Drizzle Kit](https://www.npmjs.com/package/drizzle-kit), which is a CLI migration tool, and any SQLite driver, such as [better-sqlite3](https://www.npmjs.com/package/better-sqlite3).
@@ -24,6 +24,8 @@ In addition to Drizzle, we will also need to install [Drizzle Kit](https://www.n
 npm i drizzle-orm
 npm i --save-dev drizzle-kit
 ```
+
+You may also want to check out my [guide on deploying to Cloudflare Pages](/content/remix-cloudflare-pages) if you have any issues along the way.
 
 ## Write your schema
 
@@ -96,11 +98,13 @@ interface Env {
 }
 ```
 
-The remix-cloudflare-vite template currently comes with a load-context.ts file that has an empty Env interface. You'll need to delete this to get the generated one to work.
+The remix-cloudflare template currently comes with a load-context.ts file that has an empty Env interface. You'll need to delete this to get the generated one to work.
 
 ```diff
 - interface Env {}
 ```
+
+You may need to restart the Typescript server to pick up the changes. In VS Code, open the command pallette with `CMD Shift P` and run `Typescript: Restart TS Server`.
 
 ## Read and write documents
 

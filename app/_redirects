@@ -11,6 +11,10 @@ https://search.jacobparis.com   https://twitterproductivity.com/search-cheatshee
 /content/remix-hide-on-load /content/remix-progressive-client-only
 /content/remix-fade-clientonly /content/remix-progressive-client-only
 
+/content/cloudflare-remix /content/remix-cloudflare-pages
+/content/remix-drizzle /content/remix-drizzle-sqlite
+/content/remix-drizzle-cloudflare /content/remix-drizzle-cloudflare-d1
+
 /examples/react-form-validation /content/react-form-validation/example
 /examples/remix-dates-ssr /content/remix-dates-ssr/example
 /examples/remix-dynamic-form-inputs /content/remix-dynamic-form-inputs/example
