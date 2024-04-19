@@ -28,6 +28,4 @@ lease:
     key: "epic-stack-litefs/${FLY_APP_NAME}"
 
 exec:
-  - cmd: node ./other/setup-swap.js
-
   - cmd: npm start

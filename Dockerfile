@@ -67,7 +67,6 @@ COPY --from=build /myapp/build /myapp/build
 COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
 COPY --from=build /myapp/public /myapp/public
 COPY --from=build /myapp/package.json /myapp/package.json
-COPY --from=build /myapp/other/setup-swap.js /myapp/other/setup-swap.js
 COPY --from=build /myapp/server.ts /myapp/server.ts
 
 COPY --from=flyio/litefs:0.5.8 /usr/local/bin/litefs /usr/local/bin/litefs
