@@ -28,12 +28,16 @@ import {
   ProgressiveFileExamples,
   ProgressiveLocalStorageExamples,
 } from "~/examples/remix-progressive-client-only/examples.tsx"
+import type { PerformanceServerTimings } from "~/utils/timing.server.ts"
 import { getServerTiming } from "~/utils/timing.server.ts"
 
 import { cache, cachified } from "#app/cache/cache.server.ts"
 import { compileMdx } from "#app/utils/compile-mdx.server.ts"
 import { downloadFileBySha } from "#app/utils/github.server.ts"
 import { getContentList } from "./content.server.ts"
+import { getEmail } from "./buttondown.server.ts"
+
+import { marked } from "marked"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 export const links: LinksFunction = () => {
@@ -70,6 +74,16 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
     },
     { name: "twitter:card", content: "summary_large_image" },
   ]
+
+  const translationElements = data.frontmatter.translations.map(
+    ({ lang, href }) => ({
+      tagName: "link",
+      rel: "alternate",
+      hrefLang: lang,
+      href,
+    }),
+  )
+
   return [
     ...titleElements,
     ...descriptionElements,
@@ -83,6 +97,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
     { property: "og:type", content: "article" },
     { property: "og:site_name", content: "Jacob Paris" },
     { property: "og:locale", content: "en_US" },
+    ...translationElements,
   ]
 }
 
@@ -96,6 +111,48 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
   const slug = params.slug
   invariant(typeof slug === "string", "Slug should be a string, and defined")
 
+  if (slug.startsWith("moulton-")) {
+    const { type, code, frontmatter } = await getMoultonContent({
+      slug,
+      serverTimings,
+    })
+
+    return json(
+      { type, code, frontmatter },
+      {
+        headers: {
+          "cache-control": "private, max-age: 60",
+          Vary: "Cookie",
+          "Server-Timing": getHeaderField(),
+        },
+      },
+    )
+  } else {
+    const { type, code, frontmatter } = await getJacobParisContent({
+      slug,
+      serverTimings,
+    })
+
+    return json(
+      { type, code, frontmatter },
+      {
+        headers: {
+          "cache-control": "private, max-age: 60",
+          Vary: "Cookie",
+          "Server-Timing": getHeaderField(),
+        },
+      },
+    )
+  }
+}
+
+async function getJacobParisContent({
+  slug,
+  serverTimings,
+}: {
+  slug: string
+  serverTimings: PerformanceServerTimings
+}) {
   const { frontmatter, code } = await cachified({
     key: `mdx:${slug}`,
     cache,
@@ -145,21 +202,53 @@ export async function loader({ params, request }: LoaderFunctionArgs) {
     throw new Response("Compilation error", { status: 500 })
   }
 
-  return json(
-    {
-      code,
-      frontmatter,
-    },
-    {
-      headers: {
-        "cache-control": "private, max-age: 60",
-        Vary: "Cookie",
-        "Server-Timing": getHeaderField(),
-      },
-    },
-  )
+  return {
+    type: "mdx" as const,
+    code,
+    frontmatter,
+  }
 }
+async function getMoultonContent({
+  slug,
+  serverTimings,
+}: {
+  slug: string
+  serverTimings: PerformanceServerTimings
+}) {
+  const id = slug.replace("moulton-", "")
 
+  const compiled = await cachified({
+    cache,
+    key: `compiled_email:${id}`,
+    serverTimings,
+    async getFreshValue() {
+      const content = await getEmail({ id })
+      if (content.code === "success") {
+        return {
+          ...content.data,
+          body: await marked(content.data.body),
+        }
+      }
+      return null
+    },
+  })
+
+  if (!compiled) {
+    throw new Error("Failed to compile")
+  }
+
+  return {
+    type: "md" as const,
+    code: compiled.body,
+    frontmatter: {
+      slug,
+      title: compiled.subject,
+      description: compiled.description,
+      img: null,
+      translations: [] as Array<{ lang: string; href: string; label: string }>,
+    },
+  }
+}
 export function CatchBoundary() {
   return (
     <div className="flex">
@@ -184,11 +273,43 @@ export function CatchBoundary() {
   )
 }
 
+function RenderedContent({ type, code }: { type: "md" | "mdx"; code: string }) {
+  if (type === "md") {
+    return <div dangerouslySetInnerHTML={{ __html: code }} />
+  }
+
+  if (type === "mdx") {
+    const Component = getMDXComponent(code)
+
+    return (
+      <Component
+        components={{
+          Tweet,
+          Excerpt,
+          SideNote,
+          SocialBannerSmall,
+          LocalStorageExamples,
+          ProgressiveLocalStorageExamples,
+          FileExamples,
+          ProgressiveFileExamples,
+          DateExamples,
+          ProgressiveDateExamples,
+          SubmenuExample,
+          FilterExample,
+          PaginationExample,
+          YoutubeVideo,
+          em: Highlight,
+        }}
+      />
+    )
+  }
+
+  throw new Error("Invalid type")
+}
+
 export default function Blog() {
   // videos are wrapped in a div with class="mx-auto max-w-full"
-  const { code, frontmatter } = useLoaderData<typeof loader>()
-
-  const Component = getMDXComponent(code)
+  const { type, code, frontmatter } = useLoaderData<typeof loader>()
 
   const url = `https://www.jacobparis.com/content/${frontmatter.slug}`
 
@@ -219,6 +340,7 @@ export default function Blog() {
               ))}
             </ul>
           ) : null}
+          <RenderedContent type={type} code={code} />
 
           <footer className="text-gray-500">
             <p className="mb-5">

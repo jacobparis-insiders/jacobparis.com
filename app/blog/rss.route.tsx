@@ -1,11 +1,12 @@
 import { Feed } from "feed"
 import { getContentListData, getBlogList } from "./get-content-list.ts"
+import { getButtondownEmails } from "./buttondown.server.ts"
 
 const baseUrl = "https://www.jacobparis.com"
 
 export async function loader() {
-  const content = await getContentListData()
-  const blogList = getBlogList(content)
+  const whenContent = getContentListData()
+  const whenMoulton = getButtondownEmails()
 
   const feed = new Feed({
     id: baseUrl,
@@ -21,6 +22,7 @@ export async function loader() {
     },
   })
 
+  const blogList = getBlogList(await whenContent)
   for (const blog of blogList) {
     const { slug, title, description, timestamp, tags } = blog
 
@@ -38,6 +40,18 @@ export async function loader() {
           name: item,
         })),
     })
+  }
+
+  const moulton = await whenMoulton
+  if (moulton.code === "success") {
+    for (const page of moulton.data.results) {
+      feed.addItem({
+        link: `${baseUrl}/content/moulton-${page.id}`,
+        title: page.subject,
+        description: page.description,
+        date: new Date(page.creation_date),
+      })
+    }
   }
 
   const rss = feed.rss2()

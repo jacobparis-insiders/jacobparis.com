@@ -1,7 +1,4 @@
-import type {
-  LoaderFunctionArgs,
-  MetaFunction,
-} from "@remix-run/node"
+import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
   Link,
@@ -13,6 +10,7 @@ import { ButtonLink } from "~/components/ButtonLink.tsx"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import { getServerTiming } from "#app/utils/timing.server.ts"
 import { getContentListData, getBlogList } from "./get-content-list.ts"
+import { getButtondownEmails } from "./buttondown.server.ts"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -27,48 +25,125 @@ export const meta: MetaFunction = ({ params }) => {
 export const handle = {
   id: "blog-post",
   getSitemapEntries: async () => {
-    const content = await getContentListData()
+    const whenContent = getContentListData()
+    const whenMoulton = getButtondownEmails()
 
-    return [
-      { route: `content`, priority: 0.7 },
-
-      ...content
-        .filter((page) => page?.frontmatter.published)
-        .map((page) => {
-          return { route: `content/${page?.frontmatter.slug}`, priority: 0.7 }
-        }),
+    const sitemap = [
+      {
+        route: `content`,
+        priority: 0.7,
+      },
     ]
+
+    for (const page of await whenContent) {
+      if (!page?.frontmatter.published) continue
+      sitemap.push({
+        route: `content/${page?.frontmatter.slug}`,
+        priority: 0.7,
+      })
+    }
+
+    const moulton = await whenMoulton
+
+    if (moulton.code === "success") {
+      for (const page of moulton.data.results) {
+        sitemap.push({
+          route: `content/moulton-${page.id}`,
+          priority: 0.7,
+        })
+      }
+    }
+
+    return sitemap
   },
 }
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { time, getServerTimingHeader } = getServerTiming()
-  const url = new URL(request.url)
-  const tag = url.searchParams.get("tag")
+  // const url = new URL(request.url)
+  // const tag = url.searchParams.get("tag")
 
-  const content = await time("contentList", () => getContentListData())
+  const blogContent = await time("contentList", () => getContentListData())
 
-  const blogList = getBlogList(content)
+  const blogList = getBlogList(blogContent)
 
-  const tags = new Set<string>()
-  for (const blog of blogList) {
-    if (!blog.tags) continue
+  // const tags = new Set<string>()
+  // for (const blog of blogList) {
+  //   if (!blog.tags) continue
 
-    for (const tag of blog.tags.split(",").map((t) => t.trim())) {
-      tags.add(tag)
-    }
+  //   for (const tag of blog.tags.split(",").map((t) => t.trim())) {
+  //     tags.add(tag)
+  //   }
+  // }
+
+  let moultonIssues
+  const moultonResponse = await time("moultonIssues", () =>
+    getButtondownEmails(),
+  )
+  if (moultonResponse.code === "success") {
+    moultonIssues = moultonResponse.data.results
   }
+
+  const content: Array<{
+    type: "jacobparis.com" | "moulton"
+    slug: string
+    timestamp: string | null
+    title: string
+  }> = []
+
+  content.push(
+    ...blogList
+      // .filter((blog) => {
+      //   if (tag && !blog.tags) return false
+      //   if (tag && !blog.tags?.includes(tag)) return false
+
+      //   return true
+      // })
+      .map((blog) => {
+        return {
+          type: "jacobparis.com" as const,
+          slug: blog.slug,
+          timestamp: blog.timestamp,
+          title: blog.title,
+        }
+      }),
+  )
+
+  if (moultonIssues) {
+    content.push(
+      ...moultonIssues
+        .filter((issue) => issue.publish_date)
+        .map((issue) => ({
+          type: "moulton" as const,
+          slug: `moulton-${issue.id}`,
+          title: issue.subject,
+          timestamp: new Date(issue.publish_date!).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          }),
+        })),
+    )
+  }
+
+  content.sort((a, b) => {
+    if (!a.timestamp) return 1
+    if (!b.timestamp) return -1
+
+    const aDate = new Date(a.timestamp)
+    const bDate = new Date(b.timestamp)
+
+    if (aDate > bDate) return -1
+    if (aDate < bDate) return 1
+
+    return 0
+  })
 
   return json(
     {
-      blogList: blogList.filter((blog) => {
-        if (tag && !blog.tags) return false
-        if (tag && !blog.tags?.includes(tag)) return false
-
-        return true
-      }),
-      tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
-      currentTag: tag,
+      content,
+      // tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
+      // currentTag: tag,
     },
     {
       headers: {
@@ -79,7 +154,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 }
 
 export default function Blog() {
-  const { blogList, tags, currentTag } = useLoaderData<typeof loader>()
+  const { content } = useLoaderData<typeof loader>()
 
   return (
     <div>
@@ -91,7 +166,7 @@ export default function Blog() {
       <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-8">
         <h1 className="mb-12 text-2xl">Articles, guides, and cheatsheets</h1>
 
-        <ul className="mb-12 columns-2 gap-x-2 text-sm text-gray-700 sm:columns-4">
+        {/* <ul className="mb-12 columns-2 gap-x-2 text-sm text-gray-700 sm:columns-4">
           <li key={"all"} className="mb-3 pr-4">
             <Link
               to={`/content`}
@@ -112,12 +187,30 @@ export default function Blog() {
               </Link>
             </li>
           ))}
-        </ul>
+        </ul> */}
 
-        <ol className="grid gap-x-8">
-          {blogList.map((blogItem) => (
-            <BlogItem key={blogItem.slug} {...blogItem} />
-          ))}
+        <ol className="grid gap-x-8 gap-y-2">
+          {content.map((item) => {
+            if (item.type === "jacobparis.com") {
+              return (
+                <BlogItem
+                  key={item.slug}
+                  slug={item.slug}
+                  title={item.title}
+                  timestamp={item.timestamp}
+                />
+              )
+            } else if (item.type === "moulton") {
+              return (
+                <MoultonItem
+                  key={item.slug}
+                  slug={item.slug}
+                  title={item.title}
+                  timestamp={item.timestamp}
+                />
+              )
+            }
+          })}
         </ol>
       </div>
     </div>
@@ -138,16 +231,50 @@ function BlogItem({
       <Link
         prefetch="intent"
         to={`/content/${slug}`}
-        className={`group -ml-4 flex overflow-hidden rounded-lg hover:bg-gray-100`}
+        className={`group -ml-4 flex overflow-hidden rounded-lg hover:bg-neutral-200`}
       >
         <div className={`flex flex-col gap-2 px-4 py-4`}>
           {timestamp ? (
-            <time className="text-xs font-bold uppercase tracking-wide text-gray-500">
+            <time className="text-xs font-bold uppercase tracking-wide text-neutral-500">
               {timestamp}
             </time>
           ) : null}
           <h2
-            className="text-xl font-bold text-gray-800"
+            className="text-xl font-bold text-neutral-800"
+            style={{ wordBreak: "break-word" }}
+          >
+            {title}
+          </h2>
+        </div>
+      </Link>
+    </article>
+  )
+}
+
+function MoultonItem({
+  slug,
+  title,
+  timestamp,
+}: {
+  slug: string
+  title: string
+  timestamp: string | null
+}) {
+  return (
+    <article className="">
+      <Link
+        prefetch="intent"
+        to={`/content/${slug}`}
+        className={`group -ml-4 flex overflow-hidden rounded-lg bg-gray-800 hover:bg-gray-900`}
+      >
+        <div className={`flex flex-col gap-2 px-4 py-4`}>
+          {timestamp ? (
+            <time className="text-xs font-bold uppercase tracking-wide text-gray-400">
+              {timestamp}
+            </time>
+          ) : null}
+          <h2
+            className="text-xl font-bold text-gray-200"
             style={{ wordBreak: "break-word" }}
           >
             {title}
