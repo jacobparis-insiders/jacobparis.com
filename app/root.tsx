@@ -85,6 +85,8 @@ export default function App() {
           title="RSS Feed"
         />
         <link rel="canonical" href={url.href} />
+        <link rel="alternate" href={url.href} hrefLang="en" />
+
         <Links />
         <style>
           {`.bg-light {

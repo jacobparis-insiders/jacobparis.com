@@ -208,25 +208,17 @@ export default function Blog() {
           ) : null}
           <Link to={`/content`}>← Back to all content</Link>
           <h1 className="drop-shadow-sm">{frontmatter.title} </h1>
-          <Component
-            components={{
-              Tweet,
-              Excerpt,
-              SideNote,
-              SocialBannerSmall,
-              LocalStorageExamples,
-              ProgressiveLocalStorageExamples,
-              FileExamples,
-              ProgressiveFileExamples,
-              DateExamples,
-              ProgressiveDateExamples,
-              SubmenuExample,
-              FilterExample,
-              PaginationExample,
-              YoutubeVideo,
-              em: Highlight,
-            }}
-          />
+          {frontmatter.translations.length > 0 ? (
+            <ul className="" aria-label="Translations">
+              {frontmatter.translations.map(({ lang, label, href }) => (
+                <li key={lang}>
+                  <Link to={href} className="hover:text-sky-600">
+                    {label} <span className="sr-only"> translation </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
 
           <footer className="text-gray-500">
             <p className="mb-5">

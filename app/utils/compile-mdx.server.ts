@@ -88,6 +88,16 @@ export const MdxSchema = z.object({
     img: z.string().optional().nullable().default(null),
     timestamp: z.string().optional().nullable().default(null),
     published: z.boolean().optional().default(false),
+    translations: z
+      .array(
+        z.object({
+          lang: z.string(),
+          href: z.string(),
+          label: z.string(),
+        }),
+      )
+      .optional()
+      .default([]),
   }),
 })
 
