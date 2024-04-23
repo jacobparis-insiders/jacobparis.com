@@ -15,14 +15,18 @@ import {
   useLoaderData,
   useLocation,
   useRouteError,
+  useRouteLoaderData,
 } from "@remix-run/react"
 import isbot from "isbot"
 import tailwindStylesheetUrl from "~/styles/tailwind.css"
 import { ButtonLink } from "./components/ButtonLink.tsx"
 import { SocialBannerSmall } from "./components/SocialBannerSmall.tsx"
 
-import { honeypot } from "./blog/honeypot.server.ts"
+import { honeypot } from "./moulton/honeypot.server.ts"
 import { HoneypotProvider } from "remix-utils/honeypot/react"
+import { authenticator } from "./moulton/auth.server.ts"
+import { getSubscriber } from "./moulton/buttondown.server.ts"
+import invariant from "tiny-invariant"
 export const links: LinksFunction = () => {
   return [
     { rel: "stylesheet", href: tailwindStylesheetUrl },
@@ -58,13 +62,39 @@ export const meta: MetaFunction = () => {
 }
 
 export const shouldRevalidate = () => false
+
 export async function loader({ request }: LoaderFunctionArgs) {
   const isBot = await isbot(request.headers.get("user-agent"))
+  const user = await authenticator.isAuthenticated(request)
+
+  if (!user) {
+    return json({
+      isBot: isBot,
+      user: null,
+      subscriber: null,
+      honeypot: honeypot.getInputProps(),
+    })
+  }
+
+  const subscriber = await getSubscriber({ email: user.email })
+  if (subscriber.code !== "success") {
+    return authenticator.logout(request, { redirectTo: "/" })
+  }
 
   return json({
     isBot: isBot,
+    user: user,
+    subscriber: {
+      type: subscriber.data.subscriber_type,
+    },
     honeypot: honeypot.getInputProps(),
   })
+}
+
+export function useRootLoaderData() {
+  const data = useRouteLoaderData<typeof loader>("root")
+  invariant(data, "Expected data to be defined")
+  return data
 }
 
 export default function App() {

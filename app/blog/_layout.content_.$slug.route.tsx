@@ -35,7 +35,7 @@ import { cache, cachified } from "#app/cache/cache.server.ts"
 import { compileMdx } from "#app/utils/compile-mdx.server.ts"
 import { downloadFileBySha } from "#app/utils/github.server.ts"
 import { getContentList } from "./content.server.ts"
-import { getEmail } from "./buttondown.server.ts"
+import { getEmail } from "../moulton/buttondown.server.ts"
 
 import { marked } from "marked"
 

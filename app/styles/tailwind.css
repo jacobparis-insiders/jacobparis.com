@@ -6,3 +6,10 @@
   backdrop-filter: blur(20px);
   mask: linear-gradient(to top, rgba(0, 0, 0, 1), rgba(0,0,0,1) 50%, rgba(0, 0, 0, 0));
 }
+
+.bg-glass {
+  backdrop-filter: blur(0.75rem) saturate(200%) contrast(50%) brightness(130%);
+  -webkit-backdrop-filter: blur(0.75rem) saturate(200%) contrast(50%)
+    brightness(130%);
+  background-color: rgba(0, 0, 0, 0.45);
+}

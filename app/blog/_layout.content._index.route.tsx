@@ -10,7 +10,7 @@ import { ButtonLink } from "~/components/ButtonLink.tsx"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import { getServerTiming } from "#app/utils/timing.server.ts"
 import { getContentListData, getBlogList } from "./get-content-list.ts"
-import { getButtondownEmails } from "./buttondown.server.ts"
+import { getButtondownEmails } from "../moulton/buttondown.server.ts"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 

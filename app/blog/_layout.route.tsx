@@ -1,9 +1,11 @@
-import { Outlet, useLocation } from "@remix-run/react"
+import { useRootLoaderData } from "#app/root.tsx"
+import { Form, Outlet, useLocation } from "@remix-run/react"
 
 import { HoneypotInputs } from "remix-utils/honeypot/react"
 
 export default function Index() {
   const location = useLocation()
+  const { user } = useRootLoaderData()
 
   return (
     <>
@@ -27,7 +29,7 @@ export default function Index() {
                       <span className="sr-only">Moulton</span>
                       <img
                         className="h-8 w-auto sm:h-10"
-                        src="https://www.readmoulton.com/logo.svg"
+                        src="/images/moulton.svg"
                         alt=""
                       />
                     </div>
@@ -42,13 +44,8 @@ export default function Index() {
                     <div>
                       <p>
                         Hey there! I'm a developer, designer, and digital nomad
-                        building cool things with Remix, and I'm also writing{" "}
-                        <a
-                          href="https://www.readmoulton.com/"
-                          className="text-sky-300"
-                        >
-                          Moulton, the Remix Community Newsletter
-                        </a>
+                        building cool things with Remix, and I'm also writing
+                        Moulton, the Remix Community Newsletter
                       </p>
                       <p>About once per month, I send an email with:</p>
                       <ul>
@@ -57,10 +54,21 @@ export default function Index() {
                         <li>Cool new libraries and packages</li>
                         <li>What's new in the latest versions of Remix</li>
                       </ul>
-                      <p>
-                        Stay up to date with everything in the Remix community
-                        by <strong>entering your email below.</strong>
-                      </p>
+                      {user ? (
+                        <p>
+                          You've subscribed with {user.email}.{" "}
+                          <Form method="post" action="/logout" reloadDocument>
+                            <button className="cursor-pointer text-sky-500 hover:text-sky-400 hover:underline">
+                              Click here to log out
+                            </button>
+                          </Form>
+                        </p>
+                      ) : (
+                        <p>
+                          Stay up to date with everything in the Remix community
+                          by <strong>entering your email below.</strong>
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -72,62 +80,64 @@ export default function Index() {
                       alt="Professional headshot"
                     />
                   </div>
-                  <div>
-                    <form
-                      action="https://www.readmoulton.com/subscribe"
-                      method="post"
-                      className="flex flex-col gap-4"
-                    >
-                      <HoneypotInputs label="Please leave this field blank" />
+                  {user ? null : (
+                    <div>
+                      <form
+                        action="/subscribe"
+                        method="post"
+                        className="flex flex-col gap-4"
+                      >
+                        <HoneypotInputs label="Please leave this field blank" />
 
-                      <input
-                        type="hidden"
-                        name="url"
-                        value={`${location.pathname}${location.search}`}
-                      />
-
-                      <div className="flex flex-col gap-2">
-                        <label htmlFor="cta-name" className="font-medium">
-                          First name
-                        </label>
                         <input
-                          id="cta-name"
-                          type="text"
-                          name="name"
-                          required
-                          className="block w-full rounded-md border border-gray-100 px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600"
-                          placeholder="Preferred name"
+                          type="hidden"
+                          name="url"
+                          value={`${location.pathname}${location.search}`}
                         />
-                      </div>
 
-                      <div className="flex flex-col gap-2">
-                        <label htmlFor="cta-email" className="font-medium">
-                          Email address
-                        </label>
-                        <input
-                          id="cta-email"
-                          type="email"
-                          name="email"
-                          required
-                          className="block w-full rounded-md border border-gray-100 px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600"
-                          placeholder="you@example.com"
-                        />
-                      </div>
+                        <div className="flex flex-col gap-2">
+                          <label htmlFor="cta-name" className="font-medium">
+                            First name
+                          </label>
+                          <input
+                            id="cta-name"
+                            type="text"
+                            name="name"
+                            required
+                            className="block w-full rounded-md border border-gray-100 px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600"
+                            placeholder="Preferred name"
+                          />
+                        </div>
 
-                      <div className="">
-                        <button
-                          type="submit"
-                          className="block w-full rounded-md border border-transparent bg-sky-500 px-5 py-3 text-base font-medium text-white shadow hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600 sm:px-10"
-                        >
-                          Sign up today
-                        </button>
-                      </div>
+                        <div className="flex flex-col gap-2">
+                          <label htmlFor="cta-email" className="font-medium">
+                            Email address
+                          </label>
+                          <input
+                            id="cta-email"
+                            type="email"
+                            name="email"
+                            required
+                            className="block w-full rounded-md border border-gray-100 px-5 py-3 text-base text-gray-900 placeholder-gray-500 shadow-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600"
+                            placeholder="you@example.com"
+                          />
+                        </div>
 
-                      <p className="mx-auto max-w-xs text-center text-sm ">
-                        Unsubscribe at any time.
-                      </p>
-                    </form>
-                  </div>
+                        <div className="">
+                          <button
+                            type="submit"
+                            className="block w-full rounded-md border border-transparent bg-sky-500 px-5 py-3 text-base font-medium text-white shadow hover:bg-sky-400 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-sky-600 sm:px-10"
+                          >
+                            Sign up today
+                          </button>
+                        </div>
+
+                        <p className="mx-auto max-w-xs text-center text-sm ">
+                          Unsubscribe at any time.
+                        </p>
+                      </form>
+                    </div>
+                  )}
                 </div>
               </div>
             </section>

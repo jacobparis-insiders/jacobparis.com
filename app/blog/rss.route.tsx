@@ -1,6 +1,6 @@
 import { Feed } from "feed"
 import { getContentListData, getBlogList } from "./get-content-list.ts"
-import { getButtondownEmails } from "./buttondown.server.ts"
+import { getButtondownEmails } from "../moulton/buttondown.server.ts"
 
 const baseUrl = "https://www.jacobparis.com"
 

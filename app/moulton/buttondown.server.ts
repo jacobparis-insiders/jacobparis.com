@@ -45,7 +45,7 @@ export async function createSubscriber({
       metadata: {
         name,
       },
-      tags: ["test"],
+      tags: [],
     }),
   })
 
@@ -243,6 +243,31 @@ export async function getEmail({ id }: { id: string }) {
     return {
       code: "success" as const,
       data: emailSchema.parse(response.data),
+    }
+  }
+
+  return {
+    code: "error" as const,
+  }
+}
+
+export async function getLatestContent() {
+  const response = await cachified({
+    cache,
+    key: `buttondown:emails:latest`,
+    ttl: 1000 * 60 * 60 * 12,
+    swr: 1000 * 60 * 60 * 24,
+    async getFreshValue() {
+      return fetchButtondown(`/v1/emails?ordering=-creation_date`, {
+        method: "GET",
+      })
+    },
+  })
+
+  if (response.ok) {
+    return {
+      code: "success" as const,
+      data: emailListSchema.parse(response.data),
     }
   }
 

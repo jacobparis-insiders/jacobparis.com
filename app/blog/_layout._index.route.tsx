@@ -8,8 +8,7 @@ import BlogCard from "~/components/BlogCard.tsx"
 import { MoultonMatrix } from "./MoultonMatrix.tsx"
 import { Button } from "#app/components/ui/button.tsx"
 import { Toaster, toast } from "sonner"
-import { useEffect, useState } from "react"
-import { Icon } from "#app/components/icon.tsx"
+import { useEffect } from "react"
 import { FakeUpload } from "#app/examples/remix-image-uploads/content.remix-image-uploads.example.fake.route.tsx"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
@@ -51,11 +50,7 @@ export default function Index() {
 
       <div className="mx-auto max-w-4xl px-4 sm:px-8">
         <div className=" relative block w-full overflow-hidden rounded-lg bg-gray-900 text-neutral-100">
-          <Link
-            prefetch="intent"
-            to="https://www.readmoulton.com/"
-            className="group block p-8"
-          >
+          <Link prefetch="intent" to="/moulton" className="group block p-8">
             <h3
               className="mb-4 text-2xl font-medium tracking-tight"
               style={{ wordBreak: "break-word" }}
@@ -423,7 +418,7 @@ function ToastCard() {
       "Someone else just bought this item",
       "Added to cart",
       "Removed from cart",
-      "Subscribed to readmoulton.com",
+      "Subscribed to Moulton",
     ]
 
     const interval = setInterval(() => {
