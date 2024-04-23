@@ -96,8 +96,7 @@ export const MdxSchema = z.object({
           label: z.string(),
         }),
       )
-      .optional()
-      .default([]),
+      .optional(),
   }),
 })
 
