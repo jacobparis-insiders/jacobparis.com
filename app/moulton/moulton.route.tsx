@@ -47,7 +47,7 @@ export default function Index() {
   const { lastPublished } = useLoaderData<typeof loader>()
 
   return (
-    <div className="h-full bg-gray-900  text-gray-200 lg:pb-14">
+    <div className="h-full overflow-y-auto bg-gray-900 text-gray-200 lg:pb-14">
       <SocialBannerSmall className="bg-glass top-0 z-30 mb-8 border-b border-slate-700 py-1" />
 
       <div className="mx-auto max-w-7xl px-8">

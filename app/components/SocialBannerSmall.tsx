@@ -31,7 +31,7 @@ export function SocialBannerSmall(props: React.HTMLAttributes<HTMLDivElement>) {
             <BookOpenIcon className="h-6 w-6" aria-hidden="true" />
 
             <span className="screen:md:inline mx-2 hidden font-medium leading-6">
-              Guides
+              Content
             </span>
             <span className="mx-2 hidden font-medium leading-6 print:md:inline">
               https://www.jacobparis.com/content

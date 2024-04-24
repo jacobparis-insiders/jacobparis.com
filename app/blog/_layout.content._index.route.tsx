@@ -217,7 +217,7 @@ export default function Blog() {
   )
 }
 
-function BlogItem({
+export function BlogItem({
   slug,
   title,
   timestamp,

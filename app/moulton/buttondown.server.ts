@@ -78,11 +78,18 @@ export async function createSubscriber({
   }
 }
 
-export async function getSubscriber({ email }: { email: string }) {
+export async function getSubscriber({
+  email,
+  forceFresh = false,
+}: {
+  email: string
+  forceFresh?: boolean
+}) {
   const response = await cachified({
     cache,
     key: `subscriber:${email}`,
     ttl: 1000 * 60,
+    forceFresh,
     staleWhileRevalidate: 1000 * 60 * 5,
     async getFreshValue() {
       return fetchButtondown(`/v1/subscribers/${email}`, {
@@ -98,6 +105,8 @@ export async function getSubscriber({ email }: { email: string }) {
         data: userSchema.parse(response.data),
       }
     }
+
+    void clearKey(`subscriber:${email}`)
 
     return z
       .discriminatedUnion("code", [
@@ -132,7 +141,7 @@ export async function upsertSubscriber({
   name?: string
   url?: string
 }) {
-  const sub = await getSubscriber({ email: email.toString() })
+  const sub = await getSubscriber({ email: email.toString(), forceFresh: true })
 
   if (sub.code !== "success") {
     const newSub = await createSubscriber({
@@ -140,6 +149,7 @@ export async function upsertSubscriber({
       name,
       url,
     })
+    clearKey(`subscriber:${email}`)
 
     if (newSub.code === "email_already_exists") {
       throw new Error("Transaction error: email already exists")
@@ -148,10 +158,6 @@ export async function upsertSubscriber({
     if (newSub.code === "error") {
       throw new Error("Transaction error: unknown")
     }
-
-    // TODO: creating a new sub gets the data immediately
-    // We should just replace the cache data at that point
-    clearKey(`subscriber:${email}`)
 
     return newSub
   }
