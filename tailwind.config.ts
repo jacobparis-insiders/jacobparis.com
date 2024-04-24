@@ -33,6 +33,9 @@ export default {
       },
     },
     extend: {
+      boxShadow: {
+        smooth: 'rgba(0, 0, 0, 0.05) 0px 4px 44px',
+      },
       screens: {
         print: {raw: 'print'},
         screen: {raw: 'screen'},

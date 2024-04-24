@@ -315,10 +315,10 @@ export default function Blog() {
 
   return (
     <div>
-      <div className="bg-light flex justify-center py-2">
+      <div className="relative z-40 flex justify-center bg-[#f5f5f5] py-2">
         <span className="text-3xl font-medium">Jacob Paris</span>
       </div>
-      <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
+      <SocialBannerSmall className="bg-light shadow-smooth sticky top-0 z-30 mb-8 border-b border-neutral-200 py-1" />
       <div className="flex">
         <article
           className="prose prose-neutral lg:prose-lg prose-code:bg-stone-300 prose-code:before:hidden prose-code:after:hidden prose-blockquote:bg-white min-h-screen w-full max-w-prose px-4 pt-24 sm:mx-auto sm:pl-12"

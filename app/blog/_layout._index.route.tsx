@@ -1,505 +1,145 @@
 // http://localhost:3000/
 
-import { Link, useLoaderData } from "@remix-run/react"
-import { json } from "@remix-run/node"
+import { Link } from "@remix-run/react"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
-import FeaturedBlogItem from "~/components/FeaturedBlogItem.tsx"
-import BlogCard from "~/components/BlogCard.tsx"
-import { MoultonMatrix } from "./MoultonMatrix.tsx"
-import { Button } from "#app/components/ui/button.tsx"
-import { Toaster, toast } from "sonner"
-import { useEffect } from "react"
-import { FakeUpload } from "#app/examples/remix-image-uploads/content.remix-image-uploads.example.fake.route.tsx"
+import { BlogItem } from "./_layout.content._index.route.tsx"
+import { Icon } from "#app/components/icon.tsx"
+import clsx from "clsx"
+import type { IconName } from "#app/components/icons/names.ts"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
-function sample<T>(array: Array<T>) {
-  return array[Math.floor(Math.random() * array.length)]
-}
-
-export async function loader() {
-  const greeting = sample(["Hi, I'm ", "Hey, I'm ", "It's ", "Hey there, I'm "])
-
-  return json({ greeting })
-}
-
 export default function Index() {
-  const { greeting } = useLoaderData<typeof loader>()
   return (
     <div className="">
-      <div className="bg-light">
+      <div className="relative z-40 bg-[#f5f5f5]">
         <section className="mx-auto flex max-w-4xl flex-wrap gap-8 px-4 py-8 sm:px-8">
           <div
             className="flex-grow text-center font-medium"
             style={{ flexBasis: "25rem" }}
           >
-            <p aria-hidden className="text-4xl">
-              {greeting}
-            </p>
+            <h1 className="text-5xl ">Jacob Paris</h1>
 
-            <h1 className="mb-8 text-5xl ">Jacob Paris</h1>
-
-            <h2 className="mx-auto max-w-[35ch] text-xl ">
-              I'm here to make you a better developer by teaching you everything
-              I know about building for the web.
+            <h2 className="mx-auto mt-4 max-w-[35ch] text-xl ">
+              Full stack product developer
             </h2>
           </div>
         </section>
       </div>
-      <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-white py-1" />
+      <SocialBannerSmall className="bg-light shadow-smooth sticky top-0 z-30 mb-8 border-b border-neutral-200 py-1" />
 
-      <div className="mx-auto max-w-4xl px-4 sm:px-8">
-        <div className=" relative block w-full overflow-hidden rounded-lg bg-gray-900 text-neutral-100">
-          <Link prefetch="intent" to="/moulton" className="group block p-8">
-            <h3
-              className="mb-4 text-2xl font-medium tracking-tight"
-              style={{ wordBreak: "break-word" }}
-            >
-              <span className="border-blue-300 font-bold text-blue-400 group-hover:border-b-2 group-hover:text-blue-300">
-                <img
-                  src="/images/moulton.svg"
-                  alt="Moulton logo"
-                  className="mr-1 inline h-8 w-8 align-sub"
-                />{" "}
-                Moulton
-              </span>
-              , the Remix Community newsletter
-            </h3>
-
-            <p className="opacity-80">
-              For the latest Remix news, tips, tutorials, libraries, and
-              everything else happening in the Remix community, subscribe to the
-              Moulton newsletter.
-            </p>
-          </Link>
-
-          <div className="relative" aria-hidden>
-            <div
-              style={{
-                backgroundImage:
-                  "radial-gradient(circle at center, transparent 0, rgb(16,24,39) 120%)",
-              }}
-              className="pointer-events-none absolute inset-0 z-10"
-            />
-
-            <MoultonMatrix />
-          </div>
+      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-8">
+        <div className="grid grid-cols-4 gap-4">
+          <Badge
+            icon="epic-web"
+            href="https://epicweb.dev"
+            title="Epic Web"
+            description="Instructor"
+            className="bg-gradient-to-r from-indigo-600 to-blue-600"
+          />
+          <Badge
+            icon="egghead"
+            href="https://egghead.io"
+            title="Egghead"
+            description="Instructor"
+            className="bg-neutral-800"
+          />
+          <Badge
+            icon="moulton"
+            href="/moulton"
+            title="Moulton"
+            description="Writer"
+            className="bg-sky-700"
+          />
+          <Badge
+            icon="clipboard-copy"
+            href="https://sly-cli.fly.dev"
+            title="Sly CLI"
+            description="Maintainer"
+            className="bg-neutral-800"
+          />
         </div>
+      </div>
+      <div className="mx-auto max-w-4xl px-4 py-6 sm:px-8">
+        <h2 className="text-4xl font-bold"> Featured content </h2>
 
-        <section className="mb-16 mt-8 grid  gap-8 sm:grid-cols-2">
-          <WhereToHostRemixCard />
+        <ol className="mt-4 grid gap-x-8 gap-y-2">
+          <BlogItem
+            title="Where to host your Remix app in 2024"
+            slug="where-to-host-remix"
+            timestamp="April 4, 2024"
+          />
 
-          <BlogCard
+          <BlogItem
+            title="Solve hydration issues in Remix/Next apps"
+            slug="remix-hydration-errors"
+            timestamp={"November 7, 2023"}
+          />
+
+          <BlogItem
             title="Generate open graph social preview images"
             slug="remix-og"
-            img="/content/remix-og.png"
-            tags="Remix"
-            className="row-span-2"
+            timestamp={"November 4, 2023"}
           />
 
-          <BlogCard
-            title="Find and fix performance bottlenecks with Server Timing"
-            slug="remix-server-timing"
-            tags="Remix"
-            className=""
+          <BlogItem
+            title="Build a server-side filter UI with Remix"
+            slug="remix-filter-bar"
+            timestamp="September 17, 2023"
           />
 
-          <BlogCard
-            title="Add data to a Google Sheet from a Node.js backend"
-            slug="submit-form-google-sheet"
-            img="/content/submit-form-google-sheet/cover.png"
-            tags="Forms, Integrations"
-            className="row-span-2"
+          <BlogItem
+            title="Use SVG sprite icons in React"
+            slug="svg-icons"
+            timestamp="July 22, 2023"
           />
 
-          <HydrationErrorsCard />
-
-          <FeaturedBlogItem
-            title="Stream Progress Updates with Remix using Defer, Suspense, and Server Sent Events"
-            slug="remix-defer-streaming-progress"
-            img="/content/remix-defer-streaming-progress/cover.png"
-            tags="Remix"
-          />
-
-          <BlogCard
-            title="Custom Fetcher Hooks are Remix's Typesafe RPCs"
-            slug="remix-rpc-pattern"
-            tags="Remix"
-          />
-          <BlogCard
-            title="Autosave form inputs on change or blur"
-            slug="remix-form-autosave"
-            tags="Remix"
-          />
-
-          <ToastCard />
-
-          <BlogCard
-            title="Animated page transitions with nested routes"
-            slug="remix-animated-page-transitions"
-            tags="Remix, UI/UX"
-          />
-          <BlogCard
-            title="Show active user presence (like Google Docs or Figma)"
-            slug="remix-presence"
-            tags="Remix, UI/UX"
-          />
-          <BlogCard
-            title="Build a sticky hover effect with Tailwind and React"
-            slug="ios-hover-tailwind"
-            img="/content/ios-hover-tailwind/cover.png"
-            tags="React, Tailwind"
-            className="row-span-2"
-          />
-          <BlogCard
-            title="Multi-step forms"
-            slug="remix-multi-step-forms"
-            tags="Remix, UI/UX"
-          />
-          <BlogCard
-            title="Guidelines for optimistic UI in modern apps"
-            slug="remix-crud-ui"
-            tags="Remix"
-          />
-
-          <ImageUploadsCard />
-
-          <BlogCard
-            title="Progressively enhanced client rendering"
-            slug="remix-progressive-client-only"
-            tags="Remix"
-          />
-          <BlogCard
-            title="Building a markdown input with a preview tab (like GitHub and Stack
-          Overflow)"
-            slug="remix-markdown-preview"
-            tags="Remix"
-          />
-
-          <BlogCard
-            title="Show a loading state while images load"
-            slug="image-placeholders"
-            tags="Advanced"
-          />
-        </section>
-
-        <div className="py-8 text-center">
-          <Link
-            to="/content"
-            className="inline-block rounded-full border border-gray-100 bg-transparent px-8 py-4 text-lg font-medium text-gray-700 hover:bg-gray-200 hover:text-black"
-          >
-            Explore all content
-          </Link>
-        </div>
+          <li className="py-8 text-center">
+            <Link
+              to="/content"
+              className="inline-block rounded-full border border-gray-100 bg-transparent px-8 py-4 text-lg font-medium text-gray-700 hover:bg-gray-200 hover:text-black"
+            >
+              Explore all content
+            </Link>
+          </li>
+        </ol>
       </div>
     </div>
   )
 }
 
-function WhereToHostRemixCard() {
+function Badge({
+  className,
+  icon,
+  href,
+  title,
+  description,
+}: {
+  className?: string
+  icon: IconName
+  href: string
+  title: string
+  description: string
+}) {
   return (
-    <article className="sm:col-span-2">
-      <Link
-        prefetch="intent"
-        to="/content/where-to-host-remix"
-        className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
-      >
-        <div className="p-8">
-          <h3
-            className="mb-4 text-2xl font-medium tracking-tight"
-            style={{ wordBreak: "break-word" }}
-          >
-            Where to host your Remix app
-          </h3>
-
-          <p className="text-gray-600">
-            Should you host your Remix app on a serverless provider like Vercel,
-            Fastly, Netlify, Cloudflare, or AWS Lambda? Or a long-lived server
-            like Fly, Render, Railway, or DigitalOcean? This guide will help you
-            choose the right hosting option for your app.
-          </p>
-        </div>
-
-        <div className="relative h-48">
-          <div
-            style={{
-              backgroundImage:
-                "radial-gradient(circle at center, transparent 0, #fff 100%)",
-            }}
-            className="absolute inset-0 z-10 "
-          />
-          <ul>
-            {[
-              {
-                src: "/netlify.png",
-                alt: "placekitten",
-                style: {
-                  left: "5%",
-                  top: "70%",
-                  transform: `rotate(-10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                src: "/vercel-icon-dark.svg",
-                alt: "placekitten",
-                style: {
-                  left: "80%",
-                  top: "0%",
-                },
-              },
-              {
-                src: "/fastly.svg",
-                alt: "placekitten",
-                style: {
-                  left: "20%",
-                  top: "40%",
-                  transform: `rotate(0deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                src: "/cloudflare.svg",
-                alt: "placekitten",
-                style: {
-                  left: "55%",
-                  top: "25%",
-                  transform: `rotate(10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                src: "/aws.svg",
-                alt: "placekitten",
-                style: {
-                  left: "35%",
-                  top: "20%",
-                  transform: `rotate(-10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                src: "/fly.svg",
-                alt: "placekitten",
-                style: {
-                  left: "75%",
-                  top: "60%",
-                  transform: `rotate(30deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                src: "/digitalocean.svg",
-                alt: "placekitten",
-                style: {
-                  left: "45%",
-                  top: "50%",
-                  transform: `rotate(-20deg) translate(-50%, -50%)`,
-                },
-              },
-            ].map((image, index) => (
-              <li
-                key={index}
-                className="absolute h-16 w-16 transition-all group-hover:h-20 group-hover:w-20"
-                style={image.style}
-              >
-                <div>
-                  <img
-                    src={image.src}
-                    alt={image.alt}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Link>
-    </article>
-  )
-}
-
-function HydrationErrorsCard() {
-  return (
-    <article className="sm:col-span-2">
-      <Link
-        prefetch="intent"
-        to="/content/remix-hydration-errors"
-        className="group relative block w-full overflow-hidden rounded-lg border border-gray-100 bg-white"
-        style={{
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundImage:
-            "url(https://images.pexels.com/photos/3497624/pexels-photo-3497624.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2)",
-        }}
-      >
-        <div className="relative h-48">
-          <ul>
-            {[
-              {
-                style: {
-                  left: "5%",
-                  top: "70%",
-                  transform: `rotate(-10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                style: {
-                  left: "20%",
-                  top: "40%",
-                  transform: `rotate(0deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                style: {
-                  left: "55%",
-                  top: "25%",
-                  transform: `rotate(10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                style: {
-                  left: "35%",
-                  top: "20%",
-                  transform: `rotate(-10deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                style: {
-                  left: "75%",
-                  top: "60%",
-                  transform: `rotate(30deg) translate(-50%, -50%)`,
-                },
-              },
-              {
-                style: {
-                  left: "45%",
-                  top: "50%",
-                  transform: `rotate(-20deg) translate(-50%, -50%)`,
-                },
-              },
-            ].map((image, index) => (
-              <li
-                key={index}
-                className="absolute h-16 w-16 transition-all group-hover:h-20 group-hover:w-20"
-                style={image.style}
-              >
-                <div className="text-5xl font-black">?</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="relative px-8 py-12">
-          <div className="gradient-blur absolute inset-0 rounded-md" />
-          <div className="relative z-10">
-            <h3
-              className="mb-4 text-2xl font-medium tracking-tight text-white"
-              style={{ wordBreak: "break-word" }}
-            >
-              Solve React hydration errors
-            </h3>
-
-            <p className="text-white opacity-60">
-              Hydration errors can be caused by dates, ad blockers, browser
-              extensions, invalid HTML, 3rd party scripts, CSS in JS libs,
-              character encoding, IDs, and more
-            </p>
-          </div>
-        </div>
-      </Link>
-    </article>
-  )
-}
-
-function ToastCard() {
-  useEffect(() => {
-    const toastNames = [
-      'Created "New Project"',
-      "Successfully saved changes",
-      "Deleted 3 items",
-      "Copied to clipboard",
-      "Added to favorites",
-      "Removed from favorites",
-      "Someone else just bought this item",
-      "Added to cart",
-      "Removed from cart",
-      "Subscribed to Moulton",
-    ]
-
-    const interval = setInterval(() => {
-      toast(sample(toastNames))
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
-
-  return (
-    <article className="sm:col-span-2">
-      <div className="group relative block w-full  rounded-lg border border-gray-100 bg-white">
-        <div className="relative h-48 [&_[data-sonner-toaster]]:!absolute">
-          <Button
-            onClick={() => toast("Clicked a button!")}
-            className="absolute left-4 top-4 z-10"
-          >
-            Create new toast
-          </Button>
-          <Toaster
-            expand={false}
-            toastOptions={{
-              duration: 9000,
-            }}
-          />
-        </div>
-        <Link
-          prefetch="intent"
-          to="/content/remix-form-toast"
-          className="relative block px-8 py-12"
-        >
-          <div className="gradient-blur absolute inset-0 rounded-md" />
-          <div className="relative z-10">
-            <h3
-              className="mb-4 text-2xl font-medium tracking-tight text-neutral-900"
-              style={{ wordBreak: "break-word" }}
-            >
-              Show toast notifications with Remix
-            </h3>
-
-            <p className="text-neutral-600">
-              Show the user their form submission was complete. For same-page
-              submissions, try the useActionData hook. For cross-page
-              submissions, use remix-toast or cookie session storage.
-            </p>
-          </div>
-        </Link>
+    <Link
+      to={href}
+      className={clsx(
+        "group col-span-4 flex items-center gap-4 rounded-2xl bg-neutral-800 p-4 text-white transition-all hover:shadow-2xl sm:col-span-2 lg:col-span-1",
+        className,
+      )}
+    >
+      <div>
+        <Icon
+          aria-hidden
+          name={icon}
+          className="h-10 w-10 self-start text-white transition-transform ease-in-out group-hover:-rotate-12 group-hover:scale-105"
+        />
       </div>
-    </article>
-  )
-}
-
-function ImageUploadsCard() {
-  return (
-    <article className="">
-      <div className="relative block w-full  rounded-lg border border-gray-100 bg-white">
-        <div className="p-2">
-          <FakeUpload />
-        </div>
-
-        <Link
-          prefetch="intent"
-          to="/content/remix-image-uploads"
-          className="relative block px-8 py-4 pb-12"
-        >
-          <div className="gradient-blur absolute inset-0 rounded-md" />
-          <div className="relative z-10">
-            <h3
-              className="mb-4 text-2xl font-medium tracking-tight text-neutral-900"
-              style={{ wordBreak: "break-word" }}
-            >
-              Upload images with pending UI
-            </h3>
-
-            <p className="text-neutral-600">
-              Upload images to a third-party service in the background, then
-              display them as thumbnails before the form is submitted. Use
-              drafts for cross-device persistence.
-            </p>
-          </div>
-        </Link>
+      <div className="flex flex-col gap-1">
+        <span className="text-2xl leading-5">{title}</span>
+        <span className="leading-4 opacity-80">{description}</span>
       </div>
-    </article>
+    </Link>
   )
 }

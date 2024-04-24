@@ -158,10 +158,10 @@ export default function Blog() {
 
   return (
     <div>
-      <div className="bg-light flex justify-center py-2">
+      <div className="relative z-40 flex justify-center bg-[#f5f5f5] py-2">
         <span className="text-3xl font-medium">Jacob Paris</span>
       </div>
-      <SocialBannerSmall className="bg-light sticky top-0 z-30 mb-8 border-b border-gray-100 py-1" />
+      <SocialBannerSmall className="bg-light shadow-smooth sticky top-0 z-30 mb-8 border-b border-neutral-200 py-1" />
 
       <div className="mx-auto min-h-screen max-w-4xl px-4 py-6 sm:px-8">
         <h1 className="mb-12 text-2xl">Articles, guides, and cheatsheets</h1>
@@ -231,7 +231,7 @@ export function BlogItem({
       <Link
         prefetch="intent"
         to={`/content/${slug}`}
-        className={`group -ml-4 flex overflow-hidden rounded-lg hover:bg-neutral-200`}
+        className={`hover:shadow-smooth focus:shadow-smooth group -ml-4 flex overflow-hidden rounded-lg transition-all hover:bg-white focus:bg-white`}
       >
         <div className={`flex flex-col gap-2 px-4 py-4`}>
           {timestamp ? (
@@ -265,16 +265,16 @@ function MoultonItem({
       <Link
         prefetch="intent"
         to={`/content/${slug}`}
-        className={`group -ml-4 flex overflow-hidden rounded-lg bg-gray-800 hover:bg-gray-900`}
+        className={`group -ml-4 flex overflow-hidden rounded-lg bg-gray-800 hover:bg-gray-900 hover:shadow-xl`}
       >
         <div className={`flex flex-col gap-2 px-4 py-4`}>
           {timestamp ? (
-            <time className="text-xs font-bold uppercase tracking-wide text-gray-400">
+            <time className="text-xs font-bold uppercase tracking-wide text-gray-400 ">
               {timestamp}
             </time>
           ) : null}
           <h2
-            className="text-xl font-bold text-gray-200"
+            className="text-xl font-bold text-gray-100 group-hover:text-white"
             style={{ wordBreak: "break-word" }}
           >
             {title}
