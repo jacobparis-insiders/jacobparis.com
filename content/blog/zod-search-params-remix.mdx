@@ -1,0 +1,84 @@
+---
+title: Merge search params with Zod in Remix
+description: Use zod schemas to track search params. Give each component its own schema. Merge them together in your loader.
+tags: Remix
+published: true
+timestamp: "2024-05-23"
+---
+
+When fetching in your route handlers, you probably don't have all your data requirements in the same place. As more of your code moves into components, it can be hard to tell which component is using each data point in a route.
+
+This is especially apparent with search params, which are a great way to use the [URL as state management](/content/url-as-state-management).
+
+For example, you may have
+
+- a `Pagination` component that uses `skip` and `limit` search params to set the current page
+- a `Filter` component that uses `status` and `author` search params to filter items
+- a `Sort` component that uses `sort` and `order` search params to sort items by a specific column and direction.
+- and a `Search` component that uses `query` search param to filter items to specific keywords.
+
+Each of these components can have their own Zod schema that is exported from their respective files.
+
+```ts
+import { z } from "zod"
+
+// components/Pagination.tsx
+export const PaginationSchema = z.object({
+  skip: z.number(),
+  limit: z.number().default(10),
+})
+
+// components/Filter.tsx
+export const FilterSchema = z.object({
+  status: z.string(),
+  author: z.string(),
+})
+
+// components/Sort.tsx
+export const SortSchema = z.object({
+  sort: z.string(),
+  order: z.enum(["asc", "desc"]).default("asc"),
+})
+
+// components/Search.tsx
+export const SearchSchema = z.object({
+  query: z.string(),
+})
+```
+
+In the loader for the route that uses these components, you can merge them together. You'll need a library that can parse search params with Zod, of which I like [Conform](https://conform.guide/).
+
+```ts
+import { parseWithZod } from "@conform-to/zod"
+
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
+  const url = new URL(request.url)
+
+  const submission = await parseWithZod(url.searchParams, {
+    schema: PaginationSchema.merge(FilterSchema)
+      .merge(SortSchema)
+      .merge(SearchSchema)
+      .partial(),
+  })
+
+  if (submission.status !== "success") {
+    throw new Error(
+      "This will never fail if the schema is .partial()",
+    )
+  }
+
+  const {
+    skip,
+    limit,
+    status,
+    author,
+    sort,
+    order,
+    query,
+  } = submission.value
+}
+```
+
+If any of the query params are missing and you don't want that to cause an error, you can use the `.partial()` modifier, or specify default values in the schema which will work in the loader but not affect the URL.
