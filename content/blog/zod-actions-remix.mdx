@@ -1,0 +1,127 @@
+---
+title: Multiple action handlers with Zod in Remix
+description: Use zod schemas for each request body. Give each component its own schema. Use discriminated unions to combine them in your actions.
+tags: Remix
+published: true
+timestamp: "2024-05-26"
+---
+
+When mutating data in your route action, you'll want to keep track of which components are using the action.
+
+As your app grows you'll end up having several components [using the same action endpoint](/content/remix-multiple-actions), and each will submit data with its own payload.
+
+For example, you may have
+
+- a `CreateItem` form that makes a new item
+- an `EditItem` form that lets the user change specific fields
+- a `DeleteItem` button that deletes the item
+
+Each of these components can have their own Zod schema that is exported from their respective files.
+
+Each one will need an `intent` field that distinguishes it from the other schemas.
+
+```ts
+import { z } from "zod"
+
+// components/CreateItem.tsx
+export const CreateItemSchema = z.object({
+  intent: z.literal("create"),
+  title: z.string(),
+  description: z.string().optional(),
+  status: z.enum(["todo", "doing", "done"]),
+})
+
+// components/EditItem.tsx
+export const EditItemSchema = z.object({
+  intent: z.literal("edit"),
+  changeset: z
+    .object({
+      title: z.string(),
+      description: z.string(),
+      status: z.enum(["todo", "doing", "done"]),
+    })
+    .partial(),
+})
+
+// components/DeleteItem.tsx
+export const DeleteItemSchema = z.object({
+  intent: z.literal("delete"),
+})
+```
+
+In the action for the route that uses these components, you can compose them together as a discriminated union.
+
+If you are only going to accept JSON, you can use zod to parse it on its own.
+
+```ts
+import { z } from "zod"
+
+export async function action({
+  request,
+}: ActionFunctionArgs) {
+  const body = await request.json()
+  const result = z
+    .discriminatedUnion("intent", [
+      CreateItemSchema,
+      EditItemSchema,
+      DeleteItemSchema,
+    ])
+    .safeParse(body)
+}
+```
+
+If you are only going to accept form data, you can use [Conform's](https://conform.guide/) `parseWithZod` function. It will turn the form data into an object, while coercing multiple entries with the same name into an array.
+
+```ts
+import { parseWithZod } from "@conform-to/zod"
+
+export async function action({ request }) {
+  const formData = await request.formData()
+
+  const submission = parseWithZod(formData, {
+    schema: z.discriminatedUnion("intent", [
+      CreateItemSchema,
+      EditItemSchema,
+      DeleteItemSchema,
+    ]),
+  })
+
+  if (submission.status !== "success") {
+    throw new Error("Unknown form schema")
+  }
+
+  …
+}
+```
+
+If you want to handle JSON **and** form data, you can use this [`parseRequest` function that works with both](/content/conform-json-formdata#parse-json-and-formdata-requests).
+
+```ts
+export async function action({ request }) {
+  const submission = parseRequest(request, {
+    schema: z.discriminatedUnion("intent", [
+      CreateItemSchema,
+      EditItemSchema,
+      DeleteItemSchema,
+    ]),
+  })
+
+  if (submission.status !== "success") {
+    throw new Error("Unknown form schema")
+  }
+
+  if (submission.value.intent === "create") {
+    return createItem(submission.value)
+  }
+
+  if (submission.value.intent === "edit") {
+    return updateItem(submission.value)
+  }
+
+  if (submission.value.intent === "delete") {
+    return deleteItem(submission.value)
+  }
+
+  throw new Error("Unknown intent")
+}
+```
