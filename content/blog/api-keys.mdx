@@ -1,0 +1,149 @@
+---
+title: Use API keys to connect apps and services
+description: Use environment variables to store single API keys, or put them in the database for advanced workflows. Use time-limited keys and scope them to specific permissions.
+published: true
+timestamp: "2024-06-29"
+---
+
+## Single key strategy
+
+The quick and easy way to implement API keys is to give each service a matching `API_KEY` environment variable, and then use that key to authenticate requests.
+
+In the app, attach the API key as a header to each request.
+
+```ts
+const response = await fetch(
+  `${process.env.API_URL}/api/v1/users`,
+  {
+    headers: {
+      authorization: `Bearer ${process.env.API_KEY}`,
+    },
+  },
+)
+```
+
+In the API, you can then validate the API key and make sure that the request is coming from a valid source.
+
+```ts
+async function requireApiKey(authHeader: string) {
+  const [authType, apiKey] = authHeader.split(" ")
+
+  if (
+    authType !== "Bearer" ||
+    apiKey !== process.env.API_KEY
+  ) {
+    throw new Error("Unauthorized")
+  }
+}
+
+export default async function handler(request: Request) {
+  await requireApiKey(request.headers.get("authorization"))
+
+  // handle the request
+}
+```
+
+The single key strategy is good for **trusted backend to API** communcation, where access is enforceable at the backend level.
+
+For example, a full stack Remix or Next.js app that needs to perform actions on an API service on behalf of users. If some users have admin access and some have lesser access, then the app backend must be in charge of restricting access to the API for certain users.
+
+The API must trust that any request coming from the app (with the API key) is valid.
+
+## Database backed keys
+
+The next level is to allow keys to be generated and stored in the API's database. Instead of comparing the request's authorization header against an environment variable, the API can search the database for a matching key.
+
+```ts
+async function requireApiKey(authHeader: string) {
+  const [authType, apiKey] = authHeader.split(" ")
+  const key = await db.keys.findUnique({
+    where: {
+      key: apiKey,
+    },
+  })
+
+  if (authType !== "Bearer" || !apiKey) {
+    throw new Error("Unauthorized")
+  }
+
+  return key
+}
+```
+
+With this approach, keys can be issued to apps, services, or even individual users. The API can then check if the key has the correct permissions to perform the requested action, which means it can work with less trusted clients as well.
+
+## Time limited keys
+
+Keys can expire in two ways: either at the database level or the app level.
+
+Some databases support a time-to-live (TTL) feature, where documents will automatically be deleted after that time. This can work for some use-cases, but then there is no way of informing the user that their keys have expired, or to tell them in advance that their key is due for renewal.
+
+Most apps will prefer an explicit expiration date, where the app can check if the current date is before the expiration date.
+
+```ts
+async function requireApiKey(authHeader: string) {
+  const [authType, apiKey] = authHeader.split(" ")
+  const key = await db.keys.findUnique({
+    where: {
+      key: apiKey,
+    },
+    select: {
+      expiresAt: true,
+    },
+  })
+
+  if (key.expiresAt < new Date()) {
+    throw new Error("Unauthorized")
+  }
+
+  return key
+}
+```
+
+The app could then display a list of keys to the user and prompt them to renew any that are about to expire.
+
+## Permission scoped keys
+
+Keys can also contain information on what permissions they have. This is useful if the app needs to give granular access to certain clients.
+
+```ts
+async function requireApiKey(
+  authHeader: string,
+  permissions: Array<string>,
+) {
+  const [authType, apiKey] = authHeader.split(" ")
+  const key = await db.keys.findUnique({
+    where: {
+      key: apiKey,
+    },
+    select: {
+      expiresAt: true,
+      permissions: true,
+    },
+  })
+
+  const isExpired = key.expiresAt < new Date()
+  const hasPermission = key.permissions.some((permission) =>
+    permissions.includes(permission),
+  )
+
+  if (isExpired || !hasPermission) {
+    throw new Error("Unauthorized")
+  }
+
+  return key
+}
+```
+
+The API can check permissions for each actions
+
+```ts
+export default async function handler(request: Request) {
+  await requireApiKey(
+    request.headers.get("authorization"),
+    ["read:users", "write:users"],
+  )
+
+  // handle the request
+}
+```
