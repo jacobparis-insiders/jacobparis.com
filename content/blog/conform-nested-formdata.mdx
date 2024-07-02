@@ -1,0 +1,151 @@
+---
+title: Nested arrays and objects in Form Data with Conform
+description: Use Conform's parseWithZod to handle nested arrays and objects in form data. Repeat the same input name for arrays. Use dot notation for objects. Use `array[index].property` for arrays of objects.
+tags: Conform
+published: true
+timestamp: "2024-07-01"
+---
+
+HTML forms have always had a flat structure, where each input name becomes a key in the form data.
+
+```html
+<input name="name" value="Jacob" />
+```
+
+With `formData.get("name")` you will get the single value `"Jacob"`.
+
+By using multiple inputs with the same name, you can simulate an array of values, which will be accessible at `formData.getAll("tag")`.
+
+```html
+<input name="tag" value="Remix" />
+<input name="tag" value="React" />
+```
+
+But that's as far as form data parsing goes, and there's no standard for structured data beyond that.
+
+PHP fans may be familiar with the `$_POST` superglobal, which allows you to access nested arrays using a special name syntax `user[address][street]`, but that's a convention, not a standard.
+
+Using Conform's parseWithZod function<SideNote> .</SideNote> you can get similar conventions working in React apps.
+
+## Use parseWithZod to parse form data
+
+This is the basic setup of an action function that uses Conform for parsing form data.
+
+It's important to note that you don't have to use Conform in your frontend You can use plain HTML inputs as long as you give them the right names. All this action cares about is the form data it receives.
+
+If you want to handle [multiple actions](/blog/remix-multiple-actions) use a discriminated union with multiple schemas.
+
+```ts
+const FormSchema = z.object({
+  name: z.string(),
+})
+
+export async function action({
+  request,
+}: ActionFunctionArgs) {
+  const formData = await request.formData()
+  const submission = await parseWithZod(formData, {
+    schema: FormSchema,
+  })
+
+  if (submission.status !== "success") {
+    return json(
+      { result: submission.reply() },
+      { status: submission.status === "error" ? 400 : 200 },
+    )
+  }
+
+  return {
+    // submission.data will now match the FormSchema
+    name: submission.data.name,
+  }
+}
+```
+
+## Arrays
+
+To handle arrays, you still use multiple inputs with the same name, but there's no need to use `formData.getAll` because `parseWithZod` will do that for you when your schema expects an array.
+
+```ts
+const FormSchema = z.object({
+  tags: z.array(z.string()),
+})
+```
+
+The inputs look like this and can be anywhere in the form.
+
+```html
+<input name="tags" value="Remix" />
+<input name="tags" value="React" />
+```
+
+## Objects
+
+Objects aren't part of the form data structure, but Conform allows you to specify objects in your schema and will automatically map your data into it.
+
+```ts
+const FormSchema = z.object({
+  name: z.string(),
+  age: z.number(),
+  address: z.object({
+    street: z.string(),
+    city: z.string(),
+    zip: z.string(),
+  }),
+})
+```
+
+Use dot notation to mark each input as a property of the object.
+
+```html
+<input name="name" value="Jacob" />
+<input name="age" value="30" />
+<input name="address.street" value="123 Main St" />
+<input name="address.city" value="Anytown" />
+<input name="address.zip" value="12345" />
+```
+
+## Arrays of objects
+
+Arrays of objects use the convention `array[index].property`.
+
+```ts
+const FormSchema = z.object({
+  users: z.array(
+    z.object({
+      name: z.string(),
+      age: z.number(),
+    }),
+  ),
+})
+```
+
+In order for the input to map to the correct array item, you will need to specify the index of the array on each item.
+
+```html
+<input name="users[0].name" value="Jacob" />
+<input name="users[0].age" value="30" />
+<input name="users[1].name" value="Emily" />
+<input name="users[1].age" value="28" />
+```
+
+In React, this would usually look like a map operation.
+
+```tsx
+return (
+  <form>
+    {users.map((user, index) => (
+      <div key={index}>
+        <input
+          name={`users[${index}].name`}
+          value={user.name}
+        />
+        <input
+          name={`users[${index}].age`}
+          value={user.age}
+        />
+      </div>
+    ))}
+  </form>
+)
+```
