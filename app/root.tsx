@@ -129,6 +129,22 @@ export default function App() {
           background-color: rgba(255, 255, 255, 0.2);
         }`}
         </style>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+    (function () {
+        window.counterscale = {
+            q: [["set", "siteId", "jacobparis.com"], ["trackPageview"]],
+        };
+    })();
+    `,
+          }}
+        />
+        <script
+          id="counterscale-script"
+          src="https://counterscale.jacobparis.workers.dev/tracker.js"
+          defer
+        />
       </head>
       <body className="h-full bg-[#f5f5f5]">
         <HoneypotProvider>
