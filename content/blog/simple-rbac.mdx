@@ -1,0 +1,200 @@
+---
+title: Simple RBAC in Remix
+description: Implement role based authorization in Remix. Hard-code your permissions if possible. Store them in the database if they have to be updated dynamically.
+tags: Remix
+published: true
+timestamp: "2024-07-08"
+---
+
+RBAC, or Role Based Access Control, is one of the most popular patterns for authorizing users to do things in an application, especially at the enterprise level.
+
+This structure means each user gets a role, and each role gets a set of permissions.
+
+When you want to protect access to something, you check whether the current user has the right permission based on their role.
+
+So you won't see code like "if (['admin', 'super-admin', 'accounting', 'developers', 'test'].includes(user.role))" in your codebase. That strategy leaves you with a lot of manual work updating lists of allowed roles all over the codebase every time the permissions need to change or there's a new feature added.
+
+Instead, the code might look something like
+
+```ts
+if (!hasPermissions(user.role, ["read:users"])) {
+  throw new Error(
+    "You don't have permission to view this resource",
+  )
+}
+```
+
+and then any user who has a role that has the `read:users` permission will be able to access the resource.
+
+## Level 1: Hardcoded permissions
+
+At some point in your product's lifespan, you're going to need to add or remove a permission for a role. If it's ok for that change to be made by a developer, then hardcoding the permissions is by far the easiest way to handle this.
+
+Create a permissions.server.ts file.
+
+```ts
+type Permission =
+  | "read:users"
+  | "write:users"
+  | "delete:users"
+  | "read:invoices"
+  | "write:invoices"
+  | "delete:invoices"
+  | "read:products"
+  | "write:products"
+  | "delete:products"
+
+const permissions: Record<Role, Array<Permission>> = {
+  admin: ["read:users", "write:users", "delete:users"],
+  accounting: [
+    "read:users",
+    "read:invoices",
+    "write:invoices",
+    "delete:invoices",
+  ],
+  user: [
+    "read:users",
+    "read:invoices",
+    "read:products",
+    "write:products",
+    "delete:products",
+  ],
+  guest: ["read:products"],
+}
+
+export function hasPermissions(
+  role: Role,
+  permissions: Array<Permission>,
+) {
+  return permissions.every((permission) =>
+    permissions[role].includes(permission),
+  )
+}
+```
+
+## Checking permissions in your routes
+
+You can use this function in your routes to check if the current user has the right permissions to access the resource.
+
+As part of authentication, I usually already have a `requireUser` function that throws a redirect to the login page if the user is not logged in.<SideNote>
+Remix allows you to throw redirects instead of returning them, so you don't have to check the return value.</SideNote>
+
+```ts
+export async function requireUser(request: Request) {
+  const user = await getUser(request)
+
+  if (!user) {
+    throw redirect("/login")
+  }
+
+  return user
+}
+```
+
+This is a convenient place to put the permission check too.
+
+```ts
+export async function requireUser(
+  request: Request,
+  permissions?: Array<Permission>,
+) {
+  const user = await getUser(request)
+  if (!user) {
+    throw redirect("/login")
+  }
+
+  if (
+    permissions &&
+    !hasPermissions(user.role, permissions)
+  ) {
+    // Don't redirect because we don't know where to send them
+    // The UI should handle displaying this error
+    // and should have prevented the user from attempting in the first place
+    throw new Error(
+      "You don't have permission to view this resource",
+    )
+  }
+
+  return user
+}
+```
+
+Now this can be used as a one-liner at the top of every loader and action we want to protect.
+
+```ts
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+} from "@remix-run/node"
+
+export async function action({
+  request,
+}: ActionFunctionArgs) {
+  const user = await requireUser(request, ["write:users"])
+
+  // Now we know they're logged in and they have permissions to write users
+  const formData = await request.formData()
+  const name = formData.get("name")
+
+  await createUser({
+    name: name.toString(),
+    createdBy: user.id,
+  })
+
+  return {
+    success: true,
+  }
+}
+
+export async function loader({
+  request,
+}: LoaderFunctionArgs) {
+  await requireUser(request, ["read:users"])
+
+  return {
+    users: await getUsers(),
+  }
+}
+```
+
+## Level 2: Database-backed roles
+
+If there is a product requirement to be able to reassign permissions through the UI or database without needing a developer to make the change, then hardcoding is unsuitable.
+
+In that case, store the roles in the database and then use the `hasPermissions` function to check if the current user has the right permissions to access the resource.
+
+Here's a sample prisma schema but should be easy to translate to any database you're using.
+
+```
+model Role {
+  id String @id @default uuid()
+  name String @unique
+  permissions String[]
+}
+```
+
+Update the `hasPermissions` function to fetch the role from the database and then check the permissions against that instead of using the hardcoded permissions object.
+
+```ts
+export async function hasPermissions(
+  roleName: Role,
+  permissions: Array<Permission>,
+) {
+  const role = await db.role.findUnique({
+    where: {
+      name: roleName,
+    },
+    select: {
+      permissions: true,
+    },
+  })
+
+  if (!role) {
+    throw new Error("Role not found")
+  }
+
+  return permissions.every((permission) =>
+    role.permissions.includes(permission),
+  )
+}
+```
