@@ -53,6 +53,10 @@ export default defineConfig({
 })
 ```
 
+If this is all you want, you can get away without the `remix-custom-routes` plugin and use [the built-in defineRoutes API](https://remix.run/docs/en/main/discussion/routes#manual-route-configuration).
+
+But this array format has advantages as you'll see below.
+
 ## File based routing
 
 If you like file based routing, you can use a glob pattern to collect your routes together, and then pass them to the `getRouteIds` function.
