@@ -1,0 +1,165 @@
+---
+title: Custom routing with Remix
+description: Create your own route convention. Use a custom glob pattern. Add layouts automatically, or prepend an optional language segment.
+tags: Remix
+published: true
+timestamp: "2024-07-09"
+---
+
+While Remix comes with a file based routing system built in, that's just a default convention and it's actually fully customizable.
+
+The configuration all happens in the `vite.config.ts` file.
+
+Using the [remix-custom-routes package](https://github.com/jacobparis-insiders/remix-custom-routes), you can pass any list of files and turn them into routes.
+
+Its `getRouteManifest` function takes an array of route IDs and their file paths and returns a manifest of routes that Remix accepts.
+
+The route ID is the standard remix flat file convention but without the file extension.
+
+```ts
+import path from "node:path"
+import { getRouteManifest } from "remix-custom-routes"
+
+function here(...paths: string[]) {
+  const __dirname = import.meta.dirname
+  return path.join(__dirname, ...paths)
+}
+
+export default defineConfig({
+  plugins: [
+    remix({
+      ignoredRouteFiles: ["**/*"],
+      async routes() {
+        return getRouteManifest([
+          // /
+          ["_home", here("app/homeLayout.tsx")],
+          ["_home._index", here("app/home.tsx")],
+
+          // /about (wrapped in homeLayout)
+          ["_home.about", here("app/about.tsx")],
+
+          // /login and /signup
+          ["_auth", here("app/auth/layout.tsx")],
+          ["_auth._login", here("app/auth/login.tsx")],
+          ["_auth._signup", here("app/auth/signup.tsx")],
+
+          // /es/blog/post-name or /blog/post-name
+          ["($lang).blog", here("app/blogLayout.tsx")],
+          ["($lang).blog.$slug", here("app/blogPost.tsx")],
+        ])
+      },
+    }),
+  ],
+})
+```
+
+## File based routing
+
+If you like file based routing, you can use a glob pattern to collect your routes together, and then pass them to the `getRouteIds` function.
+
+This approach gets you pretty close to the default file based routing behavior.
+
+```ts
+import { glob } from "glob"
+import path from "node:path"
+import {
+  ensureRootRouteExists,
+  getRouteIds,
+  getRouteManifest,
+} from "remix-custom-routes"
+
+const __dirname = import.meta.dirname
+
+export default defineConfig({
+  plugins: [
+    remix({
+      ignoredRouteFiles: ["**/*"],
+      async routes() {
+        const appDirectory = path.join(__dirname, "app")
+        ensureRootRouteExists(appDirectory)
+
+        const files = glob.sync(
+          "routes/*.{js,jsx,ts,tsx,md,mdx}",
+          { cwd: appDirectory },
+        )
+
+        // returns an array of [id, filepath]
+        const routeIds = getRouteIds(files, {
+          indexNames: ["_index"],
+        })
+
+        return getRouteManifest(routeIds)
+      },
+    }),
+  ],
+})
+```
+
+## Excluding files
+
+There is a lot of room for customization with the glob pattern. For example, you can exclude `.server.ts` and `.client.ts` files so that you can put them right next to your routes without causing Remix to try to mount them as routes.
+
+That lets you put `blog.tsx` and `blog.server.ts` side by side.
+
+```ts
+const files = glob.sync("routes/*.{js,jsx,ts,tsx,md,mdx}", {
+  ignore: [
+    "**/*.server.{js,jsx,ts,tsx}",
+    "**/*.client.{js,jsx,ts,tsx}",
+  ],
+  cwd: appDirectory,
+})
+```
+
+## dot route suffixes
+
+Or you can make routing an opt-in process for each file, by forgoing the `/routes` folder entirely and requiring every route to have a `.route.tsx` suffix.
+
+With that approach, you can put your routes anywhere in your codebase. You can [make feature folders](/content/remix-feature-folders) where every file related to a feature is colocated.
+
+```ts
+const files = glob.sync("**/*.route.{js,jsx,ts,tsx}", {
+  cwd: appDirectory,
+})
+```
+
+## Automatic layouts
+
+You can manipulate the IDs that getRouteIds returns before passing it to getRouteManifest.
+
+This is useful if you want to add a common layout to all of your routes but don't want to add it to every single file path.
+
+```ts
+const routeIds = getRouteIds(files, {
+  indexNames: ["_index"],
+}).map(([id, filepath]) => {
+  if (!filePath.includes("auth")) {
+    // auth routes don't get the layout
+    return [`_layout.${id}`, filepath]
+  }
+
+  return [id, filepath]
+}) as Array<[string, string]>
+
+return getRouteManifest(routeIds)
+```
+
+## Add optional language segment
+
+For internationalization, you may want your URL to include the language. `/blog` might default to english, but `/es/blog` would return spanish.
+
+Just like the above example, you can add a `($lang)` segment to your route IDs for the blog routes.
+
+```ts
+const routeIds = getRouteIds(files, {
+  indexNames: ["_index"],
+}).map(([id, filepath]) => {
+  if (filepath.includes("blog")) {
+    return [`($lang).${id}`, filepath]
+  }
+
+  return [id, filepath]
+}) as Array<[string, string]>
+
+return getRouteManifest(routeIds)
+```
