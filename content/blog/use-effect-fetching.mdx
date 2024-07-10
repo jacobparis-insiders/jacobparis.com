@@ -1,0 +1,275 @@
+---
+title: Data fetching in useEffect vs Remix loader
+description: useEffect data fetching is hard to write well. Handle errors, loading states, and race conditions. Or, use a loader.
+tags: Remix
+published: true
+timestamp: "2024-07-10"
+---
+
+Fetching data in a useEffect is a red flag.
+
+That's not to say it should never be done – most data fetching libraries for React are using useEffect under the hood.
+
+But red flags are there to warn you about danger. There are a lot of things that can go wrong and if you don't know what you're doing, it's easy to end up with a really janky and unreliable UI.
+
+After the component renders, useEffect runs and if it updates the state, the component will re-render.
+
+That's where we start:
+
+```ts
+function App() {
+  const [id, setId] = useState(1)
+  const [item, setItem] = useState(null)
+
+  useEffect(() => {
+    fetch(`/api/items/${id}`)
+      .then((response) => response.json())
+      .then((json) => setItem(json))
+  }, [id])
+
+  return (
+    <div>
+      <h1> Item {id} </h1>
+      {item ? <div>{item.name}</div> : "Loading..."}
+    </div>
+  )
+}
+```
+
+## It shows the wrong data when the id changes
+
+When the user changes the id, the title updates immediately but the old item stays for a second, which looks completely out of sync.
+
+That's because we're only showing the loading spinner when there is no item, so we need to clear the item when the id changes.
+
+```diff
+function App() {
+  const [id, setId] = useState(1)
+  const [item, setItem] = useState(null)
+
+  useEffect(() => {
++   setItem(null)
+
+    fetch(`/api/items/${id}`)
+      .then((response) => response.json())
+      .then((json) => setItem(json))
+  }, [id])
+
+  return (
+    <div>
+      <h1> Item {id} </h1>
+      {item ? <div>{item.name}</div> : "Loading..."}
+    </div>
+  )
+}
+```
+
+## What happens when there's an error?
+
+If the fetch fails we need to show an error message
+
+```diff
+function App() {
+  const [id, setId] = useState(1)
+  const [item, setItem] = useState(null)
++ const [errorMessage, setErrorMessage] = useState(null)
+
+  useEffect(() => {
+    setItem(null)
++   setErrorMessage(null)
+
+    fetch(`/api/items/${id}`)
+      .then((response) => response.json())
+      .then((json) => setItem(json))
++     .catch((error) => setErrorMessage(error.message))
+  }, [id])
+
+  return (
+    <div>
+      <h1> Item {id} </h1>
+      {item ? <div>{item.name}</div> : "Loading" }
+      {errorMessage ? <div>{errorMessage}</div> : null}
+    </div>
+  )
+}
+```
+
+## It still says "Loading" when there's an error
+
+Now we're getting some states mixed up. By trying to derive the loading state from the error state, we're making the UI more complicated.
+
+We can instead use a single status that is "loading", "error", "success" or "idle".
+
+```diff
+function App() {
+  const [id, setId] = useState(1)
+  const [item, setItem] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
++ const [status, setStatus] = useState("idle")
+
+  useEffect(() => {
+    setItem(null)
+    setErrorMessage(null)
++   setStatus("loading")
+
+    fetch(`/api/items/${id}`)
+      .then((response) => response.json())
+      .then((json) => {
+        setItem(json)
++       setStatus("success")
+      })
+      .catch((error) => {
+        setErrorMessage(error.message)
++      setStatus("error")
+      })
+  }, [id])
+
+  return (
+    <div>
+      <h1> Item {id} </h1>
+
++     {status === "loading"
++       ? "Loading..."
++       : status === "error"
++         ? <div>{errorMessage}</div>
++         : <div>{item.name}</div>
++     }
+    </div>
+  )
+}
+```
+
+## If the user changes ID too quickly, responses come in out of order
+
+Every time the ID changes, the useEffect is going to fire off another fetch. These will almost always hit the server in the order they were requested, but there's no guarantee at all that they'll receive their responses in the same order.
+
+So you rapidly click item 1, and then item 2, and then item 3.
+
+When the loading spinner disappears you see a heading of `Item 3` but the data for item 2 and it takes another second for item 3 to appear. Janky, but eventually consistent.
+
+Other times it could be worse: item 3 can come in BEFORE item 2, so you actually end up staring at a heading for Item 3 but the data for item 2 once all the flashing and loading is done.
+
+The solution to this is to cancel the previous fetch when a new one is started. Cancellation doesn't stop it from hitting the server, it just means that we aren't going to care about the response.
+
+```diff
+function App() {
+  const [id, setId] = useState(1)
+  const [item, setItem] = useState(null)
+  const [errorMessage, setErrorMessage] = useState(null)
+  const [status, setStatus] = useState("idle")
+
+
+  useEffect(() => {
++   let isCanceled = false
+
+    setItem(null)
+    setErrorMessage(null)
+    setStatus("loading")
+
+    fetch(`/api/items/${id}`)
+      .then((response) => response.json())
+      .then((json) => {
++       if (!isCanceled) {
+          setItem(json)
+          setStatus("success")
++       }
+      })
+      .catch((error) => {
++       if (!isCanceled) {
+          setErrorMessage(error.message)
+          setStatus("error")
++       }
+      })
+
++   return function cleanup() {
++     isCanceled = true
++   }
+  }, [id])
+
+  return (
+    <div>
+      <h1> Item {id} </h1>
+
+      {status === "loading"
+        ? "Loading..."
+        : status === "error"
+          ? <div>{errorMessage}</div>
+          : <div>{item.name}</div>
+      }
+    </div>
+  )
+}
+```
+
+## Use a loader
+
+With Remix, you don't need to worry about any of this. Data fetching happens in loaders, and request cancellation and race conditions are built-in.
+
+It's all tied into the router, so by default you don't even need a loading state because it will use the browser's loading state.
+
+On first page load, the user will receive the pre-rendered HTML with all the data already there at the moment the page loads.
+
+On client side navigations, the browser will wait until the loader data is ready before showing the page.
+
+```ts
+import type { LoaderFunctionArgs } from "@remix-run/node"
+
+export async function loader({ params }) {
+  return {
+    item: await fetch(`/api/items/${params.id}`).then(
+      (res) => res.json(),
+    ),
+  }
+}
+
+export default function App() {
+  const { item } = useLoaderData<typeof loader>()
+
+  return (
+    <div>
+      <h1>Item {item.id}</h1>
+      <div>{item.name}</div>
+    </div>
+  )
+}
+```
+
+## Use a custom loading state
+
+If you don't want the page to wait on your data, remove the `await` keyword.
+
+The page will still pre-render like before, but without waiting for your data, and the parts of the app that depend on your data can be replaced with loading spinners.
+
+When the data is ready, the spinners will disappear and the page will update.
+
+```diff
+export async function loader({ params }) {
+  return {
+-   item: await fetch(`/api/items/${params.id}`).then(
++   item: fetch(`/api/items/${params.id}`).then(
+      (res) => res.json(),
+    ),
+  }
+}
+```
+
+In the app, we now use Suspense and Await to show a loading spinner while the data is being fetched. You can wrap multiple Awaits in a single Suspense if you want the spinner to wait for all of them
+
+```tsx
+export default function App() {
+  const { item } = useLoaderData<typeof loader>()
+
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <Await promise={item}>
+        {(item) => (
+          <div>
+            <h1>Item {item.id}</h1>
+            <div>{item.name}</div>
+          </div>
+        )}
+      </Await>
+    </Suspense>
+  )
+}
+```
