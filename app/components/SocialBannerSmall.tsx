@@ -1,5 +1,6 @@
 import { BookOpenIcon, HomeIcon } from "@heroicons/react/20/solid"
 import { ButtonLink } from "./ButtonLink.tsx"
+import { Icon } from "./icon.tsx"
 
 export function SocialBannerSmall(props: React.HTMLAttributes<HTMLDivElement>) {
   return (
@@ -35,6 +36,26 @@ export function SocialBannerSmall(props: React.HTMLAttributes<HTMLDivElement>) {
             </span>
             <span className="mx-2 hidden font-medium leading-6 print:md:inline">
               https://www.jacobparis.com/content
+            </span>
+          </ButtonLink>
+        </li>
+
+        <li>
+          <ButtonLink
+            className="flex flex-row items-center rounded-lg px-4 py-2"
+            to="/ui"
+            prefetch="intent"
+          >
+            <Icon
+              name="clipboard-copy"
+              className="h-6 w-6"
+              aria-hidden="true"
+            />
+            <span className="screen:md:inline mx-2 hidden font-medium leading-6">
+              UI
+            </span>
+            <span className="mx-2 hidden font-medium leading-6 print:md:inline">
+              https://www.jacobparis.com/ui
             </span>
           </ButtonLink>
         </li>

@@ -10,12 +10,32 @@
 			"}"
 		]
 	},
+	"clientLoader": {
+		"prefix": "/clientLoader",
+		"body": [
+			"import type { ClientLoaderFunctionArgs } from \"@remix-run/react\"",
+			"",
+			"export async function clientLoader({ request }: ClientLoaderFunctionArgs) {",
+			"  return null",
+			"}"
+		]
+	},
 	"action": {
 		"prefix": "/action",
 		"body": [
 			"import type { ActionFunctionArgs } from \"@remix-run/node\"",
 			"",
 			"export async function action({ request }: ActionFunctionArgs) {",
+			"  return null",
+			"}"
+		]
+	},
+	"clientAction": {
+		"prefix": "/clientAction",
+		"body": [
+			"import type { ClientActionFunctionArgs } from \"@remix-run/react\"",
+			"",
+			"export async function clientAction({ request }: ClientActionFunctionArgs) {",
 			"  return null",
 			"}"
 		]

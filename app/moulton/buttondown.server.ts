@@ -207,8 +207,8 @@ const emailSchema = z.object({
   email_type: z.string(),
   status: z.string(),
   metadata: z.object({}),
-  secondary_id: z.number(),
-  external_url: z.string(),
+  secondary_id: z.number().optional(),
+  external_url: z.string().optional(),
 })
 
 const emailListSchema = z.object({
@@ -229,9 +229,17 @@ export async function getButtondownEmails() {
   })
 
   if (response.ok) {
-    return {
-      code: "success" as const,
-      data: emailListSchema.parse(response.data),
+    const data = emailListSchema.safeParse(response.data)
+    if (data.success) {
+      return {
+        code: "success" as const,
+        data,
+      }
+    } else {
+      return {
+        code: "success" as const,
+        data: [],
+      }
     }
   }
 

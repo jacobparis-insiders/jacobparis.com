@@ -1,0 +1,605 @@
+import { Button } from "#app/components/ui/button.tsx"
+import { Input } from "#app/components/ui/input.tsx"
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "#app/components/ui/tabs.tsx"
+import { Combobox } from "#app/components/ui/combobox.tsx"
+import type {
+  ClientActionFunctionArgs,
+  ClientLoaderFunctionArgs,
+} from "@remix-run/react"
+import { Form, Link, useLoaderData } from "@remix-run/react"
+import { InlineCode } from "./InlineCode.tsx"
+import { LocalStorageDB } from "./LocalStorageDB.tsx"
+import { Icon } from "#app/components/icon.tsx"
+
+export async function loader() {
+  const newGenreNames = ["Rock", "Pop", "Jazz"]
+
+  return {
+    newGenreNames,
+  }
+}
+
+clientLoader.hydrate = true
+export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
+  const db = new LocalStorageDB("combobox:genres")
+
+  const savedGenres = db.findAll()
+  if (savedGenres.length === 0) {
+    const { newGenreNames } = await serverLoader<typeof loader>()
+    for (const genre of newGenreNames) {
+      db.createOne({ name: genre })
+    }
+  }
+
+  const genres = db.findAll()
+
+  const selectedGenreIds = window.localStorage.getItem(
+    "combobox:selectedGenreIds",
+  )
+  return {
+    genres,
+    selectedGenreIds: selectedGenreIds ? selectedGenreIds.split(",") : [],
+  }
+}
+
+export async function clientAction({ request }: ClientActionFunctionArgs) {
+  const formData = await request.formData()
+  const db = new LocalStorageDB("combobox:genres")
+
+  const genreIds = formData.getAll("genreId")
+  const newGenreIds = formData
+    .getAll("newGenreName")
+    .map((name) => db.createOne({ name: name.toString() }))
+    .map((genre) => genre.id)
+
+  window.localStorage.setItem(
+    "combobox:selectedGenreIds",
+    Array.from(new Set([...genreIds, ...newGenreIds]))
+      .map((id) => id.toString())
+      .join(","),
+  )
+
+  return null
+}
+
+export default function Component() {
+  const { genres, selectedGenreIds } = useLoaderData<typeof clientLoader>()
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center text-2xl font-bold text-neutral-600">
+        <Link to="/ui" className="hover:text-black hover:underline">
+          jacobparis/ui
+        </Link>
+        <Icon name="chevron-right" />
+        <h1 className="font-bold text-black">Combobox</h1>
+      </div>
+      <p className="mt-4">
+        A searchable dropdown menu that supports creating new options on the
+        fly, in either "single" or "multiple" selection mode.
+      </p>
+      <p className="mt-4">
+        This is a form component, so wrap it in a{" "}
+        <InlineCode>&lt;Form&gt;</InlineCode> and its data will be submitted
+        along with the rest of the form. This page submits to local storage,
+        which you can clear by opening the browser's developer console and
+        running <InlineCode>localStorage.clear()</InlineCode>.
+      </p>
+      <div className="mt-6">
+        <Tabs defaultValue="preview">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <Form
+              method="POST"
+              className="shadow-smooth flex justify-center gap-x-2 rounded-md bg-white p-8"
+            >
+              <>
+                {genres ? (
+                  <Combobox
+                    className="max-w-xs grow"
+                    mode="multiple"
+                    name="genreId"
+                    defaultValue={selectedGenreIds}
+                    createName="newGenreName"
+                    createLabel="Name:"
+                    options={genres?.map((genre) => ({
+                      label: genre.name,
+                      value: genre.id,
+                    }))}
+                  />
+                ) : (
+                  <Input
+                    className="max-w-xs grow"
+                    type="text"
+                    disabled={true}
+                  />
+                )}
+                <div className="">
+                  <Button>Submit</Button>
+                </div>
+              </>
+            </Form>
+          </TabsContent>
+          <TabsContent value="code">
+            <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+              <div className="flex items-center justify-between">
+                <pre className="text-sm">
+                  <code>{`<Combobox
+  mode="multiple"
+  name="genreId"
+  defaultValue={selectedGenreIds}
+  options={genres?.map((genre) => ({
+    label: genre.name,
+    value: genre.id,
+  }))}
+  createName="newGenreName"
+  createLabel="Name:"
+/>`}</code>
+                </pre>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <h2 className="mt-8 text-2xl font-bold">Installation</h2>
+
+      <div className="mt-6">
+        <Tabs defaultValue="cli">
+          <TabsList>
+            <TabsTrigger value="cli">CLI</TabsTrigger>
+            <TabsTrigger value="manual">Manual</TabsTrigger>
+          </TabsList>
+          <TabsContent value="cli">
+            <p className="mt-4">
+              You can either copy/paste the code into your project directly or
+              use{" "}
+              <a
+                href="https://sly-cli.fly.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-500 hover:underline"
+              >
+                Sly CLI
+              </a>{" "}
+              to install the package.
+            </p>
+            <div className="shadow-smooth mt-4  rounded-md bg-black p-4 text-white">
+              <code>npx @sly-cli/sly@latest add jacobparis/ui combobox</code>
+            </div>
+          </TabsContent>
+          <TabsContent value="manual">
+            <ol className="mt-4 space-y-4">
+              <li className="">
+                Copy and paste the following code into your project.
+                <div className="mt-4 rounded-md  bg-black p-4 text-white">
+                  <pre className="text-sm">
+                    <code>{`import * as React from "react"
+
+import { cn } from "@/lib/utils"
+
+export interface InputProps
+  extends React.InputHTMLAttributes<HTMLInputElement> {}
+
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => {
+    return (
+      <input
+        type={type}
+        className={cn(
+          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+          className
+        )}
+        ref={ref}
+        {...props}
+      />
+    )
+  }
+)
+Input.displayName = "Input"
+
+export { Input }`}</code>
+                  </pre>
+                </div>
+              </li>
+              <li>Update the import paths to match your project setup.</li>
+            </ol>
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <h2 className="mt-8 text-2xl font-bold"> Single select </h2>
+
+      <p className="mt-4">
+        The default settings only allow selecting one item and only from the
+        provided options.
+      </p>
+
+      <div className="mt-6">
+        <Tabs defaultValue="preview">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <div className="shadow-smooth rounded-md bg-white">
+              <Form method="POST" className="flex justify-center gap-x-2 p-8">
+                <>
+                  {genres ? (
+                    <Combobox
+                      className="max-w-xs grow"
+                      name="genreId"
+                      defaultValue={selectedGenreIds[0]}
+                      options={genres?.map((genre) => ({
+                        label: genre.name,
+                        value: genre.id,
+                      }))}
+                    />
+                  ) : (
+                    <Input
+                      className="max-w-xs grow"
+                      type="text"
+                      disabled={true}
+                    />
+                  )}
+                  <div className="">
+                    <Button>Submit</Button>
+                  </div>
+                </>
+              </Form>
+            </div>
+          </TabsContent>
+          <TabsContent value="code">
+            <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+              <div className="flex items-center justify-between">
+                <pre className="text-sm">
+                  <code>{`<Combobox
+  name="genreId"
+  defaultValue={selectedGenreId}
+  options={genres?.map((genre) => ({
+    label: genre.name,
+    value: genre.id,
+  }))}
+/>`}</code>
+                </pre>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <p className="mt-6">
+          Submit the combobox in a form and handle the form submission in your
+          action function.
+        </p>
+
+        <div className="mt-4">
+          <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+            <div className="flex items-center justify-between">
+              <pre className="text-sm">
+                <code>{`
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+
+  // Save it wherever you want
+  const genreId = formData.get("genreId")
+}
+            `}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2 className="mt-8 text-2xl font-bold"> Single-select + create </h2>
+
+      <p className="mt-4">
+        If you want the user to be able to add their own items, add these props
+      </p>
+      <ul className="ml-4 list-disc">
+        <li className="mt-2">
+          <InlineCode>createName="newGenreName"</InlineCode> - The FormData key
+          for the new item
+        </li>
+        <li className="mt-2">
+          <InlineCode>createLabel="Name:"</InlineCode> - The label shown in the
+          dropdown and in the input when the user has selected a new item
+        </li>
+      </ul>
+
+      <div className="mt-6">
+        <Tabs defaultValue="preview">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <div className="shadow-smooth rounded-md bg-white">
+              <Form method="POST" className="flex justify-center gap-x-2 p-8">
+                <>
+                  {genres ? (
+                    <Combobox
+                      className="max-w-xs grow"
+                      name="genreId"
+                      defaultValue={selectedGenreIds[0]}
+                      options={genres?.map((genre) => ({
+                        label: genre.name,
+                        value: genre.id,
+                      }))}
+                      createName="newGenreName"
+                      createLabel="Name:"
+                    />
+                  ) : (
+                    <Input
+                      className="max-w-xs grow"
+                      type="text"
+                      disabled={true}
+                    />
+                  )}
+                  <div className="">
+                    <Button>Submit</Button>
+                  </div>
+                </>
+              </Form>
+            </div>
+          </TabsContent>
+          <TabsContent value="code">
+            <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+              <div className="flex items-center justify-between">
+                <pre className="text-sm">
+                  <code>{`<Combobox
+  name="genreId"
+  defaultValue={selectedGenreIds}
+  options={genres?.map((genre) => ({
+    label: genre.name,
+    value: genre.id,
+  }))}
+  createName="newGenreName"
+  createLabel="Name:"
+/>`}</code>
+                </pre>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <p className="mt-6">
+          Submit the combobox in a form and handle the form submission in your
+          action function.
+        </p>
+
+        <div className="mt-4">
+          <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+            <div className="flex items-center justify-between">
+              <pre className="text-sm">
+                <code>{`
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+
+  let genreId = formData.get("genreId")
+  
+  // If this exists, the user created a new item
+  const newGenreName = formData.get("newGenreName")
+  if (newGenreName) {
+    const genre = await db.genre.create({
+      data: { name: newGenreName },
+    })
+
+    genreId = genre.id
+  }
+
+  // Now save the genreId wherever you want
+}
+            `}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2 className="mt-8 text-2xl font-bold"> Multi-select </h2>
+
+      <p className="mt-4">
+        Set <InlineCode>mode="multiple"</InlineCode> to enable multi-select.
+      </p>
+
+      <div className="mt-6">
+        <Tabs defaultValue="preview">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <div className="shadow-smooth rounded-md bg-white">
+              <Form method="POST" className="flex justify-center gap-x-2 p-8">
+                <>
+                  {genres ? (
+                    <Combobox
+                      mode="multiple"
+                      className="max-w-xs grow"
+                      name="genreId"
+                      defaultValue={selectedGenreIds}
+                      options={genres?.map((genre) => ({
+                        label: genre.name,
+                        value: genre.id,
+                      }))}
+                    />
+                  ) : (
+                    <Input
+                      className="max-w-xs grow"
+                      type="text"
+                      disabled={true}
+                    />
+                  )}
+                  <div className="">
+                    <Button>Submit</Button>
+                  </div>
+                </>
+              </Form>
+            </div>
+          </TabsContent>
+          <TabsContent value="code">
+            <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+              <div className="flex items-center justify-between">
+                <pre className="text-sm">
+                  <code>{`<Combobox
+  mode="multiple"
+  name="genreId"
+  defaultValue={selectedGenreIds}
+  options={genres?.map((genre) => ({
+    label: genre.name,
+    value: genre.id,
+  }))}
+/>`}</code>
+                </pre>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <p className="mt-6">
+          Submit the combobox in a form and handle the form submission in your
+          action function.
+        </p>
+
+        <div className="mt-4">
+          <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+            <div className="flex items-center justify-between">
+              <pre className="text-sm">
+                <code>{`
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+
+  // Save them wherever you want
+  const genreIds = formData.getAll("genreId")
+}
+            `}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <h2 className="mt-8 text-2xl font-bold"> Multi-select + create </h2>
+
+      <p className="mt-4">
+        To allow the user to create multiple items, add these props
+      </p>
+      <ul className="ml-4 list-disc">
+        <li className="mt-2">
+          <InlineCode>mode="multiple"</InlineCode> - Enables multi-select
+        </li>
+        <li className="mt-2">
+          <InlineCode>createName="newGenreName"</InlineCode> - The FormData key
+          for the new items
+        </li>
+        <li className="mt-2">
+          <InlineCode>createLabel="Name:"</InlineCode> - The label shown in the
+          dropdown and in the input when the user has selected new items.
+        </li>
+      </ul>
+
+      <div className="mt-6">
+        <Tabs defaultValue="preview">
+          <TabsList>
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+          </TabsList>
+          <TabsContent value="preview">
+            <div className="shadow-smooth rounded-md bg-white">
+              <Form method="POST" className="flex justify-center gap-x-2 p-8">
+                <>
+                  {genres ? (
+                    <Combobox
+                      mode="multiple"
+                      className="max-w-xs grow"
+                      name="genreId"
+                      defaultValue={selectedGenreIds}
+                      options={genres?.map((genre) => ({
+                        label: genre.name,
+                        value: genre.id,
+                      }))}
+                      createName="newGenreName"
+                      createLabel="Name:"
+                    />
+                  ) : (
+                    <Input
+                      className="max-w-xs grow"
+                      type="text"
+                      disabled={true}
+                    />
+                  )}
+                  <div className="">
+                    <Button>Submit</Button>
+                  </div>
+                </>
+              </Form>
+            </div>
+          </TabsContent>
+          <TabsContent value="code">
+            <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+              <div className="flex items-center justify-between">
+                <pre className="text-sm">
+                  <code>{`<Combobox
+  mode="multiple"
+  name="genreId"
+  defaultValue={selectedGenreIds}
+  options={genres?.map((genre) => ({
+    label: genre.name,
+    value: genre.id,
+  }))}
+  createName="newGenreName"
+  createLabel="Name:"
+/>`}</code>
+                </pre>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        <p className="mt-6">
+          Submit the combobox in a form and handle the form submission in your
+          action function.
+        </p>
+
+        <div className="mt-4">
+          <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
+            <div className="flex items-center justify-between">
+              <pre className="text-sm">
+                <code>{`
+export async function action({ request }: ActionFunctionArgs) {
+  const formData = await request.formData()
+
+  // User selected these and they already exist
+  const genreIds = formData.getAll("genreId")
+
+  // User selected these and they don't exist
+  const newGenreNames = formData.getAll("newGenreName")
+
+  const newGenreIds = await Promise.all(newGenreNames.map(async name => {
+    const genre = await db.genre.create({
+      data: { name },
+    })
+
+    return genre.id
+  }))
+
+  // Now these all exist, save them wherever you want
+  const allGenreIds = [...genreIds, ...newGenreIds]
+}
+            `}</code>
+              </pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

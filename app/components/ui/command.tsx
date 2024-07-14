@@ -1,63 +1,24 @@
-import type { DialogProps } from "@radix-ui/react-dialog"
+import * as React from "react"
+import { type DialogProps } from "@radix-ui/react-dialog"
 import { MagnifyingGlassIcon } from "@radix-ui/react-icons"
 import { Command as CommandPrimitive } from "cmdk"
-import * as React from "react"
 
-import { Dialog, DialogContent } from "~/components/ui/dialog.tsx"
 import { cn } from "~/utils/misc.ts"
-
-// ESM is still a nightmare with Next.js so I'm just gonna copy the package code in
-// https://github.com/gregberge/react-merge-refs
-// Copyright (c) 2020 Greg Bergé
-function mergeRefs<T = any>(
-  refs: Array<React.MutableRefObject<T> | React.LegacyRef<T>>,
-): React.RefCallback<T> {
-  return (value) => {
-    refs.forEach((ref) => {
-      if (typeof ref === "function") {
-        ref(value)
-      } else if (ref != null) {
-        ;(ref as React.MutableRefObject<T | null>).current = value
-      }
-    })
-  }
-}
+import { Dialog, DialogContent } from "#app/components/ui/dialog.tsx"
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive>
->(({ className, ...props }, forwardedRef) => {
-  // attach event listener effect to the ref for `cmdk-item-select` event
-  const ref = React.useRef<HTMLDivElement>(null)
-  React.useEffect(() => {
-    const handleItemSelect = (event: Event) => {
-      console.log({ event })
-    }
-
-    const element = ref.current
-
-    if (element) {
-      element.addEventListener("cmdk-item-select", handleItemSelect)
-    }
-
-    return () => {
-      if (element) {
-        element.removeEventListener("cmdk-item-select", handleItemSelect)
-      }
-    }
-  }, [])
-
-  return (
-    <CommandPrimitive
-      ref={mergeRefs([ref, forwardedRef])}
-      className={cn(
-        "text-neutral-950 dark:bg-neutral-950 flex h-full w-full flex-col overflow-hidden rounded-md bg-white dark:text-neutral-50",
-        className,
-      )}
-      {...props}
-    />
-  )
-})
+>(({ className, ...props }, ref) => (
+  <CommandPrimitive
+    ref={ref}
+    className={cn(
+      "flex h-full w-full flex-col overflow-hidden rounded-md bg-white text-neutral-950 dark:bg-neutral-950 dark:text-neutral-50",
+      className,
+    )}
+    {...props}
+  />
+))
 Command.displayName = CommandPrimitive.displayName
 
 interface CommandDialogProps extends DialogProps {}
@@ -126,7 +87,7 @@ const CommandGroup = React.forwardRef<
   <CommandPrimitive.Group
     ref={ref}
     className={cn(
-      "text-neutral-950 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-500 dark:[&_[cmdk-group-heading]]:text-neutral-400 overflow-hidden p-1 dark:text-neutral-50",
+      "overflow-hidden p-1 text-neutral-950 dark:text-neutral-50 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-neutral-500 dark:[&_[cmdk-group-heading]]:text-neutral-400",
       className,
     )}
     {...props}
@@ -154,7 +115,7 @@ const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "aria-selected:bg-neutral-100 aria-selected:text-neutral-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:aria-selected:bg-neutral-800 dark:aria-selected:text-neutral-50 relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none",
+      "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-neutral-100 aria-selected:text-neutral-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 dark:aria-selected:bg-neutral-800 dark:aria-selected:text-neutral-50",
       className,
     )}
     {...props}
@@ -182,11 +143,11 @@ CommandShortcut.displayName = "CommandShortcut"
 export {
   Command,
   CommandDialog,
+  CommandInput,
+  CommandList,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
-  CommandList,
-  CommandSeparator,
   CommandShortcut,
+  CommandSeparator,
 }
