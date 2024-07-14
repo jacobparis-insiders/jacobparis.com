@@ -1,16 +1,16 @@
 import { useState } from "react"
-import { Icon } from "../icon.tsx"
-import { Button } from "./button.tsx"
+import { Icon } from "./icon"
+import { Button } from "./button"
 import {
   Command,
   CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
-} from "./command.tsx"
-import { Popover, PopoverContent, PopoverTrigger } from "./popover.tsx"
-import { ScrollArea } from "./scroll-area.tsx"
-import { cn } from "#app/utils/misc.ts"
+} from "./command"
+import { Popover, PopoverContent, PopoverTrigger } from "./popover"
+import { ScrollArea } from "./scroll-area"
+import { cn } from "#app/utils/misc"
 
 export type ComboboxOptions = {
   value: string

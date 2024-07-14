@@ -6,7 +6,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "#app/components/ui/tabs.tsx"
-import { Combobox } from "#app/components/ui/combobox.tsx"
+import { ComboboxMultiple } from "#app/components/ui/combobox-multiple.tsx"
 import type {
   ClientActionFunctionArgs,
   ClientLoaderFunctionArgs,
@@ -15,15 +15,14 @@ import { Form, Link, useLoaderData } from "@remix-run/react"
 import { InlineCode } from "./InlineCode.tsx"
 import { LocalStorageDB } from "./LocalStorageDB.tsx"
 import { Icon } from "#app/components/icon.tsx"
-
 import { getMeta } from "./getMeta.tsx"
 
 export const frontmatter = {
-  title: "Combobox",
+  title: "Combobox Multiple",
   description:
-    "A shadcn-compatible searchable dropdown menu\nthat supports creating new options on the fly",
-  img: "http://www.jacobparis.com/images/combobox.png",
-  slug: "combobox",
+    "A shadcn-compatible searchable dropdown menu\nthat supports selecting multiple new options and creating new options on the fly",
+  img: "http://www.jacobparis.com/images/combobox-multiple.png",
+  slug: "combobox-multiple",
 }
 
 export const meta = getMeta(frontmatter)
@@ -38,7 +37,7 @@ export async function loader() {
 
 clientLoader.hydrate = true
 export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
-  const db = new LocalStorageDB("combobox:genres")
+  const db = new LocalStorageDB("combobox-multiple:genres")
 
   const savedGenres = db.findAll()
   if (savedGenres.length === 0) {
@@ -51,7 +50,7 @@ export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
   const genres = db.findAll()
 
   const selectedGenreIds = window.localStorage.getItem(
-    "combobox:selectedGenreIds",
+    "combobox-multiple:selectedGenreIds",
   )
   return {
     genres,
@@ -61,7 +60,7 @@ export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
 
 export async function clientAction({ request }: ClientActionFunctionArgs) {
   const formData = await request.formData()
-  const db = new LocalStorageDB("combobox:genres")
+  const db = new LocalStorageDB("combobox-multiple:genres")
 
   const genreIds = formData.getAll("genreId")
   const newGenreIds = formData
@@ -70,7 +69,7 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
     .map((genre) => genre.id)
 
   window.localStorage.setItem(
-    "combobox:selectedGenreIds",
+    "combobox-multiple:selectedGenreIds",
     Array.from(new Set([...genreIds, ...newGenreIds]))
       .map((id) => id.toString())
       .join(","),
@@ -89,16 +88,13 @@ export default function Component() {
           jacobparis/ui
         </Link>
         <Icon name="chevron-right" />
-        <h1 className="font-bold text-black">Combobox</h1>
+        <h1 className="font-bold text-black">Combobox Multiple</h1>
       </div>
       <p className="mt-4">
-        A searchable dropdown menu that supports creating new options on the
-        fly. For multi-selection, see{" "}
-        <Link
-          to="/ui/combobox-multiple"
-          className="text-blue-500 hover:underline"
-        >
-          Combobox Multiple
+        A searchable dropdown menu that supports selecting multiple options and
+        creating multiple new options on the fly. Also see{" "}
+        <Link to="/ui/combobox" className="text-blue-500 hover:underline">
+          Combobox Single
         </Link>
       </p>
       <p className="mt-4">
@@ -121,10 +117,10 @@ export default function Component() {
             >
               <>
                 {genres ? (
-                  <Combobox
+                  <ComboboxMultiple
                     className="max-w-xs grow"
                     name="genreId"
-                    defaultValue={selectedGenreIds[0]}
+                    defaultValue={selectedGenreIds}
                     createName="newGenreName"
                     createLabel="Name:"
                     options={genres?.map((genre) => ({
@@ -149,9 +145,9 @@ export default function Component() {
             <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
               <div className="flex items-center justify-between">
                 <pre className="text-sm">
-                  <code>{`<Combobox
+                  <code>{`<ComboboxMultiple
   name="genreId"
-  defaultValue={selectedGenreId}
+  defaultValue={selectedGenreIds}
   options={genres?.map((genre) => ({
     label: genre.name,
     value: genre.id,
@@ -189,7 +185,9 @@ export default function Component() {
               to install the package.
             </p>
             <div className="shadow-smooth mt-4  rounded-md bg-black p-4 text-white">
-              <code>npx @sly-cli/sly@latest add jacobparis/ui combobox</code>
+              <code>
+                npx @sly-cli/sly@latest add jacobparis/ui combobox-multiple
+              </code>
             </div>
           </TabsContent>
           <TabsContent value="manual">
@@ -232,11 +230,10 @@ export { Input }`}</code>
         </Tabs>
       </div>
 
-      <h2 className="mt-8 text-2xl font-bold"> Single select </h2>
+      <h2 className="mt-8 text-2xl font-bold"> Multi-select </h2>
 
       <p className="mt-4">
-        The default settings only allow selecting one item and only from the
-        provided options.
+        Set <InlineCode>mode="multiple"</InlineCode> to enable multi-select.
       </p>
 
       <div className="mt-6">
@@ -250,10 +247,10 @@ export { Input }`}</code>
               <Form method="POST" className="flex justify-center gap-x-2 p-8">
                 <>
                   {genres ? (
-                    <Combobox
+                    <ComboboxMultiple
                       className="max-w-xs grow"
                       name="genreId"
-                      defaultValue={selectedGenreIds[0]}
+                      defaultValue={selectedGenreIds}
                       options={genres?.map((genre) => ({
                         label: genre.name,
                         value: genre.id,
@@ -277,9 +274,9 @@ export { Input }`}</code>
             <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
               <div className="flex items-center justify-between">
                 <pre className="text-sm">
-                  <code>{`<Combobox
+                  <code>{`<ComboboxMultiple
   name="genreId"
-  defaultValue={selectedGenreId}
+  defaultValue={selectedGenreIds}
   options={genres?.map((genre) => ({
     label: genre.name,
     value: genre.id,
@@ -304,8 +301,8 @@ export { Input }`}</code>
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
-  // Save it wherever you want
-  const genreId = formData.get("genreId")
+  // Save them wherever you want
+  const genreIds = formData.getAll("genreId")
 }
             `}</code>
               </pre>
@@ -314,19 +311,17 @@ export async function action({ request }: ActionFunctionArgs) {
         </div>
       </div>
 
-      <h2 className="mt-8 text-2xl font-bold"> Single-select + create </h2>
+      <h2 className="mt-8 text-2xl font-bold"> Multi-select + create </h2>
 
-      <p className="mt-4">
-        If you want the user to be able to add their own items, add these props
-      </p>
+      <p className="mt-4">To allow the user to create items, add these props</p>
       <ul className="ml-4 list-disc">
         <li className="mt-2">
           <InlineCode>createName="newGenreName"</InlineCode> - The FormData key
-          for the new item
+          for the new items
         </li>
         <li className="mt-2">
           <InlineCode>createLabel="Name:"</InlineCode> - The label shown in the
-          dropdown and in the input when the user has selected a new item
+          dropdown and in the input when the user has selected new items.
         </li>
       </ul>
 
@@ -341,10 +336,10 @@ export async function action({ request }: ActionFunctionArgs) {
               <Form method="POST" className="flex justify-center gap-x-2 p-8">
                 <>
                   {genres ? (
-                    <Combobox
+                    <ComboboxMultiple
                       className="max-w-xs grow"
                       name="genreId"
-                      defaultValue={selectedGenreIds[0]}
+                      defaultValue={selectedGenreIds}
                       options={genres?.map((genre) => ({
                         label: genre.name,
                         value: genre.id,
@@ -370,7 +365,7 @@ export async function action({ request }: ActionFunctionArgs) {
             <div className="shadow-smooth rounded-md border bg-black p-4 text-white">
               <div className="flex items-center justify-between">
                 <pre className="text-sm">
-                  <code>{`<Combobox
+                  <code>{`<ComboboxMultiple
   name="genreId"
   defaultValue={selectedGenreIds}
   options={genres?.map((genre) => ({
@@ -399,19 +394,22 @@ export async function action({ request }: ActionFunctionArgs) {
 export async function action({ request }: ActionFunctionArgs) {
   const formData = await request.formData()
 
-  let genreId = formData.get("genreId")
-  
-  // If this exists, the user created a new item
-  const newGenreName = formData.get("newGenreName")
-  if (newGenreName) {
+  // User selected these and they already exist
+  const genreIds = formData.getAll("genreId")
+
+  // User selected these and they don't exist
+  const newGenreNames = formData.getAll("newGenreName")
+
+  const newGenreIds = await Promise.all(newGenreNames.map(async name => {
     const genre = await db.genre.create({
-      data: { name: newGenreName },
+      data: { name },
     })
 
-    genreId = genre.id
-  }
+    return genre.id
+  }))
 
-  // Now save the genreId wherever you want
+  // Now these all exist, save them wherever you want
+  const allGenreIds = [...genreIds, ...newGenreIds]
 }
             `}</code>
               </pre>

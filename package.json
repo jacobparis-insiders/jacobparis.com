@@ -7,6 +7,7 @@
     "build:remix": "remix build",
     "build:icons": "tsx ./other/build-icons.ts",
     "build:redirects": "cp ./app/_redirects ./build/_redirects",
+    "build:sly": "cpx \"./app/**/*.sly\" ./build/",
     "build:workers": "cpx ./app/**/*.worker.js ./build/",
     "dev": "npm-run-all build --parallel \"dev:*\"",
     "dev:remix": "NODE_ENV=development remix dev -c \"tsx --require dotenv/config ./server.ts --watch ./server.ts\" --manual",

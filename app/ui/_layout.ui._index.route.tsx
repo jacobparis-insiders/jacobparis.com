@@ -21,6 +21,21 @@ export default function Component() {
         project.
       </p>
 
+      <div className="mt-4">
+        <ul className="ml-4 list-disc">
+          <li>
+            <Link to="/ui/combobox" className="text-blue-500 hover:underline">
+              Combobox
+            </Link>
+          </li>
+          <li>
+            <Link to="/ui/combobox" className="text-blue-500 hover:underline">
+              Combobox Multiple
+            </Link>
+          </li>
+        </ul>
+      </div>
+
       <h2 className="mt-8 text-2xl font-bold">Installation</h2>
 
       <p className="mt-4">
@@ -44,18 +59,6 @@ export default function Component() {
       </p>
       <div className="shadow-smooth mt-4  rounded-md bg-black p-4 text-white">
         <code>npx @sly-cli/sly@latest add jacobparis/ui</code>
-      </div>
-
-      <h2 className="mt-8 text-2xl font-bold">Components</h2>
-
-      <div className="mt-4">
-        <ul className="ml-4 list-disc">
-          <li>
-            <Link to="/ui/combobox" className="text-blue-500 hover:underline">
-              Combobox
-            </Link>
-          </li>
-        </ul>
       </div>
     </div>
   )
