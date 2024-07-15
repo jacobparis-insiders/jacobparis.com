@@ -17,6 +17,8 @@ import { LocalStorageDB } from "./LocalStorageDB.tsx"
 import { Icon } from "#app/components/icon.tsx"
 
 import { getMeta } from "./getMeta.tsx"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 
 export const frontmatter = {
   title: "Combobox",
@@ -29,21 +31,32 @@ export const frontmatter = {
 export const meta = getMeta(frontmatter)
 
 export async function loader() {
-  const newGenreNames = ["Rock", "Pop", "Jazz"]
+  const __dirname = path.dirname(new URL(import.meta.url).pathname)
+
+  const defaultGenres = ["Rock", "Pop", "Jazz"]
 
   return {
-    newGenreNames,
+    defaultGenres,
+    files: [
+      {
+        name: "combobox.tsx",
+        content: await readFile(
+          path.resolve(__dirname, "ui/combobox.tsx.sly"),
+          "utf8",
+        ),
+      },
+    ],
   }
 }
 
 clientLoader.hydrate = true
 export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
-  const db = new LocalStorageDB("combobox:genres")
+  const { defaultGenres, files } = await serverLoader<typeof loader>()
 
+  const db = new LocalStorageDB("combobox:genres")
   const savedGenres = db.findAll()
   if (savedGenres.length === 0) {
-    const { newGenreNames } = await serverLoader<typeof loader>()
-    for (const genre of newGenreNames) {
+    for (const genre of defaultGenres) {
       db.createOne({ name: genre })
     }
   }
@@ -54,8 +67,10 @@ export async function clientLoader({ serverLoader }: ClientLoaderFunctionArgs) {
     "combobox:selectedGenreIds",
   )
   return {
+    defaultGenres,
     genres,
     selectedGenreIds: selectedGenreIds ? selectedGenreIds.split(",") : [],
+    files,
   }
 }
 
@@ -80,7 +95,8 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
 }
 
 export default function Component() {
-  const { genres, selectedGenreIds } = useLoaderData<typeof clientLoader>()
+  const { genres, selectedGenreIds, files } =
+    useLoaderData<typeof clientLoader>()
 
   return (
     <div className="p-8">
@@ -196,35 +212,16 @@ export default function Component() {
             <ol className="mt-4 space-y-4">
               <li className="">
                 Copy and paste the following code into your project.
-                <div className="mt-4 rounded-md  bg-black p-4 text-white">
-                  <pre className="text-sm">
-                    <code>{`import * as React from "react"
-
-import { cn } from "@/lib/utils"
-
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {}
-
-const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ className, type, ...props }, ref) => {
-    return (
-      <input
-        type={type}
-        className={cn(
-          "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-Input.displayName = "Input"
-
-export { Input }`}</code>
-                  </pre>
-                </div>
+                {files.map((file) => (
+                  <div
+                    key={file.name}
+                    className="shadow-smooth mt-4 rounded-md border bg-black p-4 text-white"
+                  >
+                    <pre className="text-sm">
+                      <code>{file.content}</code>
+                    </pre>
+                  </div>
+                ))}
               </li>
               <li>Update the import paths to match your project setup.</li>
             </ol>
