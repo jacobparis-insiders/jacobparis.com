@@ -233,13 +233,10 @@ export async function getButtondownEmails() {
     if (data.success) {
       return {
         code: "success" as const,
-        data,
+        ...data,
       }
     } else {
-      return {
-        code: "success" as const,
-        data: [],
-      }
+      console.error("Error getting emails", response.data)
     }
   }
 

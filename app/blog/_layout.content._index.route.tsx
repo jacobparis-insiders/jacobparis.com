@@ -76,12 +76,18 @@ export async function loader({ request }: LoaderFunctionArgs) {
   //   }
   // }
 
-  let moultonIssues
+  let moultonIssues: Array<{
+    id: string
+    subject: string
+    publish_date: string | null
+  }>
   const moultonResponse = await time("moultonIssues", () =>
     getButtondownEmails(),
   )
   if (moultonResponse.code === "success") {
     moultonIssues = moultonResponse.data.results
+  } else {
+    moultonIssues = []
   }
 
   const content: Array<{

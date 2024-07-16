@@ -83,10 +83,14 @@ export const MdxSchema = z.object({
   frontmatter: z.object({
     slug: z.string(),
     title: z.string(),
-    description: z.string().optional().nullable().default(null),
-    tags: z.string().optional().nullable(),
-    img: z.string().optional().nullable().default(null),
-    timestamp: z.string().optional().nullable().default(null),
+    description: z.string().nullish().default(null),
+    tags: z.string().nullish(),
+    img: z.string().nullish().default(null),
+    timestamp: z
+      .string()
+      .or(z.date().transform((date) => date.toISOString()))
+      .nullish()
+      .default(null),
     published: z.boolean().optional().default(false),
     translations: z
       .array(
