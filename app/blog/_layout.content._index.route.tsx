@@ -6,6 +6,7 @@ import {
   isRouteErrorResponse,
   useLoaderData,
   useRouteError,
+  useSubmit,
 } from "@remix-run/react"
 import { ButtonLink } from "~/components/ButtonLink.tsx"
 import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
@@ -129,19 +130,12 @@ export async function loader({ request }: LoaderFunctionArgs) {
       }),
   )
 
-  return json(
-    { content },
-    {
-      headers: {
-        ...getServerTimingHeader(),
-      },
-    },
-  )
+  return json({ content }, { headers: getServerTimingHeader() })
 }
 
 export default function Blog() {
   const { content } = useLoaderData<typeof loader>()
-
+  const submit = useSubmit()
   return (
     <div>
       <div className="relative z-40 flex justify-center bg-[#f5f5f5] py-2">
@@ -175,7 +169,14 @@ export default function Blog() {
           ))}
         </ul> */}
 
-        <Form method="GET">
+        <Form
+          method="GET"
+          onChange={(event) => {
+            submit(event.currentTarget, {
+              replace: true,
+            })
+          }}
+        >
           <label htmlFor="search" className="sr-only">
             Search
           </label>
