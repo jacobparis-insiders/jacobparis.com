@@ -157,10 +157,8 @@ async function getJacobParisContent({
     key: `mdx:${slug}`,
     cache,
     serverTimings,
-
-    // Always show the cached version while we fetch a new one
     ttl: 1000 * 60 * 60,
-
+    staleWhileRevalidate: Infinity,
     async getFreshValue({ background }) {
       const contentList = await getContentList()
 

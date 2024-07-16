@@ -167,7 +167,7 @@ export function cachifiedTimingReporter<Value>(
           getFreshValueTimer = createTimer(
             {
               name: `getFreshValue:${key}`,
-              description: `request forced to wait for a fresh ${key} value`,
+              description: `${key} forced to wait for fresh`,
             },
             serverTimings,
           )

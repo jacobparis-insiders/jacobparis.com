@@ -221,6 +221,7 @@ export async function getButtondownEmails() {
     key: `buttondown:emails`,
     ttl: 1000 * 60 * 60 * 12,
     swr: 1000 * 60 * 60 * 24,
+    forceFresh: false,
     async getFreshValue() {
       return fetchButtondown(`/v1/emails?ordering=-creation_date`, {
         method: "GET",

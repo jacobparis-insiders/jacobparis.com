@@ -1,6 +1,7 @@
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/node"
 import { json } from "@remix-run/node"
 import {
+  Form,
   Link,
   isRouteErrorResponse,
   useLoaderData,
@@ -11,6 +12,8 @@ import { SocialBannerSmall } from "~/components/SocialBannerSmall.tsx"
 import { getServerTiming } from "#app/utils/timing.server.ts"
 import { getContentListData, getBlogList } from "./get-content-list.ts"
 import { getButtondownEmails } from "../moulton/buttondown.server.ts"
+import { Input } from "#app/components/ui/input.tsx"
+import { getContentList } from "./content.server.ts"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -60,21 +63,12 @@ export const handle = {
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { time, getServerTimingHeader } = getServerTiming()
-  // const url = new URL(request.url)
-  // const tag = url.searchParams.get("tag")
+  const url = new URL(request.url)
+  const search = url.searchParams.get("q")
 
-  const blogContent = await time("contentList", () => getContentListData())
-
-  const blogList = getBlogList(blogContent)
-
-  // const tags = new Set<string>()
-  // for (const blog of blogList) {
-  //   if (!blog.tags) continue
-
-  //   for (const tag of blog.tags.split(",").map((t) => t.trim())) {
-  //     tags.add(tag)
-  //   }
-  // }
+  await time("getContentList", () => getContentList())
+  const blogContent = await time("contentListData", () => getContentListData())
+  const blogList = await time("blogList", () => getBlogList(blogContent))
 
   let moultonIssues: Array<{
     id: string
@@ -90,67 +84,53 @@ export async function loader({ request }: LoaderFunctionArgs) {
     moultonIssues = []
   }
 
-  const content: Array<{
-    type: "jacobparis.com" | "moulton"
-    slug: string
-    timestamp: string | null
-    title: string
-  }> = []
-
-  content.push(
-    ...blogList
-      // .filter((blog) => {
-      //   if (tag && !blog.tags) return false
-      //   if (tag && !blog.tags?.includes(tag)) return false
-
-      //   return true
-      // })
+  const content = await time("sort-filter-blogList", () =>
+    blogList
       .map((blog) => {
         return {
-          type: "jacobparis.com" as const,
+          type: "jacobparis.com" as "jacobparis.com" | "moulton",
           slug: blog.slug,
           timestamp: blog.timestamp,
           title: blog.title,
         }
+      })
+      .concat(
+        moultonIssues
+          .filter((issue) => issue.publish_date)
+          .map((issue) => ({
+            type: "moulton" as "jacobparis.com" | "moulton",
+            slug: `moulton-${issue.id}`,
+            title: issue.subject,
+            timestamp: new Date(issue.publish_date!).toLocaleDateString(
+              "en-US",
+              {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              },
+            ),
+          })),
+      )
+      .filter((item) => {
+        if (!search) return true
+        return item.title.toLowerCase().includes(search.toLowerCase())
+      })
+      .sort((a, b) => {
+        if (!a.timestamp) return 1
+        if (!b.timestamp) return -1
+
+        const aDate = new Date(a.timestamp)
+        const bDate = new Date(b.timestamp)
+
+        if (aDate > bDate) return -1
+        if (aDate < bDate) return 1
+
+        return 0
       }),
   )
 
-  if (moultonIssues) {
-    content.push(
-      ...moultonIssues
-        .filter((issue) => issue.publish_date)
-        .map((issue) => ({
-          type: "moulton" as const,
-          slug: `moulton-${issue.id}`,
-          title: issue.subject,
-          timestamp: new Date(issue.publish_date!).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          }),
-        })),
-    )
-  }
-
-  content.sort((a, b) => {
-    if (!a.timestamp) return 1
-    if (!b.timestamp) return -1
-
-    const aDate = new Date(a.timestamp)
-    const bDate = new Date(b.timestamp)
-
-    if (aDate > bDate) return -1
-    if (aDate < bDate) return 1
-
-    return 0
-  })
-
   return json(
-    {
-      content,
-      // tags: Array.from(tags).sort((a, b) => a.localeCompare(b)),
-      // currentTag: tag,
-    },
+    { content },
     {
       headers: {
         ...getServerTimingHeader(),
@@ -195,7 +175,20 @@ export default function Blog() {
           ))}
         </ul> */}
 
-        <ol className="grid gap-x-8 gap-y-2">
+        <Form method="GET">
+          <label htmlFor="search" className="sr-only">
+            Search
+          </label>
+          <Input
+            id="search"
+            type="text"
+            name="q"
+            placeholder="Search"
+            className="-mx-4 max-w-[300px] rounded-lg px-4"
+          />
+        </Form>
+
+        <ol className="mt-4 grid gap-x-8 gap-y-2">
           {content.map((item) => {
             if (item.type === "jacobparis.com") {
               return (
