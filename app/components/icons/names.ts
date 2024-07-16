@@ -25,4 +25,5 @@ export type IconName =
 	| "paper-plane"
 	| "pencil"
 	| "plus"
+	| "rss"
 	| "search"

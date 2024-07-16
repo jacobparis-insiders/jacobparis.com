@@ -6,6 +6,12 @@
       "directory": "./other/svg-icons",
       "postinstall": ["npm", "run", "build:icons"],
       "transformers": []
+    },
+    {
+      "name": "simple-icons",
+      "directory": "./other/svg-icons",
+      "postinstall": ["npm", "run", "build:icons"],
+      "transformers": []
     }
   ]
 }

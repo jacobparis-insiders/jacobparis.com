@@ -15,6 +15,8 @@ import { getContentListData, getBlogList } from "./get-content-list.ts"
 import { getButtondownEmails } from "../moulton/buttondown.server.ts"
 import { Input } from "#app/components/ui/input.tsx"
 import { getContentList } from "./content.server.ts"
+import { Icon } from "#app/components/icon.tsx"
+import { Button } from "#app/components/ui/button.tsx"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -130,11 +132,11 @@ export async function loader({ request }: LoaderFunctionArgs) {
       }),
   )
 
-  return json({ content }, { headers: getServerTimingHeader() })
+  return json({ search, content }, { headers: getServerTimingHeader() })
 }
 
 export default function Blog() {
-  const { content } = useLoaderData<typeof loader>()
+  const { content, search } = useLoaderData<typeof loader>()
   const submit = useSubmit()
   return (
     <div>
@@ -169,25 +171,34 @@ export default function Blog() {
           ))}
         </ul> */}
 
-        <Form
-          method="GET"
-          onChange={(event) => {
-            submit(event.currentTarget, {
-              replace: true,
-            })
-          }}
-        >
-          <label htmlFor="search" className="sr-only">
-            Search
-          </label>
-          <Input
-            id="search"
-            type="text"
-            name="q"
-            placeholder="Search"
-            className="-mx-4 max-w-[300px] rounded-lg px-4"
-          />
-        </Form>
+        <div className="flex items-center justify-between">
+          <Form
+            method="GET"
+            onChange={(event) => {
+              submit(event.currentTarget, {
+                replace: true,
+              })
+            }}
+          >
+            <label htmlFor="search" className="sr-only">
+              Search
+            </label>
+            <Input
+              id="search"
+              type="text"
+              name="q"
+              placeholder="Search"
+              defaultValue={search || ""}
+              className="-mx-4 max-w-xs rounded-lg px-4"
+            />
+          </Form>
+          <Button asChild variant="outline" size="sm">
+            <a href="/rss" className="text-sm text-gray-500">
+              <span className="sr-only">RSS</span>
+              <Icon name="rss" />
+            </a>
+          </Button>
+        </div>
 
         <ol className="mt-4 grid gap-x-8 gap-y-2">
           {content.map((item) => {
