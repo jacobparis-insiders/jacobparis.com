@@ -6,6 +6,8 @@ import { BlogItem } from "./_layout.content._index.route.tsx"
 import { Icon } from "#app/components/icon.tsx"
 import clsx from "clsx"
 import type { IconName } from "#app/components/icons/names.ts"
+import Cal, { getCalApi } from "@calcom/embed-react"
+import { useEffect } from "react"
 
 export { mergeHeaders as headers } from "~/utils/misc.ts"
 
@@ -104,7 +106,33 @@ export default function Index() {
           </li>
         </ol>
       </div>
+
+      <div style={{ minHeight: "570px" }}>
+        <CalEmbed />
+      </div>
     </div>
+  )
+}
+
+function CalEmbed() {
+  useEffect(() => {
+    ;(async function () {
+      const cal = await getCalApi({ namespace: "consult" })
+      cal("ui", {
+        styles: { branding: { brandColor: "#000000" } },
+        hideEventTypeDetails: false,
+        layout: "month_view",
+      })
+    })()
+  }, [])
+
+  return (
+    <Cal
+      namespace="consult"
+      calLink="jacobparis/consult"
+      style={{ width: "100%", height: "100%", overflow: "hidden" }}
+      config={{ layout: "month_view" }}
+    />
   )
 }
 
