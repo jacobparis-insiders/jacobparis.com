@@ -1,0 +1,64 @@
+---
+title: Consuming a Remix backend from a mobile app or external client
+description: Avoid re-using route loaders. Create dedicated API routes to serve external clients.
+published: true
+timestamp: "2024-08-21"
+---
+
+The loaders and actions for each route BELONG to that route, and you should generally avoid trying to share them with other routes.
+
+If you have an external app (like a mobile app or another client that needs to talk to the same backend) then you should AVOID the temptation to re-use your app route loaders and actions for the other clients.
+
+When a user loads a page on your app, all matching route loaders will run at the same time in parallel and their responses are combined and used to render the page server-side.
+
+This behaviour is slightly different on client navigations, where depending on your Remix version there may be one or many requests for the matching loaders, which may reply with JSON or a serialized TurboStream format.
+
+There is no officially supported way to target a particular route loader and gets its raw response data. The most popular solution for that is to use the `?_data` query parameter, but this exploits an implementation detail that does not work in the latest betas of Remix under the Single Fetch feature.
+
+Instead, your route loaders should be responsible only for their own pages, and you can create dedicated API routes<SideNote> Also called Resource Routes </SideNote> to serve the mobile app or other external clients.
+
+This solves many problems:
+
+- There's usually a difference in how you authenticate your API routes vs your app routes. For example, your API routes might use a bearer token while your app routes use a cookie based session. With this approach, they can handle authentication in their own ways and then call a common function.
+- Route loaders often return redirects whereas API consumers expect errors.
+- Resource routes are designed to be called individually and you can return any response, whether data or a stream or something with custom headers.
+
+Any common functionality between the route loader and the API endpoint can be extracted into a common function that both call, so there's no repetition of code.
+
+In the below route, I've extracted the item fetching logic into a `fetchItems()` function.
+
+```tsx
+// routes/items.tsx
+export async function loader({ request }) {
+  const session = await getSession({ request })
+  if (!session) throw redirect("/login")
+
+  return fetchItems()
+}
+
+export default function AppApi() {
+  const { items } = useLoaderData()
+
+  return (
+    <div>
+      <ItemsTable items={items} />
+    </div>
+  )
+}
+```
+
+Then, the API route performs its own authentication check before calling the `fetchItems()` function itself.
+
+```tsx
+// routes/api.items.ts
+export async function loader({ request }) {
+  if (
+    request.headers.get("Authorization") !==
+    `Bearer ${process.env.API_TOKEN}`
+  ) {
+    throw new Error("Unauthorized")
+  }
+
+  return fetchItems()
+}
+```
