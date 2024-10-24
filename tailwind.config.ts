@@ -32,6 +32,11 @@ export default {
       },
     },
     extend: {
+      colors: {
+        "neutral": {
+          500: '#757575'
+        }
+      },
       boxShadow: {
         smooth: 'rgba(0, 0, 0, 0.05) 0px 4px 44px',
       },

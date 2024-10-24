@@ -146,7 +146,7 @@ export default function App() {
           defer
         />
       </head>
-      <body className="h-full bg-[#f5f5f5]">
+      <body className="h-full ">
         <HoneypotProvider>
           <Outlet />
         </HoneypotProvider>

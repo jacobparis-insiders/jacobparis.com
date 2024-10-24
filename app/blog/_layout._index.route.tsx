@@ -55,7 +55,7 @@ export default function Index() {
           />
           <Badge
             icon="clipboard-copy"
-            href="https://sly-cli.fly.dev"
+            href="/sly"
             title="Sly CLI"
             description="Maintainer"
             className="bg-neutral-800"
