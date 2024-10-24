@@ -307,8 +307,20 @@ export default function Component() {
       </div>
 
       <div
-        className={`relative z-10 mx-auto my-auto mb-12 flex min-h-full max-w-7xl flex-1 flex-col items-center justify-center px-4 text-center sm:px-6 lg:px-8`}
+        className={`relative z-10 mx-auto my-auto mb-12 flex min-h-full max-w-7xl flex-1 flex-col items-center justify-center text-center sm:px-6 lg:px-8`}
       >
+        {/* // alert box mentioning Sly v2 is in beta and providing a custom install link */}
+        <div className="shadow-smooth mb-4 mt-4 border-y border-yellow-600/20 bg-white px-4 py-3 text-left sm:rounded-md sm:border-x">
+          <p className="font-medium">
+            Sly v2 (with Iconify support) is now in pre-release
+          </p>
+          <p className="mt-2">
+            <code>
+              npm i --save-dev
+              https://pkg.pr.new/jacobparis-insiders/sly/@sly-cli/sly@71
+            </code>
+          </p>
+        </div>
         <div className="grow" />
 
         <h1
@@ -328,7 +340,7 @@ export default function Component() {
           style={{ animationDelay: "1.2s" }}
         >
           <div
-            className="shadow-smooth mt-2 flex flex-col overflow-hidden rounded-lg bg-black p-4 font-mono text-white transition-[height]"
+            className="shadow-smooth mt-2 flex flex-col overflow-hidden bg-black p-4 font-mono text-white transition-[height] sm:rounded-lg"
             style={{
               height: isExpanded ? "30lh" : "6lh",
             }}
@@ -406,7 +418,8 @@ For more information, visit: https://sly-cli.fly.dev
                           setIsRunning(false)
                         }}
                       >
-                        npx sly
+                        <span className="sm:hidden">sly</span>
+                        <span className="hidden sm:inline">npx sly</span>
                       </Button>
                       <Button
                         type="button"
@@ -491,7 +504,10 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: icon!, directory })
                         }}
                       >
-                        &lt;library&gt;
+                        <span className="sm:hidden">&lt;lib&gt;</span>
+                        <span className="hidden sm:inline">
+                          &lt;library&gt;
+                        </span>
                       </Button>
                       <Button
                         type="button"
@@ -570,7 +586,10 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        --directory &lt;dir&gt;
+                        <span className="sm:hidden">-d &lt;dir&gt;</span>
+                        <span className="hidden sm:inline">
+                          --directory &lt;dir&gt;
+                        </span>
                       </Button>
                       <Button
                         type="button"
@@ -607,7 +626,8 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        --overwrite
+                        <span className="sm:hidden">-o</span>
+                        <span className="hidden sm:inline">--overwrite</span>
                       </Button>
                       <Button
                         type="button"
@@ -644,7 +664,8 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        --yes
+                        <span className="sm:hidden">-y</span>
+                        <span className="hidden sm:inline">--yes</span>
                       </Button>
                     </div>
                   </div>
@@ -698,7 +719,7 @@ For more information, visit: https://sly-cli.fly.dev
         </p>
       </div>
 
-      <div className="mx-auto mt-12 grid max-w-5xl gap-4 md:grid-cols-3">
+      <div className="mx-auto mt-12 grid max-w-5xl gap-4 px-2 md:grid-cols-3">
         <div className="shadow-smooth flex flex-col overflow-hidden rounded-lg border border-neutral-100 bg-white dark:bg-gray-800">
           <div className="p-4">
             <div className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
@@ -778,7 +799,7 @@ For more information, visit: https://sly-cli.fly.dev
         className="animate-fade-in-down shadow-smooth mx-auto mt-8 w-full max-w-3xl bg-white text-left"
         style={{ animationDelay: "1.2s" }}
       >
-        <div className="mt-2 flex flex-col overflow-x-auto rounded-lg bg-black p-4 font-mono text-white transition-[height]">
+        <div className="mt-2 flex flex-col overflow-x-auto bg-black p-4 font-mono text-white transition-[height] sm:rounded-lg">
           <TerminalTabs className="-m-4 rounded-none" defaultValue="react">
             <TerminalTabsList>
               <TerminalTabsTrigger value="react">React</TerminalTabsTrigger>

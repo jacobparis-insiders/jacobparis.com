@@ -1,76 +1,56 @@
-# base node image
-FROM node:18-bullseye-slim as base
+# syntax = docker/dockerfile:1
 
-# set for base and all layer that inherit from it
-ENV NODE_ENV production
+# Adjust NODE_VERSION as desired
+ARG NODE_VERSION=20
+FROM node:${NODE_VERSION}-slim as base
 
-# Install openssl for Prisma
-RUN apt-get update && apt-get install -y openssl sqlite3 python3 make g++ git fuse3
+LABEL fly_launch_runtime="Remix"
 
-WORKDIR /myapp
+# Remix app lives here
+WORKDIR /app
 
-RUN npm install npm@9.1.1 && \
-  rm -rf /usr/local/lib/node_modules/npm && \
-  mv node_modules/npm /usr/local/lib/node_modules/npm
+# Set production environment
+ENV NODE_ENV=production
 
-# Setup production node_modules
-FROM base as deps
 
-WORKDIR /myapp
-
-ADD package.json package-lock.json ./
-
-RUN npm install --production=false
-
-FROM base as production-deps
-
-WORKDIR /myapp
-
-COPY --from=deps /myapp/node_modules /myapp/node_modules
-ADD package.json package-lock.json ./
-RUN npm prune --production
-
-# Build the app
+# Throw-away build stage to reduce size of final image
 FROM base as build
 
-WORKDIR /myapp
+# Install packages needed to build node modules
+RUN apt-get update -qq && \
+    apt-get install -y python-is-python3 pkg-config build-essential git openssh-client
 
-COPY --from=deps /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/npm
-COPY --from=deps /myapp/package.json /myapp/package.json
-COPY --from=deps /myapp/node_modules /myapp/node_modules
+# Install node modules
+COPY --link package.json ./
+RUN npm install --include=dev --legacy-peer-deps
 
-ADD . .
-RUN touch ./app/refresh.ignored.js
+# Copy application code
+COPY --link . .
+
+# Build application
 RUN npm run build
-# Finally, build the production image with minimal footprint
-FROM base as run
+
+# Remove development dependencies
+RUN npm prune --omit=dev --legacy-peer-deps
+
+
+# Final stage for app image
+FROM base
+
+# Copy built application
+COPY --from=build /app /app
 
 ENV FLY="true"
-ENV LITEFS_DIR="/litefs/data"
+ENV LITEFS_DIR="/data"
 ENV DATABASE_FILENAME="sqlite.db"
 ENV DATABASE_PATH="$LITEFS_DIR/$DATABASE_FILENAME"
 ENV DATABASE_URL="file:$DATABASE_PATH"
 ENV CACHE_DATABASE_FILENAME="cache.db"
 ENV CACHE_DATABASE_PATH="/$LITEFS_DIR/$CACHE_DATABASE_FILENAME"
-ENV INTERNAL_PORT="8080"
-ENV PORT="8081"
+ENV PORT="8080"
 ENV NODE_ENV="production"
 
-# add shortcut for connecting to database CLI
-RUN echo "#!/bin/sh\nset -x\nsqlite3 \$DATABASE_URL" > /usr/local/bin/database-cli && chmod +x /usr/local/bin/database-cli
+# Start the server by default, this can be overwritten at runtime
+EXPOSE 8080
 
-WORKDIR /myapp
-
-COPY --from=production-deps /myapp/node_modules /myapp/node_modules
-
-COPY --from=build /myapp/build /myapp/build
-COPY --from=build /myapp/app/_redirects /myapp/build/_redirects
-COPY --from=build /myapp/public /myapp/public
-COPY --from=build /myapp/package.json /myapp/package.json
-COPY --from=build /myapp/server.ts /myapp/server.ts
-
-COPY --from=flyio/litefs:0.5.8 /usr/local/bin/litefs /usr/local/bin/litefs
-ADD litefs.yml /etc/litefs.yml
-RUN mkdir -p /data ${LITEFS_DIR}
-
-CMD [ "litefs", "mount" ]
+CMD [ "npm", "run", "start" ]
