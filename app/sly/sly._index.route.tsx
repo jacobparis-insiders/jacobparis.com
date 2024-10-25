@@ -50,9 +50,9 @@ export async function loader({ request }: LoaderFunctionArgs) {
       return Object.entries(index)
         .map(([key, library]) => ({
           key,
-          name: library.name,
+          displayName: library.name,
         }))
-        .sort((a, b) => a.name.localeCompare(b.name))
+        .sort((a, b) => a.displayName.localeCompare(b.displayName))
     },
   })
 
@@ -216,14 +216,22 @@ export default function Component() {
     )
 
     if (commandRef.current !== commandId) return
-    iconNames.forEach((icon) => {
-      setOutput((prev) => prev + `◯  ${icon}\n`)
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     const randomIconIndex = Math.floor(Math.random() * iconNames.length)
     const chosenIcon = iconNames[randomIconIndex]
+    // only display 10 libraries, centered on the index
+    // if the index is less than 5, display the first 10
+    // if the index is greater than the length of the array minus 5, display the last 10
+    iconNames
+      .slice(
+        Math.max(randomIconIndex - 5, 0),
+        Math.min(randomIconIndex + 5, iconNames.length),
+      )
+      .forEach((icon) => {
+        setOutput((prev) => prev + `◯  ${icon}\n`)
+      })
+
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     await new Promise((resolve) => setTimeout(resolve, 500))
 
@@ -253,35 +261,38 @@ export default function Component() {
   async function interactiveChooseRandomLibrary(commandId: number) {
     if (commandRef.current !== commandId) return
 
-    const iconLibraries = Object.entries(iconLibraries).map(
-      ([key, library]) => ({
-        key,
-        name: library.name,
-      }),
-    )
-
     setOutput(
       (output) =>
         output + "? Which icon libraries would you like to use? › \n\n",
     )
 
     if (commandRef.current !== commandId) return
-    Object.entries(iconLibraries).forEach(([key, library]) => {
-      setOutput((prev) => prev + `◯  ${library.name}\n`)
-    })
-
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
     const randomLibraryIndex = Math.floor(Math.random() * iconLibraries.length)
     const chosenLibrary = iconLibraries[randomLibraryIndex]
+
+    iconLibraries
+      .slice(
+        Math.max(randomLibraryIndex - 5, 0),
+        Math.min(randomLibraryIndex + 5, iconLibraries.length),
+      )
+      .forEach((library) => {
+        setOutput((prev) => prev + `◯  ${library.displayName}\n`)
+      })
+
+    await new Promise((resolve) => setTimeout(resolve, 1000))
 
     if (commandRef.current !== commandId) return
     setOutput((prev) => {
       const lines = prev.split("\n")
-      lines[randomLibraryIndex + 2] = lines[randomLibraryIndex + 2].replace(
-        "◯",
-        "●",
+      const lineToUpdate = lines.findIndex(
+        (line) =>
+          line.includes("◯") && line.includes(chosenLibrary.displayName),
       )
+
+      if (lineToUpdate !== -1) {
+        lines[lineToUpdate] = lines[lineToUpdate].replace("◯", "●")
+      }
+
       return lines.join("\n")
     })
 
@@ -290,7 +301,7 @@ export default function Component() {
     setOutput(
       (prev) =>
         prev +
-        `\n✔ Which icon libraries would you like to use? · ${chosenLibrary.name}\n`,
+        `\n✔ Which icon libraries would you like to use? · ${chosenLibrary.displayName}\n`,
     )
 
     return {
@@ -309,8 +320,7 @@ export default function Component() {
       <div
         className={`relative z-10 mx-auto my-auto mb-12 flex min-h-full max-w-7xl flex-1 flex-col items-center justify-center text-center sm:px-6 lg:px-8`}
       >
-        {/* // alert box mentioning Sly v2 is in beta and providing a custom install link */}
-        <div className="shadow-smooth mb-4 mt-4 border-y border-yellow-600/20 bg-white px-4 py-3 text-left sm:rounded-md sm:border-x">
+        <div className="shadow-smooth mb-4 mt-4 border-y border-green-600/30 bg-white px-4 py-3 text-left sm:rounded-md sm:border-x">
           <p className="font-medium">
             Sly v2 (with Iconify support) is now in pre-release
           </p>
@@ -340,7 +350,7 @@ export default function Component() {
           style={{ animationDelay: "1.2s" }}
         >
           <div
-            className="shadow-smooth mt-2 flex flex-col overflow-hidden bg-black p-4 font-mono text-white transition-[height] sm:rounded-lg"
+            className="shadow-smooth mt-2 flex flex-col overflow-y-auto overflow-x-hidden bg-black p-4 font-mono text-white transition-[height] sm:rounded-lg"
             style={{
               height: isExpanded ? "30lh" : "6lh",
             }}
@@ -349,7 +359,7 @@ export default function Component() {
               value={selectedFile?.name}
               className="-m-4 rounded-none"
             >
-              <TerminalTabsList>
+              <TerminalTabsList className="w-full justify-start overflow-x-auto [scrollbar-width:thin]">
                 <TerminalTabsTrigger
                   value="Terminal"
                   onClick={() =>
@@ -379,6 +389,7 @@ export default function Component() {
                   <div className="flex items-center gap-x-2">
                     <div className="flex space-x-2 px-2">
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -418,10 +429,11 @@ For more information, visit: https://sly-cli.fly.dev
                           setIsRunning(false)
                         }}
                       >
-                        <span className="sm:hidden">sly</span>
-                        <span className="hidden sm:inline">npx sly</span>
+                        <span className="md:hidden">sly</span>
+                        <span className="hidden md:inline">npx sly</span>
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -466,6 +478,7 @@ For more information, visit: https://sly-cli.fly.dev
                         add
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -488,7 +501,7 @@ For more information, visit: https://sly-cli.fly.dev
                           if (commandRef.current !== thisCommand) return
                           const { directory } =
                             (await configureLibrary(
-                              randomLibrary!,
+                              randomLibrary,
                               thisCommand,
                             )) || {}
 
@@ -504,12 +517,13 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: icon!, directory })
                         }}
                       >
-                        <span className="sm:hidden">&lt;lib&gt;</span>
-                        <span className="hidden sm:inline">
+                        <span className="md:hidden">&lt;lib&gt;</span>
+                        <span className="hidden md:inline">
                           &lt;library&gt;
                         </span>
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -541,7 +555,7 @@ For more information, visit: https://sly-cli.fly.dev
                           if (commandRef.current !== thisCommand) return
                           const { directory } =
                             (await configureLibrary(
-                              randomLibrary!,
+                              randomLibrary,
                               thisCommand,
                             )) || {}
 
@@ -552,6 +566,7 @@ For more information, visit: https://sly-cli.fly.dev
                         &lt;icon&gt;
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -586,12 +601,13 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        <span className="sm:hidden">-d &lt;dir&gt;</span>
-                        <span className="hidden sm:inline">
+                        <span className="md:hidden">-d &lt;dir&gt;</span>
+                        <span className="hidden md:inline">
                           --directory &lt;dir&gt;
                         </span>
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -626,10 +642,11 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        <span className="sm:hidden">-o</span>
-                        <span className="hidden sm:inline">--overwrite</span>
+                        <span className="md:hidden">-o</span>
+                        <span className="hidden md:inline">--overwrite</span>
                       </Button>
                       <Button
+                        className="whitespace-nowrap"
                         type="button"
                         variant="outline-dark"
                         size="sm"
@@ -664,8 +681,8 @@ For more information, visit: https://sly-cli.fly.dev
                           addFile({ filename: randomIconName, directory })
                         }}
                       >
-                        <span className="sm:hidden">-y</span>
-                        <span className="hidden sm:inline">--yes</span>
+                        <span className="md:hidden">-y</span>
+                        <span className="hidden md:inline">--yes</span>
                       </Button>
                     </div>
                   </div>
@@ -690,7 +707,7 @@ For more information, visit: https://sly-cli.fly.dev
         </div>
       </div>
       <p
-        className="drop-shadow-smooth animate-fade-in-down sm:text-2x mb-10 mt-48 text-center text-xl  text-neutral-600"
+        className="drop-shadow-smooth animate-fade-in-down sm:text-2x mt-48 text-center text-xl  text-neutral-600"
         style={{ animationDelay: "0.9s" }}
       >
         Powered by{" "}
@@ -703,10 +720,13 @@ For more information, visit: https://sly-cli.fly.dev
           Iconify
         </a>
       </p>
+      <p className="drop-shadow-smooth animate-fade-in-down sm:text-2x mt-4 text-center text-xl  text-neutral-600">
+        There's probably a better way to list all of these
+      </p>
 
-      <ul className="columns-3 text-center text-sm text-neutral-600">
-        {Object.entries(iconLibraries).map(([key, library]) => (
-          <li key={key}> {library.name} </li>
+      <ul className="mt-8 columns-3 text-center text-sm text-neutral-600">
+        {iconLibraries.map((library) => (
+          <li key={library.key}> {library.displayName} </li>
         ))}
       </ul>
 
@@ -794,7 +814,6 @@ For more information, visit: https://sly-cli.fly.dev
         </p>
       </div>
 
-      {/* // terminal tabs for each language */}
       <div
         className="animate-fade-in-down shadow-smooth mx-auto mt-8 w-full max-w-3xl bg-white text-left"
         style={{ animationDelay: "1.2s" }}
@@ -812,7 +831,7 @@ For more information, visit: https://sly-cli.fly.dev
 import { type IconName } from './icons/name';
 import href from './icons/sprite.svg';
 
-export function Icon({
+export async function Icon({
 	name,
 	className,
 	...props
@@ -825,7 +844,7 @@ export function Icon({
 		</svg>
 	);
 }
-`}
+                `}
               </pre>
             </TerminalTabsContent>
             <TerminalTabsContent value="vue">
@@ -860,7 +879,7 @@ export default defineComponent({
   }
 });
 </script>
-`}
+                `}
               </pre>
             </TerminalTabsContent>
             <TerminalTabsContent value="svelte">
@@ -878,7 +897,7 @@ export default defineComponent({
 <svg {...props} class={\`inline self-center \${className}\`}>
   <use href={\`\${href}#\${name}\`} />
 </svg>
-`}
+                `}
               </pre>
             </TerminalTabsContent>
           </TerminalTabs>
