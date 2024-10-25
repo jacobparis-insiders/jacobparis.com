@@ -761,7 +761,7 @@ For more information, visit: https://sly-cli.fly.dev
             </Link>
           </div>
         </div>
-        <div className="shadow-smooth flex flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-800">
+        <div className="shadow-smooth flex flex-col overflow-hidden rounded-lg border border-neutral-100 bg-white dark:bg-gray-800">
           <div className="p-4">
             <div className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
               <Icon name="terminal" className="h-6 w-6" />
@@ -782,7 +782,7 @@ For more information, visit: https://sly-cli.fly.dev
             </Link>
           </div>
         </div>
-        <div className="shadow-smooth flex flex-col overflow-hidden rounded-lg bg-white dark:bg-gray-800">
+        <div className="shadow-smooth flex flex-col overflow-hidden rounded-lg border border-neutral-100 bg-white dark:bg-gray-800">
           <div className="p-4">
             <div className="mb-4 flex items-center gap-2 text-xl font-semibold text-gray-900 dark:text-gray-100">
               <Icon name="file-code-2" className="h-6 w-6" />
