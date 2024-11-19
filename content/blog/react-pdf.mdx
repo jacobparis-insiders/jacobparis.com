@@ -1,0 +1,101 @@
+---
+title: Remix with React PDF
+description: Use React PDF to generate PDFs using React Components.
+tags: Remix
+published: true
+timestamp: "2024-11-19"
+---
+
+[React PDF](https://react-pdf.org/) is a rendering engine for React that creates PDFs instead of DOM elements.
+
+This is great because it you can use all the nice things about React (like components, props, and context providers) to create PDF templates.
+
+Key points to know:
+
+- The `ReactPDF.renderToStream` function returns a `NodeJS.ReadableStream`. If you are working with web streams (like in Remix) then you'll need to convert it.
+- Their documentation shows passing JSX directly to the `renderToStream` function, but if you aren't using a bundler for your server code that supports that then you can use `React.createElement` instead.
+
+```ts
+export async function loader({ request }: LoaderFunctionArgs) {
+  const stream = await ReactPDF.renderToStream(
+    React.createElement(PageComponent, {
+      invoices,
+      currencies,
+      contacts,
+    }) as React.ReactElement<ReactPDF.DocumentProps>,
+  )
+
+  const webStream = new ReadableStream({
+    start(controller) {
+      stream.on("data", (chunk) => controller.enqueue(chunk))
+      stream.on("end", () => controller.close())
+      stream.on("error", (err) => controller.error(err))
+    },
+  })
+
+  return new Response(webStream, {
+    headers: {
+      "Content-Type": "application/pdf",
+    },
+  })
+}
+
+function PageComponent({
+  invoices,
+  currencies,
+  contacts,
+}: {
+  invoices: Array<Invoice>
+  currencies: Array<Currency>
+  contacts: Array<Contact>
+}) {
+  <Document>
+			<CurrenciesProvider currencies={currencies}>
+				<Page
+					size="A4"
+          style={{
+            paddingHorizontal: 30,
+            paddingTop: 10,
+            fontFamily: "GeistMono",
+            fontSize: 6,
+          }}
+        >
+          <View style={{ flexDirection: "row", justifyContent: "space-between", marginBottom: 10 }}>
+            <Text style={{ fontSize: 16, fontWeight: "bold", textAlign: "center", flex: 1 }}>
+              PDF TITLE
+            </Text>
+          </View>
+        </Page>
+      </CurrenciesProvider>
+    </Document>
+  )
+}
+```
+
+## Custom Fonts
+
+React PDF has a static class for registering custom fonts. Put this at the top of the file and then you can use it in your fontFamily styles.
+
+```ts
+import { Font } from "react-pdf"
+
+Font.register({
+  family: "GeistMono",
+  fonts: [
+    {
+      src: "https://fonts.gstatic.com/s/geistmono/v1/or3yQ6H-1_WfwkMZI_qYPLs1a-t7PU0AbeE9KK5U5Cw.ttf",
+      fontWeight: 400,
+    },
+    {
+      src: "https://fonts.gstatic.com/s/geistmono/v1/or3yQ6H-1_WfwkMZI_qYPLs1a-t7PU0AbeHaL65U5Cw.ttf",
+      fontWeight: 700,
+    },
+  ],
+})
+```
+
+To get the static TTF link from Google Fonts, you can `curl` the font URL from the embed code. It's sensitive to user-agent, so if you do it in a browser you'll probably get a woff2 file instead.
+
+```bash
+curl "https://fonts.googleapis.com/css2?family=Geist+Mono:wght@500&display=swap"
+```
