@@ -1,0 +1,274 @@
+---
+title: Essential Typescript for React
+description: The minimum set of typescript knowledge to be effective at product development with React
+tags: React
+published: true
+timestamp: "2024-11-20"
+---
+
+Typescript is a complicated language, but most developers don't need to know all of its nuances in order to be effective at their jobs. You could disambiguate it as "library" vs "application" development, or as "engineering" vs "tradesman" work, but in either case this article focuses on the latter.
+
+This is what I would consider the minimum set of typescript knowledge to be effective at product development.
+
+The core principles we're using here are
+
+- type inputs, infer outputs
+- minimize noise in the codebase
+- errors should appear as close to the code that caused them as possible
+
+## Use ReturnType and Awaited
+
+- To get the return type of a function, use `ReturnType`.
+- To get the return type of an async function, wrap it in `Awaited`.
+
+```ts
+export async function loader() {
+  return {…}
+}
+
+type LoaderData = Awaited<ReturnType<typeof loader>>
+```
+
+## Type components based on their requirements
+
+When you start getting into full stack type-safe development, you'll have the power to pass types directly from your database into your components. This is usually a mistake because it leads to components that are tightly coupled to the database schema.
+
+```tsx
+// incorrect
+function UserAddressCard({ user }: { user: User }) {
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <div>
+        {user.address.street}, {user.address.city}, {user.address.state},{" "}
+        {user.address.postalCode}
+      </div>
+    </div>
+  )
+}
+```
+
+This component can only be used in places where you have a whole User object, which makes it much less portable, especially when all it needs is the address info.
+
+There's also a maintenance problem. Since this component requires a user with an address, and you change the database schema so that the address is optional, there's now a mismatch between what the component wants and what the database gives. You'll get type errors on every invocation of `user.address`.
+
+A better place to get the error is right where the user is passed as a prop, at `<UserAddressCard user={user} />`, so that we can solve it by verifying that the address is present and without needing to handle conditional cases inside the card.
+
+```tsx
+// correct
+function UserAddressCard({
+  user,
+}: {
+  user: {
+    name: string
+    address: {
+      street: string
+      city: string
+      state: string
+      postalCode: string
+    }
+  }
+})
+```
+
+## Use ReactNode for typing children
+
+There are two ways people commonly type children in React:
+
+- ReactElement is the type that lets you invoke a function like `<Component />`in JSX
+- ReactNode is that plus all the other things that can be in JSX, like strings, numbers, or null
+
+With that in mind, the correct way to type a component's children is to use ReactNode.
+
+```tsx
+// correct
+function Heading(props: { children: ReactNode }) {
+  return <h1 className="text-2xl font-bold">{props.children}</h1>
+}
+```
+
+```tsx
+<Heading>Hello</Heading>
+```
+
+If you use ReactElement instead, you'll have errors passing non-elements and Typescript will nudge you toward wrapping them in Fragments to get around it.
+
+```tsx
+// incorrect
+function Heading(props: { children: ReactElement }) {
+  return <h1 className="text-2xl font-bold">{props.children}</h1>
+}
+```
+
+```tsx
+<Heading>
+  <>Hello</>
+</Heading>
+```
+
+🚩 If you see gratuitous Fragment usage, check to see if someone used ReactElement instead of ReactNode.
+
+## Use `React.ComponentProps` when passing props to child elements.
+
+This is such a useful type, especially if you're big into composition. At surface level it looks just like this, and is great for when you want to pass props to a component.
+
+```tsx
+function Button(props: React.ComponentProps<"button">) {
+  return <button {...props} />
+}
+```
+
+This works on custom components too using the `typeof` operator.
+
+```tsx
+function PrimaryButton(props: React.ComponentProps<typeof Button>) {
+  return <Button variant="primary" {...props} />
+}
+```
+
+🚩 If you have props that are explicitly defined in the types but not explicitly used in the component, it's probably a candidate for `ComponentProps`.
+
+```tsx
+// incorrect
+function Button({
+  variant,
+  ...props
+}: {
+  variant: "primary"
+  // these aren't being used explicitly
+  // they've probably been added one by one as a developer needs them
+  type: string
+  className: string
+}) {
+  return (
+    <button className={variant === "primary" ? "bg-blue-500" : ""} {...props} />
+  )
+}
+```
+
+## Use & intersections to add additional props
+
+```tsx
+function Button({
+  variant,
+  className,
+  ...props
+}: { variant: "primary" | "secondary" } & React.ComponentProps<"button">) {
+  return (
+    <button
+      {...props}
+      className={cn(
+        "bg-blue-500",
+        variant === "secondary" && "bg-gray-500",
+        className,
+      )}
+    />
+  )
+}
+```
+
+## Use `Omit` to remove props when you override them.
+
+In the above example, the user can still pass their own className to Button, which will override the styles applied by the variant. That might be desirable to give developers freedom, but you can also use `Omit` to take that freedom away.
+
+```tsx
+function Button({
+  variant,
+  className,
+  ...props
+}: { variant: "primary" | "secondary" } & Omit<
+  React.ComponentProps<"button">,
+  "className"
+>) {
+  return (
+    <button
+      {...props}
+      className={cn("bg-blue-500", variant === "secondary" && "bg-gray-500")}
+    />
+  )
+}
+```
+
+One scenario where this is useful is when you're overriding an existing prop.
+
+The above Button component accepts a className as a string, but what if you wanted to accept arrays or anything else that the `cn` function accepts?
+
+A simple union will try to combine the types and end up with `never`.
+
+```ts
+// incorrect
+type ButtonProps = React.ComponentProps<"button"> & {
+  className: ClassValue | ClassValue[]
+}
+ButtonProps["className"] // never
+```
+
+Instead, use `Omit` to remove the className prop from the type, and then add your custom type with an `&` intersection.
+
+```ts
+type ButtonProps = Omit<React.ComponentProps<"button">, "className"> & {
+  className: ClassValue | ClassValue[]
+}
+```
+
+## Use unions for groups of related props
+
+You can use unions to group related props together.
+
+By default a `button` element has an optional `type` prop, which defaults to `submit`.
+
+This can be problematic because a submit button causes side effects if it's inside a form, and typescript can't check for that.
+
+On the other hand, changing the default to the side-effect free "button" can confuse developers who are used to the way it's been for the last 20 years. So forcing it to be declared explicitly is the compromise I favour.
+
+Complicating further, sometimes a Button component doesn't render a `button` element at all, like in a design system where the component is used to wrap an anchor tag. In that case the `type` is useless and may mislead a dev if they try to pass it anyway.
+
+```tsx
+type ButtonProps = Omit<React.Component, "type"> &
+  (
+    | {
+        asChild: true
+      }
+    | {
+        asChild?: false
+        type: "button" | "submit" | "reset"
+      }
+  )
+```
+
+This forces the dev to use good combinations of props
+
+```tsx
+// correct
+<Button type="submit" />
+<Button type="button" />
+<Button asChild>
+  <Link href="/">Home</Link>
+</Button>
+
+// incorrect
+<Button />
+<Button asChild type="button">
+  <Link href="/">Home</Link>
+</Button>
+```
+
+## Use `as const` for tuples
+
+To use a tuple in a hook, like `useState` does, you can use `as const` to tell typescript that it's not an array
+
+```tsx
+function useCopy() {
+  const [copied, setCopied] = useState()
+
+  return [
+    copied,
+    (text: string) => {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+    },
+  ] as const
+}
+```
+
+🚩 A common workaround is to set an explicit return type like `useCopy(): [boolean, (text: string) => Promise<void>]`, which is more verbose and will require more maintenance if changes are made to the hook.
