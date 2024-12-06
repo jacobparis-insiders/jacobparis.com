@@ -1,14 +1,14 @@
 ---
-title: Essential Typescript for React
-description: The minimum set of typescript knowledge to be effective at product development with React
+title: Essential TypeScript for React
+description: The minimum set of TypeScript knowledge to be effective at product development with React
 tags: React
 published: true
 timestamp: "2024-11-20"
 ---
 
-Typescript is a complicated language, but most developers don't need to know all of its nuances in order to be effective at their jobs. You could disambiguate it as "library" vs "application" development, or as "engineering" vs "tradesman" work, but in either case this article focuses on the latter.
+TypeScript is a complicated language, but most developers don't need to know all of its nuances in order to be effective at their jobs. You could disambiguate it as "library" vs "application" development, or as "engineering" vs "tradesman" work, but in either case this article focuses on the latter.
 
-This is what I would consider the minimum set of typescript knowledge to be effective at product development.
+This is what I would consider the minimum set of TypeScript knowledge to be effective at product development.
 
 The core principles we're using here are
 
@@ -91,7 +91,7 @@ function Heading(props: { children: ReactNode }) {
 <Heading>Hello</Heading>
 ```
 
-If you use ReactElement instead, you'll have errors passing non-elements and Typescript will nudge you toward wrapping them in Fragments to get around it.
+If you use ReactElement instead, you'll have errors passing non-elements and TypeScript will nudge you toward wrapping them in Fragments to get around it.
 
 ```tsx
 // incorrect
@@ -217,7 +217,7 @@ You can use unions to group related props together.
 
 By default a `button` element has an optional `type` prop, which defaults to `submit`.
 
-This can be problematic because a submit button causes side effects if it's inside a form, and typescript can't check for that.
+This can be problematic because a submit button causes side effects if it's inside a form, and TypeScript can't check for that.
 
 On the other hand, changing the default to the side-effect free "button" can confuse developers who are used to the way it's been for the last 20 years. So forcing it to be declared explicitly is the compromise I favour.
 
@@ -255,7 +255,7 @@ This forces the dev to use good combinations of props
 
 ## Use `as const` for tuples
 
-To use a tuple in a hook, like `useState` does, you can use `as const` to tell typescript that it's not an array
+To use a tuple in a hook, like `useState` does, you can use `as const` to tell TypeScript that it's not an array
 
 ```tsx
 function useCopy() {
